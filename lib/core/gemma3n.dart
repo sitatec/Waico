@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:flutter_gemma/core/model.dart';
@@ -9,25 +11,25 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
   ///
   /// If the current token count is >= _maxTokenCount - _reservedTokenCount, the chat history
   /// will be reset to avoid exceeding the model context window.
-  static const _reservedTokenCount = 1024;
-  static const _maxTokenCount = 32768;
+  static const _reservedTokenCount = 500;
+  static const _maxTokenCount = 4096;
 
-  Iterable<ChatMessage> _history = [];
+  List<ChatMessage> _history = [];
   int _currentTokenCount = 0;
   late final InferenceModel _model;
   late final InferenceModelSession _chatSession;
 
-  final String modelPath;
   final String loraPath;
   final double temperature;
   final int topK;
+  final double topP;
   final bool supportImageInput;
 
   Gemma3n({
-    required this.modelPath,
     this.loraPath = '',
-    this.temperature = 0.8,
-    this.topK = 40,
+    this.temperature = 1.0,
+    this.topK = 64,
+    this.topP = 0.95,
     this.supportImageInput = true,
   });
 
@@ -36,12 +38,12 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
       modelType: ModelType.gemmaIt,
       preferredBackend: PreferredBackend.gpu,
       maxTokens: _maxTokenCount,
-      supportImage: true,
-      maxNumImages: 1,
+      supportImage: supportImageInput,
     );
     _chatSession = await _model.createSession(
       temperature: temperature,
       topK: topK,
+      topP: topP,
       enableVisionModality: supportImageInput,
     );
   }
@@ -50,34 +52,50 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
   Iterable<ChatMessage> get history => _history;
 
   @override
-  set history(Iterable<ChatMessage> history) => _history = history;
+  set history(Iterable<ChatMessage> history) {
+    _history.clear();
+    _history.addAll(history);
+    // _currentTokenCount =  TODO
+    notifyListeners();
+  }
 
   @override
-  Stream<String> sendMessageStream(String prompt, {Iterable<Attachment>? attachments}) async* {
-    if (attachments?.first is! ImageFileAttachment?) {
-      throw ArgumentError('Only ImageFileAttachment is supported for Gemma 3n');
+  Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
+    _history.add(ChatMessage(text: prompt, attachments: attachments, origin: MessageOrigin.user));
+
+    ImageFileAttachment? imageAttachment;
+    if (attachments.isNotEmpty) {
+      if (attachments.first is! ImageFileAttachment) {
+        throw ArgumentError('Only ImageFileAttachment is supported for Gemma 3n');
+      }
+
+      imageAttachment = attachments.first as ImageFileAttachment;
     }
 
-    final imageAttachment = attachments?.first as ImageFileAttachment?;
-    await _chatSession.addQueryChunk(Message(text: prompt, imageBytes: imageAttachment?.bytes, isUser: true));
+    try {
+      await _chatSession.addQueryChunk(Message(text: prompt, imageBytes: imageAttachment?.bytes, isUser: true));
+      final llmResponse = ChatMessage.llm();
+      _history.add(llmResponse);
+      await for (final responseChunk in _chatSession.getResponseAsync()) {
+        llmResponse.text = (llmResponse.text ?? '') + responseChunk;
+        yield responseChunk;
+      }
 
-    final buffer = StringBuffer();
-    await for (final token in _chatSession.getResponseAsync()) {
-      buffer.write(token);
-      yield token;
-    }
+      int responseTokens = await _chatSession.sizeInTokens(llmResponse.text!);
+      if (imageAttachment != null) {
+        // Add token count for the image attachment
+        responseTokens += 256;
+      }
+      _currentTokenCount += responseTokens;
 
-    int responseTokens = await _chatSession.sizeInTokens(buffer.toString());
-    if (imageAttachment != null) {
-      // Add token count for the image attachment
-      responseTokens += 256;
-    }
-    _currentTokenCount += responseTokens;
-
-    if (_currentTokenCount >= (_maxTokenCount - _reservedTokenCount)) {
-      throw Gemma3nMaxTokensExceededException(
-        'Maximum token count exceeded. Current: $_currentTokenCount, Max: ${_maxTokenCount - _reservedTokenCount}',
-      );
+      if (_currentTokenCount >= (_maxTokenCount - _reservedTokenCount)) {
+        throw Gemma3nMaxTokensExceededException(
+          'Maximum token count exceeded. Current: $_currentTokenCount, Max: ${_maxTokenCount - _reservedTokenCount}',
+        );
+      }
+    } catch (e, stackTrace) {
+      log('Error during message generation', error: e, stackTrace: stackTrace);
+      throw Exception('Failed to generate response: $e');
     }
   }
 
@@ -95,6 +113,14 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
     );
     await newSession.addQueryChunk(Message(text: prompt, imageBytes: imageAttachment?.bytes, isUser: true));
     yield* newSession.getResponseAsync();
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _chatSession.close();
+    await _model.close();
+    _history = [];
+    super.dispose();
   }
 }
 
