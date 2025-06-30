@@ -1,6 +1,6 @@
 {
-    "name": "itcares",
-    "short_name": "itcares",
+    "name": "waico",
+    "short_name": "waico",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

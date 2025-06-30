@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "ai.buinitylabs" "\0"
-            VALUE "FileDescription", "itcares" "\0"
+            VALUE "FileDescription", "waico" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "itcares" "\0"
+            VALUE "InternalName", "waico" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 ai.buinitylabs. All rights reserved." "\0"
-            VALUE "OriginalFilename", "itcares.exe" "\0"
-            VALUE "ProductName", "itcares" "\0"
+            VALUE "OriginalFilename", "waico.exe" "\0"
+            VALUE "ProductName", "waico" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

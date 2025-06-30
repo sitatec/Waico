@@ -1,4 +1,4 @@
-package ai.buinitylabs.itcares
+package ai.buinitylabs.waico
 
 import io.flutter.embedding.android.FlutterActivity
 

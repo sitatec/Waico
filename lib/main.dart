@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:flutter_gemma/flutter_gemma_interface.dart';
-import 'package:itcares/core/gemma3n.dart';
+import 'package:waico/core/gemma3n.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
