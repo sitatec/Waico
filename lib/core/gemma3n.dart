@@ -63,17 +63,26 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
     _history.add(ChatMessage(text: prompt, attachments: attachments, origin: MessageOrigin.user));
 
-    ImageFileAttachment? imageAttachment;
+    List<ImageFileAttachment>? imageAttachments;
     if (attachments.isNotEmpty) {
-      if (attachments.first is! ImageFileAttachment) {
-        throw ArgumentError('Only ImageFileAttachment is supported for Gemma 3n');
+      if (attachments is! List<ImageFileAttachment>) {
+        throw ArgumentError('Only a list of ImageFileAttachment is supported');
       }
 
-      imageAttachment = attachments.first as ImageFileAttachment;
+      imageAttachments = attachments;
     }
 
     try {
-      await _chatSession.addQueryChunk(Message(text: prompt, imageBytes: imageAttachment?.bytes, isUser: true));
+      if ((imageAttachments?.length ?? 0) > 1) {
+        for (final attachment in imageAttachments!) {
+          await _chatSession.addQueryChunk(Message.imageOnly(imageBytes: attachment.bytes, isUser: true));
+        }
+        await _chatSession.addQueryChunk(Message.text(text: prompt, isUser: true));
+      } else {
+        await _chatSession.addQueryChunk(
+          Message(text: prompt, imageBytes: imageAttachments?.first.bytes, isUser: true),
+        );
+      }
       final llmResponse = ChatMessage.llm();
       _history.add(llmResponse);
       await for (final responseChunk in _chatSession.getResponseAsync()) {
@@ -82,17 +91,11 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
       }
 
       int responseTokens = await _chatSession.sizeInTokens(llmResponse.text!);
-      if (imageAttachment != null) {
+      if (imageAttachments?.isNotEmpty == true) {
         // Add token count for the image attachment
-        responseTokens += 256;
+        responseTokens += 256 * imageAttachments!.length; // Assuming 256 tokens per image
       }
       _currentTokenCount += responseTokens;
-
-      if (_currentTokenCount >= (_maxTokenCount - _reservedTokenCount)) {
-        throw Gemma3nMaxTokensExceededException(
-          'Maximum token count exceeded. Current: $_currentTokenCount, Max: ${_maxTokenCount - _reservedTokenCount}',
-        );
-      }
     } catch (e, stackTrace) {
       log('Error during message generation', error: e, stackTrace: stackTrace);
       throw Exception('Failed to generate response: $e');
