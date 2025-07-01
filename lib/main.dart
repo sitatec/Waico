@@ -33,14 +33,14 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  final model = Gemma3n();
+  final model = Gemma3nModel();
   bool isModelReady = false;
 
   @override
   void initState() {
     super.initState();
     model
-        .initializeModel()
+        .initialize()
         .then((_) {
           setState(() {
             isModelReady = true;

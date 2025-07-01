@@ -2,48 +2,67 @@ import 'dart:developer';
 
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:flutter_gemma/core/model.dart';
+import 'package:flutter_gemma/core/model.dart' show ModelType;
 import 'package:flutter_gemma/flutter_gemma.dart';
-import 'package:flutter_gemma/pigeon.g.dart';
+import 'package:flutter_gemma/pigeon.g.dart' show PreferredBackend;
 
-class Gemma3n extends LlmProvider with ChangeNotifier {
+class Gemma3nModel extends LlmProvider with ChangeNotifier {
   /// Used to prevent the model from exceeding the maximum context length.
   /// It ensures that the model has enough tokens left for the response.
   static const _reservedTokenCount = 300;
   static const _maxTokenCount = 4096;
 
+  /// The base Gemma 3n model. This need to be loaded once and reused as it is or with LoRA.
+  static InferenceModel? _model;
+
+  static Future<void> loadBaseModel({bool supportImageInput = true}) async {
+    _model ??= await FlutterGemmaPlugin.instance.createModel(
+      modelType: ModelType.gemmaIt,
+      preferredBackend: PreferredBackend.gpu,
+      maxTokens: _maxTokenCount,
+      supportImage: supportImageInput,
+    );
+  }
+
+  static Future<void> unloadBaseModel() async {
+    if (_model != null) {
+      await _model!.close();
+      _model = null;
+    }
+  }
+
   List<ChatMessage> _history = [];
   int _chatTokenCount = 0;
-  late final InferenceModel _model;
   late final InferenceModelSession _chatSession;
 
-  final String loraPath;
+  final String? loraPath;
   final double temperature;
   final int topK;
   final double topP;
   final bool supportImageInput;
 
-  Gemma3n({
-    this.loraPath = '',
+  Gemma3nModel({
+    this.loraPath,
     this.temperature = 1.0,
     this.topK = 64,
     this.topP = 0.95,
     this.supportImageInput = true,
   });
 
-  Future<void> initializeModel() async {
-    _model = await FlutterGemmaPlugin.instance.createModel(
-      modelType: ModelType.gemmaIt,
-      preferredBackend: PreferredBackend.gpu,
-      maxTokens: _maxTokenCount,
-      supportImage: supportImageInput,
-    );
-    _chatSession = await _model.createSession(
+  /// Initializes the chat session. The base model must be loaded before using this provider.
+  /// When called again, it will act as a reset.
+  Future<void> initialize() async {
+    ensureBaseModelLoaded();
+    _chatSession = await _model!.createSession(
       temperature: temperature,
       topK: topK,
       topP: topP,
       enableVisionModality: supportImageInput,
+      loraPath: loraPath,
     );
+    _chatTokenCount = 0;
+    _history = [];
+    notifyListeners();
   }
 
   @override
@@ -70,6 +89,7 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
   }
 
   @override
+  // Hover the function name for documentation.
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
     List<ImageFileAttachment>? imageAttachments;
     if (attachments.isNotEmpty) {
@@ -124,13 +144,15 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
   }
 
   @override
+  // Hover the function name for documentation.
   Stream<String> generateStream(String prompt, {Iterable<Attachment>? attachments}) async* {
+    ensureBaseModelLoaded();
     if (attachments?.first is! ImageFileAttachment?) {
       throw ArgumentError('Only ImageFileAttachment is supported for Gemma 3n');
     }
     final imageAttachment = attachments?.first as ImageFileAttachment?;
     // This is for onetime generation with no history.
-    final newSession = await _model.createSession(
+    final newSession = await _model!.createSession(
       temperature: temperature,
       topK: topK,
       enableVisionModality: supportImageInput,
@@ -139,10 +161,15 @@ class Gemma3n extends LlmProvider with ChangeNotifier {
     yield* newSession.getResponseAsync();
   }
 
+  void ensureBaseModelLoaded() {
+    if (_model == null) {
+      throw StateError('Base model must be loaded before generating responses');
+    }
+  }
+
   @override
   Future<void> dispose() async {
     await _chatSession.close();
-    await _model.close();
     _history = [];
     super.dispose();
   }
