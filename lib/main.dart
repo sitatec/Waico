@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:flutter_gemma/flutter_gemma_interface.dart';
 import 'package:waico/core/gemma3n.dart';
+import 'package:waico/pages/ai_model_init_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!await FlutterGemmaPlugin.instance.modelManager.isModelInstalled) {
-    await FlutterGemmaPlugin.instance.modelManager.downloadModelFromNetwork(
-      'http://192.168.63.170:8000/gemma-3n-E2B-it-int4.task',
-    );
+    // await FlutterGemmaPlugin.instance.modelManager.downloadModelFromNetwork(
+    //   'http://192.168.63.170:8000/gemma-3n-E2B-it-int4.task',
+    // );
   }
   runApp(const App());
 }
@@ -60,7 +61,48 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gemma 3n')),
+      appBar: AppBar(
+        title: const Text('Gemma 3n'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AiModelsInitializationPage(
+                    downloadItems: [
+                      DownloadItem(
+                        url: 'https://httpbin.org//stream-bytes/1000000',
+                        fileName: 'test0145.json',
+                        displayName: 'Base Model',
+                      ),
+                      DownloadItem(url: 'https://httpbin.org/delay/3', fileName: 'test24.json', displayName: 'Test24'),
+                      DownloadItem(url: 'https://httpbin.org/json', fileName: 'test34.json', displayName: 'Test34'),
+                      DownloadItem(
+                        url: 'https://jsonplaceholder.typicode.com/posts/12',
+                        fileName: 'post1F.json',
+                        displayName: 'Post1F',
+                      ),
+                      DownloadItem(
+                        url: 'https://jsonplaceholder.typicode.com/posts/2',
+                        fileName: 'post2G.json',
+                        displayName: 'Post2G',
+                      ),
+                      DownloadItem(
+                        url: 'https://jsonplaceholder.typicode.com/posts/2',
+                        fileName: 'post2J.json',
+                        displayName: 'Post2J',
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Open Downloads',
+          ),
+        ],
+      ),
       body: isModelReady
           ? LlmChatView(
               provider: model,
