@@ -83,13 +83,21 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                   break;
               }
             case TaskProgressUpdate():
-              print("Progress update for ${widget.downloadItems[itemIndex].displayName}: ${update.progress}");
               widget.downloadItems[itemIndex].progress = update.progress;
               break;
           }
         });
       }
     });
+    // Setup notifications
+    FileDownloader().configureNotification(
+      progressBar: true,
+      running: TaskNotification("Downloading", "{displayName}"),
+      complete: TaskNotification("Download Complete", "{displayName}"),
+      error: TaskNotification("Download Failed", "{displayName}"),
+      canceled: TaskNotification("Download Canceled", "{displayName}"),
+      paused: TaskNotification("Download Paused", "{displayName}"),
+    );
   }
 
   Future<void> _checkExistingFiles() async {
@@ -98,6 +106,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       final task = DownloadTask(
         url: item.url,
         filename: item.fileName,
+        displayName: item.displayName ?? item.fileName,
         updates: Updates.status,
         directory: 'ai_models',
       );
@@ -144,6 +153,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       final task = DownloadTask(
         url: item.url,
         filename: item.fileName,
+        displayName: item.displayName ?? item.fileName,
         updates: Updates.statusAndProgress,
         directory: 'ai_models',
       );
