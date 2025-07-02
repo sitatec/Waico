@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -50,16 +51,20 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   @override
   void initState() {
     super.initState();
-    _setupDownloader();
-    _initDownloadTasks().then((_) {
-      // Check if all downloads are already complete
-      final allComplete = widget.downloadItems.every((item) => item.isCompleted);
-      if (allComplete) {
-        _startInitialization();
-      } else {
-        _downloadNextFile();
-      }
-    });
+    init();
+  }
+
+  Future<void> init() async {
+    await _setupDownloader();
+    await _initDownloadTasks();
+
+    // Check if all downloads are already complete if this is not the first time the app is opened
+    final allComplete = widget.downloadItems.every((item) => item.isCompleted);
+    if (allComplete) {
+      await _startInitialization();
+    } else {
+      _downloadNextFile();
+    }
   }
 
   @override
@@ -70,7 +75,16 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     super.dispose();
   }
 
-  void _setupDownloader() {
+  Future<void> _setupDownloader() async {
+    await _downloader.configure(
+      globalConfig: [
+        (Config.resourceTimeout, Duration(hours: 1)), // For slow network conditions (IOS)
+        (Config.checkAvailableSpace, 1024 * 4), // 4GB
+        (Config.runInForeground, true), // For android, to prevent timeout at 9minute on slow network conditions
+      ],
+    );
+    await _handlePermissions();
+    await _downloader.start();
     // Set up progress listener
     _downloadUpdatesSubscription = _downloader.updates.listen((update) {
       final itemIndex = widget.downloadItems.indexWhere(
@@ -122,7 +136,6 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   }
 
   Future<void> _initDownloadTasks() async {
-    await _downloader.start();
     final savedTaskRecords = (await _downloader.database.allRecords()).map(
       (record) => record.copyWith(task: record.task.copyWith(metaData: 'fromDB')),
     );
@@ -150,6 +163,15 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       item.progress = taskRecord.progress;
       item.isCompleted = taskRecord.status == TaskStatus.complete;
       item.isError = [TaskStatus.canceled, TaskStatus.failed, TaskStatus.notFound].contains(taskRecord.status);
+    }
+  }
+
+  Future<void> _handlePermissions() async {
+    final permissionType = PermissionType.notifications;
+    var status = await _downloader.permissions.status(permissionType);
+    if (status != PermissionStatus.granted) {
+      status = await _downloader.permissions.request(permissionType);
+      log('Permission for $permissionType was $status');
     }
   }
 

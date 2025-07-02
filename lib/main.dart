@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:waico/pages/ai_model_init_page.dart';
 import 'package:waico/pages/home_page.dart';
 
 void main() async {
