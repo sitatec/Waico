@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/gemma3n_model.dart';
-import 'dart:io';
 
 class DownloadItem {
   final String url;
@@ -12,6 +11,7 @@ class DownloadItem {
   double progress;
   bool isCompleted;
   bool isError;
+  bool isPaused;
   String? errorMessage;
   DownloadTask? task;
 
@@ -22,6 +22,7 @@ class DownloadItem {
     this.progress = 0.0,
     this.isCompleted = false,
     this.isError = false,
+    this.isPaused = false,
     this.errorMessage,
     this.task,
   });
@@ -44,12 +45,13 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   int currentDownloadIndex = 0;
   late final StreamSubscription<TaskUpdate> _downloadUpdatesSubscription;
   Timer? _progressTimer;
+  final _downloader = FileDownloader();
 
   @override
   void initState() {
     super.initState();
     _setupDownloader();
-    _checkExistingFiles().then((_) {
+    _initDownloadTasks().then((_) {
       // Check if all downloads are already complete
       final allComplete = widget.downloadItems.every((item) => item.isCompleted);
       if (allComplete) {
@@ -64,35 +66,40 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   void dispose() {
     _progressTimer?.cancel();
     _downloadUpdatesSubscription.cancel();
-    FileDownloader().destroy();
+    _downloader.destroy();
     super.dispose();
   }
 
   void _setupDownloader() {
     // Set up progress listener
-    _downloadUpdatesSubscription = FileDownloader().updates.listen((update) {
-      final itemIndex = widget.downloadItems.indexWhere((item) => item.task?.taskId == update.task.taskId);
+    _downloadUpdatesSubscription = _downloader.updates.listen((update) {
+      final itemIndex = widget.downloadItems.indexWhere(
+        (item) => item.url == update.task.url && item.fileName == update.task.filename,
+      );
 
       if (itemIndex != -1) {
+        final item = widget.downloadItems[itemIndex];
         setState(() {
           switch (update) {
             case TaskStatusUpdate():
               switch (update.status) {
                 case TaskStatus.complete:
-                  widget.downloadItems[itemIndex].progress = 1.0;
-                  widget.downloadItems[itemIndex].isCompleted = true;
+                  item.progress = 1.0;
+                  item.isCompleted = true;
                   _continueWithNextDownload();
                   break;
                 case TaskStatus.failed:
-                  widget.downloadItems[itemIndex].isError = true;
-                  widget.downloadItems[itemIndex].errorMessage = update.exception?.description ?? 'Download failed';
+                  item.isError = true;
+                  item.errorMessage = update.exception?.description ?? 'Download failed';
                   _continueWithNextDownload();
                   break;
                 case TaskStatus.canceled:
-                  widget.downloadItems[itemIndex].isError = true;
-                  widget.downloadItems[itemIndex].errorMessage = 'Download canceled';
+                  item.isError = true;
+                  item.errorMessage = 'Download canceled';
                   _continueWithNextDownload();
                   break;
+                case TaskStatus.paused:
+                  item.isPaused = true;
                 default:
                   break;
               }
@@ -104,7 +111,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       }
     });
     // Setup notifications
-    FileDownloader().configureNotification(
+    _downloader.configureNotification(
       progressBar: true,
       running: TaskNotification("Downloading", "{displayName}"),
       complete: TaskNotification("Download Complete", "{displayName}"),
@@ -114,35 +121,44 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     );
   }
 
-  Future<void> _checkExistingFiles() async {
+  Future<void> _initDownloadTasks() async {
+    await _downloader.start();
+    final savedTaskRecords = (await _downloader.database.allRecords()).map(
+      (record) => record.copyWith(task: record.task.copyWith(metaData: 'fromDB')),
+    );
+
     for (int i = 0; i < widget.downloadItems.length; i++) {
       final item = widget.downloadItems[i];
-      final task = DownloadTask(
-        url: item.url,
-        filename: item.fileName,
-        displayName: item.displayName ?? item.fileName,
-        updates: Updates.status,
-        directory: 'ai_models',
+      final taskRecord = savedTaskRecords.firstWhere(
+        (record) => record.task.url == item.url && record.task.filename == item.fileName,
+        orElse: () => TaskRecord(
+          DownloadTask(
+            url: item.url,
+            filename: item.fileName,
+            displayName: item.displayName ?? item.fileName,
+            updates: Updates.statusAndProgress,
+            directory: 'ai_models',
+            allowPause: true,
+            retries: 3,
+          ),
+          TaskStatus.enqueued,
+          0,
+          -1, // -1 means unknown size,
+        ),
       );
-
-      // Get the full file path
-      final filePath = await task.filePath();
-      final file = File(filePath);
-
-      if (await file.exists()) {
-        setState(() {
-          widget.downloadItems[i].isCompleted = true;
-          widget.downloadItems[i].progress = 1.0;
-        });
-      }
+      item.task = taskRecord.task as DownloadTask;
+      item.progress = taskRecord.progress;
+      item.isCompleted = taskRecord.status == TaskStatus.complete;
+      item.isError = [TaskStatus.canceled, TaskStatus.failed, TaskStatus.notFound].contains(taskRecord.status);
     }
   }
 
   void _downloadNextFile() {
-    // Find next file that isn't completed and isn't in error
     while (currentDownloadIndex < widget.downloadItems.length) {
       final item = widget.downloadItems[currentDownloadIndex];
-      if (!item.isCompleted && !item.isError) {
+
+      // All task in coming from DB will be handled by the library when the _downloader.start method is called
+      if (!item.isCompleted && !item.isError && item.task?.metaData != "fromDB") {
         _downloadItem(item);
         return;
       }
@@ -163,20 +179,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
   Future<void> _downloadItem(DownloadItem item) async {
     try {
-      final task = DownloadTask(
-        url: item.url,
-        filename: item.fileName,
-        displayName: item.displayName ?? item.fileName,
-        updates: Updates.statusAndProgress,
-        directory: 'ai_models',
-      );
-
-      setState(() {
-        item.task = task;
-      });
-
       // Enqueue the task (don't wait for completion)
-      final success = await FileDownloader().enqueue(task);
+      final success = await _downloader.enqueue(item.task!);
       if (!success) {
         setState(() {
           item.isError = true;
@@ -194,37 +198,24 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   }
 
   Future<void> _retryDownload(DownloadItem item) async {
+    if (isDownloading) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Wait until the ongoing download complete before retrying this one.")));
+      return;
+    }
+
     setState(() {
       item.isError = false;
       item.errorMessage = null;
       item.progress = 0.0;
     });
 
-    if (!isDownloading) {
-      setState(() {
-        isDownloading = true;
-        currentDownloadIndex = widget.downloadItems.indexOf(item);
-      });
-      _downloadItem(item);
-    }
-  }
-
-  void _cancelDownload(DownloadItem item) {
-    final task = item.task;
-    if (task != null) {
-      FileDownloader().cancelTaskWithId(task.taskId);
-      setState(() {
-        item.isError = true;
-        item.errorMessage = 'Canceled by user';
-      });
-    }
-  }
-
-  void _pauseDownload(DownloadItem item) {
-    final task = item.task;
-    if (task != null) {
-      FileDownloader().pause(task);
-    }
+    setState(() {
+      isDownloading = true;
+      currentDownloadIndex = widget.downloadItems.indexOf(item);
+    });
+    await _downloader.resume(item.task!);
   }
 
   Future<void> _startInitialization() async {
@@ -313,11 +304,11 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                 Text("Downloading", style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
                 if (widget.downloadItems.every((item) => item.isCompleted)) ...[
                   const SizedBox(width: 8),
-                  Icon(Icons.check, color: Colors.green),
+                  Icon(Icons.check, color: Colors.green, size: 22),
                 ],
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             for (final item in widget.downloadItems)
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 380),
@@ -360,30 +351,45 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                             ),
                           ),
 
-                          if (item.progress > 0 && !item.isCompleted && item.task != null) ...[
+                          if (item.progress > 0 && !item.isCompleted && item.task != null && !item.isPaused) ...[
+                            const SizedBox(width: 8),
                             IconButton(
-                              icon: const Icon(Icons.pause, size: 20),
-                              onPressed: () => _pauseDownload(item),
+                              icon: const Icon(Icons.pause, size: 18),
+                              onPressed: () => _downloader.pause(item.task!),
                               tooltip: 'Pause',
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 20),
-                              onPressed: () => _cancelDownload(item),
-                              tooltip: 'Cancel',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              style: IconButton.styleFrom(
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              ),
                             ),
                           ],
-                          if (item.isError)
+                          if (item.isPaused) ...[
+                            const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(Icons.refresh, size: 20),
+                              icon: const Icon(Icons.play_arrow, size: 18),
+                              onPressed: () => _downloader.resume(item.task!),
+                              tooltip: 'Resume',
+                              padding: EdgeInsets.zero,
+                              style: IconButton.styleFrom(
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ],
+                          if (item.isError) ...[
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.refresh, size: 18),
                               onPressed: () => _retryDownload(item),
                               tooltip: 'Retry',
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              style: IconButton.styleFrom(
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                              ),
                             ),
+                          ],
                         ],
                       ),
                     ],
@@ -392,7 +398,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
               ),
             const SizedBox(height: 42),
             Text("Initializing", style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 380),
               child: Column(
@@ -458,7 +464,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
   Widget _buildInitializationIcon() {
     if (isInitializationComplete) {
-      return const Icon(Icons.check, color: Colors.green, size: 20);
+      return const Icon(Icons.check, color: Colors.green, size: 18);
     } else {
       return CircularProgressIndicator.adaptive(
         constraints: const BoxConstraints.tightFor(width: 18, height: 18),
