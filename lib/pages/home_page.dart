@@ -9,22 +9,22 @@ class HomePage extends StatelessWidget {
     final features = <Map<String, dynamic>>[
       {
         'title': 'Meditation',
-        'color': const Color.fromARGB(108, 234, 136, 93),
+        'color': const Color.fromARGB(99, 191, 89, 1),
         'image': {'url': 'assets/images/meditation.png', 'size': 105.0},
       },
       {
         'title': 'Sleep',
-        'color': const Color.fromARGB(108, 79, 152, 216),
+        'color': const Color.fromARGB(98, 0, 51, 171),
         'image': {'url': 'assets/images/sleep.png', 'size': 120.0},
       },
       {
         'title': 'Nutrition',
-        'color': const Color.fromARGB(108, 32, 179, 128),
+        'color': const Color.fromARGB(106, 0, 105, 68),
         'image': {'url': 'assets/images/nutrition.png', 'size': 85.0},
       },
       {
         'title': 'Workout',
-        'color': const Color.fromARGB(118, 232, 194, 89),
+        'color': const Color.fromARGB(92, 196, 144, 0),
         'image': {'url': 'assets/images/workout.png', 'size': 110.0},
       },
     ];
@@ -52,7 +52,7 @@ class HomePage extends StatelessWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
-                childAspectRatio: 1.1,
+                childAspectRatio: 1.3,
               ),
               itemBuilder: (context, index) {
                 final feature = features[index];
@@ -73,7 +73,7 @@ class HomePage extends StatelessWidget {
         data: theme.copyWith(
           floatingActionButtonTheme: theme.floatingActionButtonTheme.copyWith(
             backgroundColor: theme.colorScheme.primary,
-            sizeConstraints: BoxConstraints(minWidth: 160, minHeight: 60),
+            sizeConstraints: BoxConstraints(minWidth: 180, minHeight: 60),
           ),
         ),
         child: FloatingActionButton(
@@ -81,17 +81,18 @@ class HomePage extends StatelessWidget {
           onPressed: () {},
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
+            // crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Icon(Icons.voice_chat, color: theme.colorScheme.onPrimary),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Text(
                 "Counselor",
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 18,
+                  fontSize: 19,
                   fontWeight: FontWeight.w500,
                   color: theme.colorScheme.onPrimary,
                 ),
+                textHeightBehavior: TextHeightBehavior(applyHeightToFirstAscent: false),
               ),
             ],
           ),
@@ -122,7 +123,10 @@ class FeatureCard extends StatelessWidget {
           Positioned(
             top: 16,
             left: 16,
-            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w500, color: Colors.white),
+            ),
           ),
           Positioned(
             bottom: 8,
