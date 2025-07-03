@@ -9,9 +9,16 @@ class App extends StatelessWidget {
   const App({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Gemma 3n Chat',
-    theme: ThemeData(primarySwatch: Colors.blue),
-    home: HomePage(),
-  );
+  Widget build(BuildContext context) {
+    final defaultTheme = Theme.of(context);
+    final primaryColor = Color(0xFF4B9B6E);
+    return MaterialApp(
+      title: 'Gemma 3n Chat',
+      theme: defaultTheme.copyWith(
+        colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
+        appBarTheme: defaultTheme.appBarTheme.copyWith(surfaceTintColor: primaryColor),
+      ),
+      home: HomePage(),
+    );
+  }
 }

@@ -207,30 +207,38 @@ class _HealthDashboardState extends State<HealthDashboard> {
                   childAspectRatio: 1.2,
                   shrinkWrap: true,
                   children: [
-                    _HealthMetricCard(icon: Icons.directions_walk, title: 'Steps', value: _steps.toString(), unit: ''),
+                    _HealthMetricCard(
+                      icon: Icons.directions_walk,
+                      title: 'Steps',
+                      value: _steps.toString(),
+                      unit: '',
+                      iconSize: 19,
+                    ),
                     _HealthMetricCard(
                       icon: Icons.favorite,
                       title: 'Heart Rate',
                       value: _heartRate.toInt().toString(),
-                      unit: 'bpm',
+                      unit: 'BPM',
+                      iconSize: 17,
                     ),
                     _HealthMetricCard(
                       icon: Icons.local_fire_department,
                       title: 'Calories',
                       value: _calories.toInt().toString(),
-                      unit: 'cal',
+                      unit: 'CAL',
+                      iconSize: 19,
                     ),
                     _HealthMetricCard(
                       icon: Icons.bedtime,
                       title: 'Sleep',
                       value: _sleepHours.toStringAsFixed(1),
-                      unit: 'hrs',
+                      unit: 'HOURS',
                     ),
                     _HealthMetricCard(
                       icon: Icons.water_drop,
                       title: 'Water',
                       value: _waterIntake.toStringAsFixed(1),
-                      unit: 'L',
+                      unit: 'LITERS',
                     ),
                   ],
                 ),
@@ -245,11 +253,18 @@ class _HealthDashboardState extends State<HealthDashboard> {
 
 class _HealthMetricCard extends StatelessWidget {
   final IconData icon;
+  final double iconSize;
   final String title;
   final String value;
   final String unit;
 
-  const _HealthMetricCard({required this.icon, required this.title, required this.value, required this.unit});
+  const _HealthMetricCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.unit,
+    this.iconSize = 18,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -268,23 +283,33 @@ class _HealthMetricCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 8),
-              Text(title, style: theme.textTheme.titleSmall?.copyWith(color: Colors.white)),
+              Text(title, style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
               const SizedBox(width: 16),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    value,
-                    style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                  Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Text(
+                      value,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 27,
+                      ),
+                    ),
                   ),
-                  Text(unit, style: theme.textTheme.labelLarge?.copyWith(color: Colors.white)),
+                  Text(
+                    unit,
+                    style: theme.textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ],
           ),
           Align(
             alignment: AlignmentDirectional.topStart,
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: Colors.white, size: iconSize),
           ),
         ],
       ),
