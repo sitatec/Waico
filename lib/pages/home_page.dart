@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:waico/core/utils/navigation_utils.dart';
+import 'package:waico/pages/counselor_page.dart';
 import '../widgets/health_dashboard.dart';
 
 class HomePage extends StatelessWidget {
@@ -34,7 +36,7 @@ class HomePage extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            surfaceTintColor: theme.colorScheme.primary,
+            backgroundColor: Colors.transparent,
             expandedHeight: MediaQuery.sizeOf(context).height * 0.34,
             flexibleSpace: FlexibleSpaceBar(
               expandedTitleScale: 1.2,
@@ -78,7 +80,9 @@ class HomePage extends StatelessWidget {
         ),
         child: FloatingActionButton(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          onPressed: () {},
+          onPressed: () {
+            context.navigateTo(CounselorPage());
+          },
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -124,7 +128,7 @@ class FeatureCard extends StatelessWidget {
             left: 16,
             child: Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
             ),
           ),
           Positioned(

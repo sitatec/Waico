@@ -16,7 +16,7 @@ class App extends StatelessWidget {
       title: 'Gemma 3n Chat',
       theme: defaultTheme.copyWith(
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
-        appBarTheme: defaultTheme.appBarTheme.copyWith(surfaceTintColor: primaryColor),
+        appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),
       ),
       home: HomePage(),
     );

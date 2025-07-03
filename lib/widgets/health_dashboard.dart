@@ -296,20 +296,17 @@ class _HealthMetricCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 8),
-              Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white)),
-              const SizedBox(width: 16),
+              Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontSize: 13)),
+              const SizedBox(height: 5),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, top: 5),
-                    child: Text(
-                      value,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                      ),
+                  Text(
+                    value,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
                     ),
                   ),
                   Text(
@@ -317,7 +314,7 @@ class _HealthMetricCard extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 10,
+                      fontSize: 9,
                     ),
                   ),
                 ],
