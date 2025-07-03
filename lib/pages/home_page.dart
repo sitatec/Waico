@@ -10,22 +10,22 @@ class HomePage extends StatelessWidget {
       {
         'title': 'Meditation',
         'color': const Color.fromARGB(99, 191, 89, 1),
-        'image': {'url': 'assets/images/meditation.png', 'size': 105.0},
+        'image': {'url': 'assets/images/meditation.png', 'size': 80.0},
       },
       {
         'title': 'Sleep',
         'color': const Color.fromARGB(98, 0, 51, 171),
-        'image': {'url': 'assets/images/sleep.png', 'size': 120.0},
+        'image': {'url': 'assets/images/sleep.png', 'size': 90.0},
       },
       {
         'title': 'Nutrition',
         'color': const Color.fromARGB(106, 0, 105, 68),
-        'image': {'url': 'assets/images/nutrition.png', 'size': 85.0},
+        'image': {'url': 'assets/images/nutrition.png', 'size': 70.0},
       },
       {
         'title': 'Workout',
         'color': const Color.fromARGB(92, 196, 144, 0),
-        'image': {'url': 'assets/images/workout.png', 'size': 110.0},
+        'image': {'url': 'assets/images/workout.png', 'size': 90.0},
       },
     ];
     final theme = Theme.of(context);
@@ -73,7 +73,7 @@ class HomePage extends StatelessWidget {
         data: theme.copyWith(
           floatingActionButtonTheme: theme.floatingActionButtonTheme.copyWith(
             backgroundColor: theme.colorScheme.primary,
-            sizeConstraints: BoxConstraints(minWidth: 180, minHeight: 60),
+            sizeConstraints: BoxConstraints(minWidth: 160, minHeight: 52),
           ),
         ),
         child: FloatingActionButton(
@@ -81,14 +81,13 @@ class HomePage extends StatelessWidget {
           onPressed: () {},
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            // crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Icon(Icons.voice_chat, color: theme.colorScheme.onPrimary),
               const SizedBox(width: 10),
               Text(
                 "Counselor",
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 19,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: theme.colorScheme.onPrimary,
                 ),
@@ -125,7 +124,7 @@ class FeatureCard extends StatelessWidget {
             left: 16,
             child: Text(
               title,
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w500, color: Colors.white),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.white),
             ),
           ),
           Positioned(

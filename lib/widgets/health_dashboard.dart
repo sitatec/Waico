@@ -40,6 +40,10 @@ class _HealthDashboardState extends State<HealthDashboard> {
       // Configure health plugin
       await _health.configure();
 
+      if (!await _health.isHealthConnectAvailable()) {
+        await _health.installHealthConnect();
+      }
+
       // Request activity recognition permission for Android
       await Permission.activityRecognition.request();
 
@@ -142,7 +146,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.blue.shade400, Colors.purple.shade400],
+            colors: [Colors.blue.shade400, theme.colorScheme.primary],
           ),
         ),
         child: const Center(child: CircularProgressIndicator(color: Colors.white)),
@@ -155,7 +159,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.grey.shade400, Colors.grey.shade600],
+            colors: [Colors.blue.shade400, theme.colorScheme.primary],
           ),
         ),
         padding: const EdgeInsets.all(16),
@@ -196,7 +200,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
           children: [
             Text(
               'Today\'s Health Overview',
-              style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
+              style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
             ),
             Expanded(
               child: Center(
@@ -283,25 +287,29 @@ class _HealthMetricCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 8),
-              Text(title, style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
+              Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white)),
               const SizedBox(width: 16),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.only(bottom: 2, top: 5),
                     child: Text(
                       value,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 27,
+                        fontSize: 22,
                       ),
                     ),
                   ),
                   Text(
                     unit,
-                    style: theme.textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
                   ),
                 ],
               ),
