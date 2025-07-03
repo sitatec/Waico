@@ -13,6 +13,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
   final Health _health = Health();
   bool _isLoading = true;
   bool _permissionsGranted = false;
+  bool _healthConnectInstalled = false;
 
   // Health data variables
   int _steps = 0;
@@ -48,9 +49,11 @@ class _HealthDashboardState extends State<HealthDashboard> {
       await Permission.activityRecognition.request();
 
       // Request health permissions
-      bool requested = await _health.requestAuthorization(_healthDataTypes);
+      bool authorized = await _health.requestAuthorization(_healthDataTypes);
 
-      if (requested) {
+      _healthConnectInstalled = await _health.isHealthConnectAvailable();
+
+      if (authorized) {
         await _fetchHealthData();
         setState(() {
           _permissionsGranted = true;
@@ -63,6 +66,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
         });
       }
     } catch (e) {
+      _healthConnectInstalled = await _health.isHealthConnectAvailable();
       setState(() {
         _permissionsGranted = false;
         _isLoading = false;
@@ -153,7 +157,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
       );
     }
 
-    if (!_permissionsGranted) {
+    if (!_permissionsGranted || !_healthConnectInstalled) {
       return Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -168,18 +172,23 @@ class _HealthDashboardState extends State<HealthDashboard> {
           children: [
             const Icon(Icons.health_and_safety, size: 48, color: Colors.white),
             const SizedBox(height: 16),
-            const Text(
-              'Health permissions required',
+            Text(
+              _healthConnectInstalled ? 'Health permissions required' : 'Google Health Connect App required',
               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Enable health data access to see your wellness insights',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+            Text(
+              _healthConnectInstalled
+                  ? 'Enable health data access to see your wellness insights'
+                  : 'Install the Health Connect App to see your wellness insights',
+              style: TextStyle(color: Colors.white, fontSize: 12),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _initializeHealth, child: const Text('Grant Permissions')),
+            ElevatedButton(
+              onPressed: _initializeHealth,
+              child: Text(_healthConnectInstalled ? 'Grant Permissions' : 'Install Health Connect'),
+            ),
           ],
         ),
       );
