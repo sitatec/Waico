@@ -59,7 +59,7 @@ class _CounselorPageState extends State<CounselorPage> {
               ),
             ],
           ),
-          body: LlmChatView(provider: _llm),
+          body: LlmChatView(provider: _llm, enableVoiceNotes: false),
         ),
         if (!_initialized)
           Container(
