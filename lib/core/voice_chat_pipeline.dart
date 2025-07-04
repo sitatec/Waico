@@ -27,13 +27,14 @@ class VoiceChatPipeline {
     _sttStreamSubscription?.cancel();
   }
 
-  void addImage(List<XFile> imageFiles) {
+  void addImages(List<XFile> imageFiles) {
     _pendingImages.addAll(imageFiles);
   }
 
   Future<void> _onSttResultReceived(SttRecognition result) async {
     if (result.isFinal) {
       final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
+      _pendingImages.clear();
 
       String sentenceBuffer = "";
       llm
