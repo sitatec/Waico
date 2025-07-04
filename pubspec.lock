@@ -885,6 +885,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  stts:
+    dependency: "direct main"
+    description:
+      name: stts
+      sha256: "56119848145352b2a42538ba7daf8117f8881995fdd532189ebfb419375de207"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.4"
+  stts_platform_interface:
+    dependency: transitive
+    description:
+      name: stts_platform_interface
+      sha256: "6b82268d59d608e9b5accdadf0e7ccaea7928e8fce68ca393111fa7193d1bf10"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
+  stts_web:
+    dependency: transitive
+    description:
+      name: stts_web
+      sha256: "62625c3b4d86076820d687dc468845a0f54c7dd4ead155b58f1e5864488c7f1c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   term_glyph:
     dependency: transitive
     description:
