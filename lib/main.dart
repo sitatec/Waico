@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waico/pages/home_page.dart';
 
-void main() async {
+void main() {
   runApp(const App());
 }
 
