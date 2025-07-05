@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:audio_session/audio_session.dart' show AudioSession, AudioSessionConfiguration;
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ImageFileAttachment, LlmProvider;
 import 'package:kokoro_tts_flutter/kokoro_tts_flutter.dart' show Kokoro;
 import 'package:stts/stts.dart';
+import 'package:waico/core/audio_stream_player.dart';
 
 class VoiceChatPipeline {
   final LlmProvider llm;
@@ -12,19 +14,43 @@ class VoiceChatPipeline {
   final Stt stt;
   final List<XFile> _pendingImages = [];
   final String voice;
+  final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _sttStreamSubscription;
 
-  VoiceChatPipeline({required this.llm, required this.tts, required this.voice, Stt? stt}) : stt = stt ?? Stt();
+  /// Can be used to animate the AI speech waves widget
+  Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
+
+  VoiceChatPipeline({
+    required this.llm,
+    required this.tts,
+    required this.voice,
+    Stt? stt,
+    AudioStreamPlayer? audioStreamPlayer,
+  }) : stt = stt ?? Stt(),
+       _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer();
 
   Future<void> startChat() async {
     await stt.hasPermission();
     _sttStreamSubscription = stt.onResultChanged.listen(_onSttResultReceived);
     await stt.start();
+    await _audioStreamPlayer.resume();
+
+    final session = await AudioSession.instance;
+    await session.configure(AudioSessionConfiguration.speech());
   }
 
   Future<void> endChat() async {
+    await _sttStreamSubscription?.cancel();
     await stt.stop();
-    _sttStreamSubscription?.cancel();
+    await _audioStreamPlayer.stop();
+  }
+
+  Future<void> dispose() async {
+    await _sttStreamSubscription?.cancel();
+    await stt.dispose();
+    await tts.dispose();
+    await _audioStreamPlayer.dispose();
+    _sttStreamSubscription = null;
   }
 
   void addImages(List<XFile> imageFiles) {
@@ -32,6 +58,9 @@ class VoiceChatPipeline {
   }
 
   Future<void> _onSttResultReceived(SttRecognition result) async {
+    // TODO: Check for interruption and notify the user that interruption is not supported yet, they need to wait for
+    // the ai speech to finish
+
     if (result.isFinal) {
       final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
       _pendingImages.clear();
@@ -78,7 +107,8 @@ class VoiceChatPipeline {
       // Kokoro voices are in this format 12_name where 1 is the language code's fist letter 2 is the gender's
       lang: _kokoroToStandardLangCode[voice[0]]!,
     );
-    // TODO play audio
+
+    await _audioStreamPlayer.append(ttsResult.toInt16PCM(), caption: text);
   }
 }
 
