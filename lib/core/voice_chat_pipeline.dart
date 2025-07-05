@@ -11,7 +11,7 @@ import 'package:waico/core/audio_stream_player.dart';
 class VoiceChatPipeline {
   final LlmProvider llm;
   final Kokoro tts;
-  final Stt stt;
+  final Stt _stt;
   final List<XFile> _pendingImages = [];
   final String voice;
   final AudioStreamPlayer _audioStreamPlayer;
@@ -26,13 +26,13 @@ class VoiceChatPipeline {
     required this.voice,
     Stt? stt,
     AudioStreamPlayer? audioStreamPlayer,
-  }) : stt = stt ?? Stt(),
+  }) : _stt = stt ?? Stt(),
        _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer();
 
   Future<void> startChat() async {
-    await stt.hasPermission();
-    _sttStreamSubscription = stt.onResultChanged.listen(_onSttResultReceived);
-    await stt.start();
+    await _stt.hasPermission();
+    _sttStreamSubscription = _stt.onResultChanged.listen(_onSttResultReceived);
+    await _stt.start();
     await _audioStreamPlayer.resume();
 
     final session = await AudioSession.instance;
@@ -41,13 +41,13 @@ class VoiceChatPipeline {
 
   Future<void> endChat() async {
     await _sttStreamSubscription?.cancel();
-    await stt.stop();
+    await _stt.stop();
     await _audioStreamPlayer.stop();
   }
 
   Future<void> dispose() async {
     await _sttStreamSubscription?.cancel();
-    await stt.dispose();
+    await _stt.dispose();
     await tts.dispose();
     await _audioStreamPlayer.dispose();
     _sttStreamSubscription = null;

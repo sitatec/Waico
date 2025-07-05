@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:waico/core/gemma3n_model.dart';
+import 'package:waico/core/voice_chat_pipeline.dart';
+import 'package:waico/core/widgets/loading_widget.dart';
+import 'package:waico/core/widgets/voice_chat_view.dart';
 
 class CounselorPage extends StatefulWidget {
   const CounselorPage({super.key});
@@ -12,19 +15,21 @@ class CounselorPage extends StatefulWidget {
 class _CounselorPageState extends State<CounselorPage> {
   String _conversationMode = 'speech';
   final _llm = Gemma3nModel();
+  late final VoiceChatPipeline _voiceChat;
   bool _initialized = false;
+
+  bool get _isSpeechMode => _conversationMode == 'speech';
 
   @override
   void initState() {
     super.initState();
-    // TODO: Uncomment when ready
-    // _llm.initialize().then((_) {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     setState(() {
-    //       _initialized = true;
-    //     });
-    //   });
-    // });
+    _llm.initialize().then((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _initialized = true;
+        });
+      });
+    });
   }
 
   @override
@@ -59,24 +64,13 @@ class _CounselorPageState extends State<CounselorPage> {
               ),
             ],
           ),
-          body: LlmChatView(provider: _llm, enableVoiceNotes: false),
+          body: _initialized
+              ? _isSpeechMode
+                    ? VoiceChatView(voiceChatPipeline: _voiceChat)
+                    : LlmChatView(provider: _llm, enableVoiceNotes: false)
+              : null,
         ),
-        if (!_initialized)
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.black.withValues(alpha: 0.7),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator.adaptive(),
-                  const SizedBox(height: 16),
-                  Text("Initializing Chat", style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
-                ],
-              ),
-            ),
-          ),
+        if (!_initialized) LoadingWidget(message: "Initializing Chat"),
       ],
     );
   }
