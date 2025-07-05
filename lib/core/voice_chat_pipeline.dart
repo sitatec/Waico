@@ -104,6 +104,7 @@ class VoiceChatPipeline {
     final ttsResult = await tts.createTTS(
       text: text,
       voice: voice,
+      trim: false,
       // Kokoro voices are in this format 12_name where 1 is the language code's fist letter 2 is the gender's
       lang: _kokoroToStandardLangCode[voice[0]]!,
     );

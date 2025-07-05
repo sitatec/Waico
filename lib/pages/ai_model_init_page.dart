@@ -6,6 +6,8 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/gemma3n_model.dart';
 
 class DownloadItem {
+  static final String baseUrl = "https://huggingface.co/sitatech/waico-models/resolve/main";
+
   final String url;
   final String? displayName;
   final String fileName;
@@ -15,6 +17,9 @@ class DownloadItem {
   bool isPaused;
   String? errorMessage;
   DownloadTask? task;
+
+  /// Return the filepath of the downloaded file. Most be called when download completes
+  Future<String> get downloadedFilePath => task!.filePath();
 
   DownloadItem({
     required this.url,
@@ -31,8 +36,9 @@ class DownloadItem {
 
 class AiModelsInitializationPage extends StatefulWidget {
   final List<DownloadItem> downloadItems;
+  final Function()? onDone;
 
-  const AiModelsInitializationPage({super.key, required this.downloadItems});
+  const AiModelsInitializationPage({super.key, required this.downloadItems, this.onDone});
 
   @override
   State<AiModelsInitializationPage> createState() => _AiModelsInitializationPageState();
@@ -261,6 +267,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         initializationProgress = 1.0;
         isInitializationComplete = true;
       });
+
+      widget.onDone?.call();
     } catch (e) {
       // Handle error
       _progressTimer?.cancel();
