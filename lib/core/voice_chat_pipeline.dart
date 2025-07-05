@@ -13,23 +13,20 @@ class VoiceChatPipeline {
   final Kokoro tts;
   final Stt _stt;
   final List<XFile> _pendingImages = [];
-  final String voice;
+  String? voice;
   final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _sttStreamSubscription;
 
   /// Can be used to animate the AI speech waves widget
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
 
-  VoiceChatPipeline({
-    required this.llm,
-    required this.tts,
-    required this.voice,
-    Stt? stt,
-    AudioStreamPlayer? audioStreamPlayer,
-  }) : _stt = stt ?? Stt(),
-       _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer();
+  VoiceChatPipeline({required this.llm, required this.tts, Stt? stt, AudioStreamPlayer? audioStreamPlayer})
+    : _stt = stt ?? Stt(),
+      _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer();
 
-  Future<void> startChat() async {
+  Future<void> startChat({required String voice}) async {
+    this.voice = voice;
+
     await _stt.hasPermission();
     _sttStreamSubscription = _stt.onResultChanged.listen(_onSttResultReceived);
     await _stt.start();
@@ -106,7 +103,7 @@ class VoiceChatPipeline {
       voice: voice,
       trim: false,
       // Kokoro voices are in this format 12_name where 1 is the language code's fist letter 2 is the gender's
-      lang: _kokoroToStandardLangCode[voice[0]]!,
+      lang: _kokoroToStandardLangCode[voice![0]]!,
     );
 
     await _audioStreamPlayer.append(ttsResult.toInt16PCM(), caption: text);

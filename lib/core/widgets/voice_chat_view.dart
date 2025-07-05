@@ -25,18 +25,18 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   @override
   void initState() {
     super.initState();
-    widget.voiceChatPipeline.startChat().then((_) {
+    widget.voiceChatPipeline.startChat(voice: "af_heart").then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
           _chatStarted = true;
         });
       });
-    });
 
-    widget.voiceChatPipeline.aiSpeechLoudnessStream.listen((loudness) {
-      aiVoiceWaveController
-        ..amplitude = loudness
-        ..speed = loudness * 0.5;
+      widget.voiceChatPipeline.aiSpeechLoudnessStream.listen((loudness) {
+        aiVoiceWaveController
+          ..amplitude = loudness
+          ..speed = loudness * 0.5;
+      });
     });
   }
 
