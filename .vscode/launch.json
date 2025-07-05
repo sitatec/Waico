@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Dev mode",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": [
+        "--dart-define",
+        "ENV=dev",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=https://localhost:8011",
+      ]
+    },
+    {
+      "name": "Dev mode - Physical Device",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": [
+        "--dart-define",
+        "ENV=test",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=https://192.168.19.170:8011",
+      ]
+    },
+    {
+      "name": "Profile mode",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "args": [
+        "--dart-define",
+        "ENV=profile"
+      ]
+    },
+    {
+      "name": "Release mode",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": [
+        "--dart-define",
+        "ENV=prod"
+      ]
+    }
+  ]
+}

@@ -36,8 +36,12 @@ class _Entrypoint extends StatelessWidget {
       fileName: "gemma-3n-E2B-it.task",
       displayName: "Gemma 3n E2B",
     ),
-    DownloadItem(url: "${DownloadItem.baseUrl}/kokoro.onnx", fileName: "kokoro.onnx", displayName: "Kokoro TTS"),
-    DownloadItem(url: "${DownloadItem.baseUrl}/voices.json", fileName: "kokoro-voices.json", displayName: "AI Voices"),
+    DownloadItem(url: "${DownloadItem.baseUrl}/kokoro-v1.0.onnx", fileName: "kokoro.onnx", displayName: "Kokoro TTS"),
+    DownloadItem(
+      url: "${DownloadItem.baseUrl}/kokoro-voices-v1.0.json",
+      fileName: "kokoro-voices.json",
+      displayName: "AI Voices",
+    ),
   ];
 
   @override

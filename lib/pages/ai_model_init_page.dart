@@ -1,12 +1,26 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/gemma3n_model.dart';
 
 class DownloadItem {
-  static final String baseUrl = "https://huggingface.co/sitatech/waico-models/resolve/main";
+  static String get baseUrl {
+    // During development we setup a local server to download the models and provide it's URL
+    // in the MODELS_DOWNLOAD_BASE_URL env var. But you can still use the huggingface url in dev mode
+    final url = String.fromEnvironment("MODELS_DOWNLOAD_BASE_URL");
+    if (url.isNotEmpty) {
+      if (Platform.isAndroid) {
+        // Android emulators can't access the host using localhost, they use the special IP 10.0.2.2 instead
+        return url.replaceAll("localhost", "10.0.2.2");
+      }
+      return url;
+    }
+
+    return "https://huggingface.co/sitatech/waico-models/resolve/main";
+  }
 
   final String url;
   final String? displayName;
