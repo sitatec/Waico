@@ -33,13 +33,9 @@ class _VoiceChatViewState extends State<VoiceChatView> {
       });
 
       widget.voiceChatPipeline.aiSpeechLoudnessStream.listen((loudness) {
-        print("#########################");
-        print("AUDIO_LOUDNESS: $loudness");
-        print("#########################");
-
         aiVoiceWaveController
-          ..amplitude = loudness
-          ..speed = loudness * 0.5;
+          ..amplitude = (loudness * 2).clamp(0.2, 1)
+          ..speed = (loudness * 1.5).clamp(0.2, 1);
       });
     });
   }

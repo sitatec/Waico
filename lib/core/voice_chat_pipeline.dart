@@ -35,11 +35,9 @@ class VoiceChatPipeline {
     _sttStateSubscription = _stt.onStateChanged.listen((newState) {
       log("New STT state: $newState");
     });
-    await _stt.start();
-    await _audioStreamPlayer.resume();
-
     final session = await AudioSession.instance;
     await session.configure(AudioSessionConfiguration.speech());
+    _startListeningToUser();
   }
 
   Future<void> endChat() async {
@@ -66,6 +64,7 @@ class VoiceChatPipeline {
     // the ai speech to finish
 
     if (result.isFinal) {
+      _stopListeningToUser(); // Stop listening to the user since interruption is not supported yet.
       final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
       _pendingImages.clear();
 
@@ -96,15 +95,28 @@ class VoiceChatPipeline {
               sentenceBuffer = potentialSentences.last;
             },
             onDone: () {
-              // Process remaining text
-              log('Remaining sentence: $sentenceBuffer');
-              _queueTTS(sentenceBuffer);
+              if (sentenceBuffer.isNotEmpty) {
+                log('Remaining sentence: $sentenceBuffer');
+                _queueTTS(sentenceBuffer, isLastInCurrentTurn: true);
+              } else {
+                _startListeningToUser();
+              }
             },
           );
     }
   }
 
-  Future<void> _queueTTS(String text) async {
+  Future<void> _startListeningToUser() async {
+    await _stt.start();
+    await _audioStreamPlayer.pause();
+  }
+
+  Future<void> _stopListeningToUser() async {
+    await _stt.stop();
+    await _audioStreamPlayer.resume();
+  }
+
+  Future<void> _queueTTS(String text, {bool isLastInCurrentTurn = false}) async {
     final ttsResult = await _tts.createTTS(
       text: text,
       voice: voice,
@@ -114,6 +126,9 @@ class VoiceChatPipeline {
     );
 
     await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
+    if (isLastInCurrentTurn) {
+      _audioStreamPlayer.appendCallback(_startListeningToUser);
+    }
   }
 }
 

@@ -382,8 +382,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
       setState(() {
         if (modelLoadingProgress < 0.25) {
-          // 0-25%: add 2% every second
-          modelLoadingProgress += 0.02;
+          // 0-25%: add 3% every second
+          modelLoadingProgress += 0.03;
         } else if (modelLoadingProgress < 0.75) {
           // 50-90%: add 1% every 5 seconds
           if (secondsElapsed % 5 == 0) {
