@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:kokoro_tts_flutter/kokoro_tts_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:waico/core/gemma3n_model.dart';
-import 'package:waico/core/utils/model_download_utils.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
@@ -33,10 +30,7 @@ class _CounselorPageState extends State<CounselorPage> {
   Future<void> init() async {
     await _llm.initialize();
     // ignore: use_build_context_synchronously
-    final modelPaths = context.read<DownloadedModelPaths>();
-    final kokoro = Kokoro(KokoroConfig(modelPath: modelPaths.kokoroPath, voicesPath: modelPaths.kokoroVoicesPath));
-    await kokoro.initialize();
-    _voiceChat = VoiceChatPipeline(llm: _llm, tts: kokoro);
+    _voiceChat = VoiceChatPipeline(llm: _llm);
     setState(() {
       _initialized = true;
     });

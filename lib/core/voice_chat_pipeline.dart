@@ -7,21 +7,24 @@ import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ImageFileAttach
 import 'package:kokoro_tts_flutter/kokoro_tts_flutter.dart' show Kokoro;
 import 'package:stts/stts.dart';
 import 'package:waico/core/audio_stream_player.dart';
+import 'package:waico/core/kokoro_model.dart';
 
 class VoiceChatPipeline {
   final LlmProvider llm;
-  final Kokoro tts;
+  final Kokoro _tts;
   final Stt _stt;
   final List<XFile> _pendingImages = [];
   String? voice;
   final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _sttStreamSubscription;
+  StreamSubscription? _sttStateSubscription;
 
   /// Can be used to animate the AI speech waves widget
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
 
-  VoiceChatPipeline({required this.llm, required this.tts, Stt? stt, AudioStreamPlayer? audioStreamPlayer})
+  VoiceChatPipeline({required this.llm, Kokoro? tts, Stt? stt, AudioStreamPlayer? audioStreamPlayer})
     : _stt = stt ?? Stt(),
+      _tts = tts ?? KokoroModel.instance,
       _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer();
 
   Future<void> startChat({required String voice}) async {
@@ -29,6 +32,9 @@ class VoiceChatPipeline {
 
     await _stt.hasPermission();
     _sttStreamSubscription = _stt.onResultChanged.listen(_onSttResultReceived);
+    _sttStateSubscription = _stt.onStateChanged.listen((newState) {
+      log("New STT state: $newState");
+    });
     await _stt.start();
     await _audioStreamPlayer.resume();
 
@@ -45,8 +51,9 @@ class VoiceChatPipeline {
   Future<void> dispose() async {
     await _sttStreamSubscription?.cancel();
     await _stt.dispose();
-    await tts.dispose();
     await _audioStreamPlayer.dispose();
+    await _sttStateSubscription?.cancel();
+    _sttStateSubscription = null;
     _sttStreamSubscription = null;
   }
 
@@ -98,7 +105,7 @@ class VoiceChatPipeline {
   }
 
   Future<void> _queueTTS(String text) async {
-    final ttsResult = await tts.createTTS(
+    final ttsResult = await _tts.createTTS(
       text: text,
       voice: voice,
       trim: false,
@@ -106,7 +113,7 @@ class VoiceChatPipeline {
       lang: _kokoroToStandardLangCode[voice![0]]!,
     );
 
-    await _audioStreamPlayer.append(ttsResult.toInt16PCM(), caption: text);
+    await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
   }
 }
 

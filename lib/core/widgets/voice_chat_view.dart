@@ -33,6 +33,10 @@ class _VoiceChatViewState extends State<VoiceChatView> {
       });
 
       widget.voiceChatPipeline.aiSpeechLoudnessStream.listen((loudness) {
+        print("#########################");
+        print("AUDIO_LOUDNESS: $loudness");
+        print("#########################");
+
         aiVoiceWaveController
           ..amplitude = loudness
           ..speed = loudness * 0.5;
@@ -45,11 +49,11 @@ class _VoiceChatViewState extends State<VoiceChatView> {
     return Stack(
       children: [
         Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Spacer(),
             SiriWaveform.ios9(
               controller: aiVoiceWaveController,
-              options: const IOS9SiriWaveformOptions(height: 200, width: 400),
+              options: const IOS9SiriWaveformOptions(height: 500, width: 300, showSupportBar: false),
             ),
           ],
         ),

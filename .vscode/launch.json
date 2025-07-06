@@ -6,11 +6,11 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
-      "args": [
+      "toolArgs": [
         "--dart-define",
         "ENV=dev",
         "--dart-define",
-        "MODELS_DOWNLOAD_BASE_URL=https://localhost:8011",
+        "MODELS_DOWNLOAD_BASE_URL=http://localhost:8011",
       ]
     },
     {
@@ -18,11 +18,11 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
-      "args": [
+      "toolArgs": [
         "--dart-define",
         "ENV=test",
         "--dart-define",
-        "MODELS_DOWNLOAD_BASE_URL=https://192.168.19.170:8011",
+        "MODELS_DOWNLOAD_BASE_URL=http://192.168.63.170:8011",
       ]
     },
     {
@@ -30,7 +30,7 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "profile",
-      "args": [
+      "toolArgs": [
         "--dart-define",
         "ENV=profile"
       ]
@@ -40,7 +40,7 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "release",
-      "args": [
+      "toolArgs": [
         "--dart-define",
         "ENV=prod"
       ]

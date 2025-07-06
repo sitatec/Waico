@@ -1,13 +1,42 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:waico/core/gemma3n_model.dart';
-import 'package:waico/core/utils/model_download_utils.dart';
+import 'package:waico/core/kokoro_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/pages/ai_model_init_page.dart';
 import 'package:waico/pages/home_page.dart';
 import 'package:provider/provider.dart';
 
-class App extends StatelessWidget {
+class App extends StatefulWidget {
   const App({super.key});
+
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    log("#######\n   AppState : $state\n#######");
+    if (state == AppLifecycleState.detached) {
+      log("App closing detected, disposing Models");
+      Gemma3nModel.unloadBaseModel();
+      KokoroModel.dispose();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,53 +48,18 @@ class App extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
         appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),
       ),
-      home: _Entrypoint(),
-    );
-  }
-}
-
-class _Entrypoint extends StatefulWidget {
-  @override
-  State<_Entrypoint> createState() => _EntrypointState();
-}
-
-class _EntrypointState extends State<_Entrypoint> {
-  final modelsToDownload = <DownloadItem>[
-    DownloadItem(
-      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it.task",
-      fileName: "gemma-3n-E2B-it.task",
-      displayName: "Gemma 3n E2B",
-    ),
-    DownloadItem(url: "${DownloadItem.baseUrl}/kokoro-v1.0.onnx", fileName: "kokoro.onnx", displayName: "Kokoro TTS"),
-    DownloadItem(
-      url: "${DownloadItem.baseUrl}/kokoro-voices-v1.0.json",
-      fileName: "kokoro-voices.json",
-      displayName: "AI Voices",
-    ),
-  ];
-
-  @override
-  void dispose() {
-    Gemma3nModel.unloadBaseModel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AiModelsInitializationPage(
-      downloadItems: modelsToDownload,
-      onDone: () async {
-        final downloadedModelPaths = DownloadedModelPaths(
-          gemma3nPath: await modelsToDownload[0].task!.filePath(),
-          kokoroPath: await modelsToDownload[1].task!.filePath(),
-          kokoroVoicesPath: await modelsToDownload[2].task!.filePath(),
-        );
-
-        // ignore: use_build_context_synchronously
-        context.navigateTo(
-          Provider.value(value: downloadedModelPaths, updateShouldNotify: (_, _) => false, child: HomePage()),
-        );
-      },
+      home: Builder(
+        builder: (context) {
+          return AiModelsInitializationPage(
+            onDone: (downloadedModelPaths) {
+              context.navigateTo(
+                Provider.value(value: downloadedModelPaths, updateShouldNotify: (_, _) => false, child: HomePage()),
+                replaceCurrent: true,
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

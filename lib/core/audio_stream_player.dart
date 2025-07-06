@@ -31,7 +31,7 @@ class AudioStreamPlayer {
     await _playerBackend.setAudioSource(_audioBuffer);
     await _playerBackend.setShuffleModeEnabled(false);
     await _playerBackend.setLoopMode(LoopMode.off);
-    await _playerBackend.play();
+    // await _playerBackend.play();
     await _playerBackend.setVolume(2);
     _setupCallbackListeners();
   }
@@ -244,7 +244,7 @@ class _RawAudioBytesSource extends StreamAudioSource {
       contentLength: end - start,
       offset: start,
       stream: Stream.value(bytes?.sublist(start, end) ?? []),
-      contentType: 'audio/L16',
+      contentType: 'audio/wav',
     );
   }
 

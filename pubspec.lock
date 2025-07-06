@@ -563,10 +563,11 @@ packages:
   kokoro_tts_flutter:
     dependency: "direct main"
     description:
-      name: kokoro_tts_flutter
-      sha256: fb384b5e036b44eaea374265a0e64b2524c66f93641587fc82171fd3ab76b1c0
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: main
+      resolved-ref: c3d67f2681147b6b3ffc2df89446fa6836786e3c
+      url: "https://github.com/sitatec/Kokoro-TTS-Flutter.git"
+    source: git
     version: "0.1.1"
   large_file_handler:
     dependency: transitive

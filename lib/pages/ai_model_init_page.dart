@@ -5,12 +5,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/gemma3n_model.dart';
+import 'package:waico/core/kokoro_model.dart';
+import 'package:waico/core/utils/model_download_utils.dart';
+import 'package:waico/core/utils/navigation_utils.dart';
 
 class DownloadItem {
   static String get baseUrl {
     // During development we setup a local server to download the models and provide it's URL
     // in the MODELS_DOWNLOAD_BASE_URL env var. But you can still use the huggingface url in dev mode
-    final url = String.fromEnvironment("MODELS_DOWNLOAD_BASE_URL");
+    const url = String.fromEnvironment("MODELS_DOWNLOAD_BASE_URL");
     if (url.isNotEmpty) {
       if (Platform.isAndroid) {
         // Android emulators can't access the host using localhost, they use the special IP 10.0.2.2 instead
@@ -49,20 +52,33 @@ class DownloadItem {
 }
 
 class AiModelsInitializationPage extends StatefulWidget {
-  final List<DownloadItem> downloadItems;
-  final Function()? onDone;
+  final Function(DownloadedModelPaths)? onDone;
 
-  const AiModelsInitializationPage({super.key, required this.downloadItems, this.onDone});
+  const AiModelsInitializationPage({super.key, this.onDone});
 
   @override
   State<AiModelsInitializationPage> createState() => _AiModelsInitializationPageState();
 }
 
 class _AiModelsInitializationPageState extends State<AiModelsInitializationPage> {
+  final _modelsToDownload = <DownloadItem>[
+    DownloadItem(
+      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it.task",
+      fileName: "gemma-3n-E2B-it.task",
+      displayName: "Gemma 3n E2B",
+    ),
+    DownloadItem(url: "${DownloadItem.baseUrl}/kokoro-v1.0.onnx", fileName: "kokoro.onnx", displayName: "Kokoro TTS"),
+    DownloadItem(
+      url: "${DownloadItem.baseUrl}/kokoro-voices-v1.0.json",
+      fileName: "kokoro-voices.json",
+      displayName: "AI Voices",
+    ),
+  ];
+
   bool isDownloading = false;
   bool isInitializing = false;
   bool isInitializationComplete = false;
-  double initializationProgress = 0.0;
+  double modelLoadingProgress = 0.0;
   int currentDownloadIndex = 0;
   late final StreamSubscription<TaskUpdate> _downloadUpdatesSubscription;
   Timer? _progressTimer;
@@ -79,7 +95,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     await _initDownloadTasks();
 
     // Check if all downloads are already complete if this is not the first time the app is opened
-    final allComplete = widget.downloadItems.every((item) => item.isCompleted);
+    final allComplete = _modelsToDownload.every((item) => item.isCompleted);
     if (allComplete) {
       await _startInitialization();
     } else {
@@ -107,12 +123,12 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     await _downloader.start();
     // Set up progress listener
     _downloadUpdatesSubscription = _downloader.updates.listen((update) {
-      final itemIndex = widget.downloadItems.indexWhere(
+      final itemIndex = _modelsToDownload.indexWhere(
         (item) => item.url == update.task.url && item.fileName == update.task.filename,
       );
 
       if (itemIndex != -1) {
-        final item = widget.downloadItems[itemIndex];
+        final item = _modelsToDownload[itemIndex];
         setState(() {
           switch (update) {
             case TaskStatusUpdate():
@@ -125,6 +141,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                 case TaskStatus.failed:
                   item.isError = true;
                   item.errorMessage = update.exception?.description ?? 'Download failed';
+
                   _continueWithNextDownload();
                   break;
                 case TaskStatus.canceled:
@@ -138,7 +155,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                   break;
               }
             case TaskProgressUpdate():
-              widget.downloadItems[itemIndex].progress = update.progress;
+              _modelsToDownload[itemIndex].progress = update.progress;
               break;
           }
         });
@@ -160,8 +177,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       (record) => record.copyWith(task: record.task.copyWith(metaData: 'fromDB')),
     );
 
-    for (int i = 0; i < widget.downloadItems.length; i++) {
-      final item = widget.downloadItems[i];
+    for (int i = 0; i < _modelsToDownload.length; i++) {
+      final item = _modelsToDownload[i];
       final taskRecord = savedTaskRecords.firstWhere(
         (record) => record.task.url == item.url && record.task.filename == item.fileName,
         orElse: () => TaskRecord(
@@ -172,7 +189,6 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
             updates: Updates.statusAndProgress,
             directory: 'ai_models',
             allowPause: true,
-            retries: 3,
           ),
           TaskStatus.enqueued,
           0,
@@ -190,14 +206,57 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     final permissionType = PermissionType.notifications;
     var status = await _downloader.permissions.status(permissionType);
     if (status != PermissionStatus.granted) {
+      if (await _downloader.permissions.shouldShowRationale(permissionType)) {
+        final result = await _showPermissionRationale();
+        if (result != true) {
+          // result is false (explicitly denied) or null (modal closed)
+          return;
+        }
+      }
       status = await _downloader.permissions.request(permissionType);
-      log('Permission for $permissionType was $status');
+      log('Permission result for $permissionType was $status');
     }
   }
 
+  Future<bool?> _showPermissionRationale() {
+    return showModalBottomSheet<bool>(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("We need permission to show download progress notification"),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      context.navBack(false);
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: Text("Deny"),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.navBack(true);
+                    },
+                    child: Text("Grant"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _downloadNextFile() {
-    while (currentDownloadIndex < widget.downloadItems.length) {
-      final item = widget.downloadItems[currentDownloadIndex];
+    while (currentDownloadIndex < _modelsToDownload.length) {
+      final item = _modelsToDownload[currentDownloadIndex];
 
       // All task in coming from DB will be handled by the library when the _downloader.start method is called
       if (!item.isCompleted && !item.isError && item.task?.metaData != "fromDB") {
@@ -221,6 +280,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
   Future<void> _downloadItem(DownloadItem item) async {
     try {
+      log("Downloading ${item.url}");
       // Enqueue the task (don't wait for completion)
       final success = await _downloader.enqueue(item.task!);
       if (!success) {
@@ -230,7 +290,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         });
         _continueWithNextDownload();
       }
-    } catch (e) {
+    } catch (e, s) {
+      log("Failed to download ${item.url}", error: e, stackTrace: s);
       setState(() {
         item.isError = true;
         item.errorMessage = e.toString();
@@ -255,40 +316,54 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
     setState(() {
       isDownloading = true;
-      currentDownloadIndex = widget.downloadItems.indexOf(item);
+      currentDownloadIndex = _modelsToDownload.indexOf(item);
     });
     await _downloader.resume(item.task!);
   }
 
   Future<void> _startInitialization() async {
-    if (isInitializing || isInitializationComplete) return;
+    final downloadComplete = _modelsToDownload.every((item) => item.isCompleted);
+    // It is possible that we reach here even if download is not complete in the case
+    // where the user open the app and there some canceled/failed downloads in DB, they won't
+    // automatically retry. Some error types may be retried but not user cancelled downloads
+    if (isInitializing || isInitializationComplete || !downloadComplete) return;
 
     setState(() {
       isInitializing = true;
-      initializationProgress = 0.0;
+      modelLoadingProgress = 0.0;
     });
 
     // Start dummy progress simulation
-    _startProgressSimulation();
+    _startModelLoadingProgressSimulation();
 
     try {
-      // Load the base model
-      await Gemma3nModel.loadBaseModel();
+      final gemmaModelPath = await _modelsToDownload[0].downloadedFilePath;
+      await Gemma3nModel.loadBaseModel(gemmaModelPath);
+
+      final kokoroModelPath = await _modelsToDownload[1].downloadedFilePath;
+      final kokoroVoicesPath = await _modelsToDownload[2].downloadedFilePath;
+      await KokoroModel.initialize(modelPath: kokoroModelPath, voicesPath: kokoroVoicesPath);
 
       // Model loaded successfully, set to 100%
       _progressTimer?.cancel();
       setState(() {
-        initializationProgress = 1.0;
+        modelLoadingProgress = 1.0;
         isInitializationComplete = true;
       });
 
-      widget.onDone?.call();
+      widget.onDone?.call(
+        DownloadedModelPaths(
+          kokoroPath: kokoroModelPath,
+          kokoroVoicesPath: kokoroVoicesPath,
+          gemma3nPath: gemmaModelPath,
+        ),
+      );
     } catch (e) {
       // Handle error
       _progressTimer?.cancel();
       setState(() {
         isInitializing = false;
-        initializationProgress = 0.0;
+        modelLoadingProgress = 0.0;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Model initialization failed: $e')));
@@ -296,33 +371,36 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     }
   }
 
-  void _startProgressSimulation() {
+  /// We can't track model loading progress, so we simulate it to give feedback to the user
+  /// Otherwise it may seem like it is frozen since the gemma model is big and take minutes
+  /// to load depending on the device
+  void _startModelLoadingProgressSimulation() {
     int secondsElapsed = 0;
 
     _progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       secondsElapsed++;
 
       setState(() {
-        if (initializationProgress < 0.25) {
+        if (modelLoadingProgress < 0.25) {
           // 0-25%: add 2% every second
-          initializationProgress += 0.02;
-        } else if (initializationProgress < 0.50) {
-          // 25-50%: add 2% every 5 seconds
+          modelLoadingProgress += 0.02;
+        } else if (modelLoadingProgress < 0.75) {
+          // 50-90%: add 1% every 5 seconds
           if (secondsElapsed % 5 == 0) {
-            initializationProgress += 0.02;
+            modelLoadingProgress += 0.01;
           }
-        } else if (initializationProgress < 0.90) {
+        } else if (modelLoadingProgress < 0.90) {
+          // 50-90%: add 1% every 7 seconds
+          if (secondsElapsed % 7 == 0) {
+            modelLoadingProgress += 0.01;
+          }
+        } else if (modelLoadingProgress < 0.95) {
           // 50-90%: add 1% every 10 seconds
           if (secondsElapsed % 10 == 0) {
-            initializationProgress += 0.01;
+            modelLoadingProgress += 0.01;
           }
         }
-        // After 90%, wait for actual model loading to complete
-
-        // Ensure we don't exceed 90% in simulation
-        if (initializationProgress > 0.90) {
-          initializationProgress = 0.90;
-        }
+        // After 95%, wait for actual model loading to complete
       });
     });
   }
@@ -346,14 +424,14 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
             Row(
               children: [
                 Text("Downloading", style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
-                if (widget.downloadItems.every((item) => item.isCompleted)) ...[
+                if (_modelsToDownload.every((item) => item.isCompleted)) ...[
                   const SizedBox(width: 8),
                   Icon(Icons.check, color: Colors.green, size: 22),
                 ],
               ],
             ),
             const SizedBox(height: 12),
-            for (final item in widget.downloadItems)
+            for (final item in _modelsToDownload)
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 380),
                 child: Padding(
@@ -375,21 +453,28 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                                         color: item.isCompleted ? null : Colors.black54, // null = default color
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
-                                    if (item.isError)
+                                    if (item.isError) ...[
+                                      const SizedBox(width: 16),
                                       Flexible(
                                         child: Text(
                                           item.errorMessage ?? 'Unknown error',
                                           style: const TextStyle(color: Colors.red, fontSize: 12),
                                         ),
                                       ),
+                                    ] else if (item.progress > 0) ...[
+                                      const Spacer(),
+                                      Text(
+                                        '${(item.progress * 100).toStringAsFixed(0)}%',
+                                        style: TextStyle(fontSize: 12, color: Colors.black87),
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 2),
                                 LinearProgressIndicator(
                                   value: item.progress,
                                   backgroundColor: Colors.grey.shade300,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                                  valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
                                 ),
                               ],
                             ),
@@ -465,17 +550,17 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                                 const Spacer(),
                                 if (isInitializing)
                                   Text(
-                                    '${(initializationProgress * 100).toStringAsFixed(0)}%',
+                                    '${(modelLoadingProgress * 100).toStringAsFixed(0)}%',
                                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                                   ),
                               ],
                             ),
                             const SizedBox(height: 2),
                             LinearProgressIndicator(
-                              value: isInitializationComplete ? 1.0 : initializationProgress,
+                              value: isInitializationComplete ? 1.0 : modelLoadingProgress,
                               backgroundColor: Colors.grey.shade300,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                isInitializationComplete ? Colors.green : Theme.of(context).primaryColor,
+                                isInitializationComplete ? Colors.green : theme.colorScheme.primary,
                               ),
                             ),
                           ],

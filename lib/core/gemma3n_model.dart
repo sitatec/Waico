@@ -15,7 +15,8 @@ class Gemma3nModel extends LlmProvider with ChangeNotifier {
   /// The base Gemma 3n model. This need to be loaded once and reused as it is or with LoRA.
   static InferenceModel? _model;
 
-  static Future<void> loadBaseModel({bool supportImageInput = true}) async {
+  static Future<void> loadBaseModel(String modelPath, {bool supportImageInput = true}) async {
+    await FlutterGemmaPlugin.instance.modelManager.setModelPath(modelPath);
     _model ??= await FlutterGemmaPlugin.instance.createModel(
       modelType: ModelType.gemmaIt,
       preferredBackend: PreferredBackend.gpu,
