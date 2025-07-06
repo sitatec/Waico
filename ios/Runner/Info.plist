@@ -26,8 +26,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Allow speech recognition to allow the AI to read what you say</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>To enable the AI to hear you, we need access to the microphone.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
