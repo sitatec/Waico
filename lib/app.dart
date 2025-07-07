@@ -2,7 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
-import 'package:waico/core/gemma3n_model.dart';
+import 'package:waico/core/chat_model.dart';
 import 'package:waico/core/tts_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/pages/ai_model_init_page.dart';
@@ -35,7 +35,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     log("#######\n   AppState : $state\n#######");
     if (state == AppLifecycleState.detached) {
       log("App closing detected, disposing Models");
-      Gemma3nModel.unloadBaseModel();
+      ChatModel.unloadBaseModel();
       TtsModel.dispose();
     }
   }

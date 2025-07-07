@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:waico/core/gemma3n_model.dart';
+import 'package:waico/core/chat_model.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
@@ -14,7 +14,7 @@ class CounselorPage extends StatefulWidget {
 
 class _CounselorPageState extends State<CounselorPage> {
   String _conversationMode = 'speech';
-  final _llm = Gemma3nModel();
+  final _chatModel = ChatModel();
   VoiceChatPipeline? _voiceChat;
   bool _initialized = false;
 
@@ -28,9 +28,9 @@ class _CounselorPageState extends State<CounselorPage> {
   }
 
   Future<void> init() async {
-    await _llm.initialize();
+    await _chatModel.initialize();
     // ignore: use_build_context_synchronously
-    _voiceChat = VoiceChatPipeline(llm: _llm);
+    _voiceChat = VoiceChatPipeline(llm: _chatModel);
     setState(() {
       _initialized = true;
     });
@@ -39,7 +39,7 @@ class _CounselorPageState extends State<CounselorPage> {
   @override
   void dispose() {
     _voiceChat?.dispose();
-    _llm.dispose();
+    _chatModel.dispose();
     super.dispose();
   }
 
@@ -78,7 +78,7 @@ class _CounselorPageState extends State<CounselorPage> {
           body: _initialized
               ? _isSpeechMode
                     ? VoiceChatView(voiceChatPipeline: _voiceChat!)
-                    : LlmChatView(provider: _llm, enableVoiceNotes: false)
+                    : LlmChatView(provider: _chatModel, enableVoiceNotes: false)
               : null,
         ),
         if (!_initialized) LoadingWidget(message: "Initializing Chat"),

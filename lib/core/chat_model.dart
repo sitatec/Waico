@@ -6,7 +6,7 @@ import 'package:flutter_gemma/core/model.dart' show ModelType;
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/pigeon.g.dart' show PreferredBackend;
 
-class Gemma3nModel extends LlmProvider with ChangeNotifier {
+class ChatModel extends LlmProvider with ChangeNotifier {
   /// Used to prevent the model from exceeding the maximum context length.
   /// It ensures that the model has enough tokens left for the response.
   static const _reservedTokenCount = 300;
@@ -42,13 +42,7 @@ class Gemma3nModel extends LlmProvider with ChangeNotifier {
   final double topP;
   final bool supportImageInput;
 
-  Gemma3nModel({
-    this.loraPath,
-    this.temperature = 1.0,
-    this.topK = 64,
-    this.topP = 0.95,
-    this.supportImageInput = true,
-  });
+  ChatModel({this.loraPath, this.temperature = 1.0, this.topK = 64, this.topP = 0.95, this.supportImageInput = true});
 
   /// Initializes the chat session. The base model must be loaded before using this provider.
   /// When called again, it will act as a reset.
