@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive_io.dart' show extractFileToDisk;
 import 'package:sherpa_onnx/sherpa_onnx.dart';
 
 class TtsModel {
@@ -18,22 +19,25 @@ class TtsModel {
       log("TtsModel Already initialized, Skipping.");
       return;
     }
+    if (!await File(modelPath).exists()) throw Exception("Model path not found: $modelPath");
 
-    // Check if required files exist
-    final modelDir = Directory(modelPath);
-    if (!modelDir.existsSync()) throw Exception("Model directory not found: $modelPath");
+    // The modelPath is a compressed archive containing all the kokoro model data
+    final modelBaseDir = modelPath.replaceAll(".tar.bz2", "");
+    if (!await Directory(modelBaseDir).exists()) {
+      await extractFileToDisk(modelPath, modelBaseDir);
+    }
 
-    final modelFile = File('$modelPath/model.onnx');
-    final voicesFile = File('$modelPath/voices.bin');
-    final tokensFile = File('$modelPath/tokens.txt');
-    final espeakDataDir = Directory('$modelPath/espeak-ng-data');
-    final dictDir = Directory('$modelPath/dict');
+    final modelFile = File('$modelBaseDir/model.onnx');
+    final voicesFile = File('$modelBaseDir/voices.bin');
+    final tokensFile = File('$modelBaseDir/tokens.txt');
+    final espeakDataDir = Directory('$modelBaseDir/espeak-ng-data');
+    final dictDir = Directory('$modelBaseDir/dict');
 
-    if (!modelFile.existsSync()) throw Exception("model.onnx not found in $modelPath");
-    if (!voicesFile.existsSync()) throw Exception("voices.bin not found in $modelPath");
-    if (!tokensFile.existsSync()) throw Exception("tokens.txt not found in $modelPath");
-    if (!espeakDataDir.existsSync()) throw Exception("espeak-ng-data directory not found in $modelPath");
-    if (!dictDir.existsSync()) throw Exception("dict directory not found in $modelPath");
+    if (!await modelFile.exists()) throw Exception("model.onnx not found in $modelBaseDir");
+    if (!await voicesFile.exists()) throw Exception("voices.bin not found in $modelBaseDir");
+    if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelBaseDir");
+    if (!await espeakDataDir.exists()) throw Exception("espeak-ng-data directory not found in $modelBaseDir");
+    if (!await dictDir.exists()) throw Exception("dict directory not found in $modelBaseDir");
 
     // Create kokoro model configuration
     final kokoro = OfflineTtsKokoroModelConfig(
