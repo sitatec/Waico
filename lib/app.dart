@@ -1,8 +1,9 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'package:waico/core/gemma3n_model.dart';
-import 'package:waico/core/kokoro_model.dart';
+import 'package:waico/core/tts_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/pages/ai_model_init_page.dart';
 import 'package:waico/pages/home_page.dart';
@@ -19,6 +20,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    sherpa_onnx.initBindings();
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -34,7 +36,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     if (state == AppLifecycleState.detached) {
       log("App closing detected, disposing Models");
       Gemma3nModel.unloadBaseModel();
-      KokoroModel.dispose();
+      TtsModel.dispose();
     }
   }
 

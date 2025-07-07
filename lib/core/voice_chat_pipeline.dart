@@ -1,16 +1,14 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:audio_session/audio_session.dart' show AudioSession, AudioSessionConfiguration;
 import 'package:cross_file/cross_file.dart' show XFile;
-import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ImageFileAttachment, LlmProvider;
-import 'package:kokoro_tts_flutter/kokoro_tts_flutter.dart' show Kokoro;
+import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show LlmProvider;
 import 'package:waico/core/audio_stream_player.dart';
-import 'package:waico/core/kokoro_model.dart';
+import 'package:waico/core/tts_model.dart';
 
 class VoiceChatPipeline {
   final LlmProvider llm;
-  final Kokoro _tts;
+  final TtsModel _tts;
   final List<XFile> _pendingImages = [];
   String? voice;
   final AudioStreamPlayer _audioStreamPlayer;
@@ -20,8 +18,8 @@ class VoiceChatPipeline {
   /// Can be used to animate the AI speech waves widget
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
 
-  VoiceChatPipeline({required this.llm, Kokoro? tts, AudioStreamPlayer? audioStreamPlayer})
-    : _tts = tts ?? KokoroModel.instance,
+  VoiceChatPipeline({required this.llm, TtsModel? tts, AudioStreamPlayer? audioStreamPlayer})
+    : _tts = tts ?? TtsModel(),
       _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer();
 
   Future<void> startChat({required String voice}) async {
@@ -49,67 +47,13 @@ class VoiceChatPipeline {
     _pendingImages.addAll(imageFiles);
   }
 
-  Future<void> _onSttResultReceived(String text) async {
-    // TODO: Check for interruption and notify the user that interruption is not supported yet, they need to wait for
-    // the ai speech to finish
-
-    _stopListeningToUser(); // Stop listening to the user since interruption is not supported yet.
-    final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
-    _pendingImages.clear();
-
-    String sentenceBuffer = "";
-    llm
-        .sendMessageStream(text, attachments: attachments)
-        .listen(
-          (textChunk) {
-            sentenceBuffer += textChunk;
-
-            // A sentence detection logic. This reduces LLm response latency since we don't have to wait for the full
-            // response, we can send the sentences to the TTS model as they are detected in the stream.
-
-            // It splits the text by sentence-ending punctuation followed by a space or at the end of the string.
-            final sentenceEndings = RegExp(r'(?<=[.?!])\s+');
-            final potentialSentences = sentenceBuffer.split(sentenceEndings);
-
-            // Process all but the last part, which might be an incomplete sentence.
-            for (var i = 0; i < potentialSentences.length - 1; i++) {
-              final sentence = potentialSentences[i].trim();
-              if (sentence.isNotEmpty) {
-                log('Detected sentence: $sentence');
-                _queueTTS(sentence);
-              }
-            }
-
-            // The last part is kept in the buffer until the next sentence is detected or stream is done
-            sentenceBuffer = potentialSentences.last;
-          },
-          onDone: () {
-            if (sentenceBuffer.isNotEmpty) {
-              log('Remaining sentence: $sentenceBuffer');
-              _queueTTS(sentenceBuffer, isLastInCurrentTurn: true);
-            } else {
-              _startListeningToUser();
-            }
-          },
-        );
-  }
-
   Future<void> _startListeningToUser() async {
     await _audioStreamPlayer.pause();
   }
 
-  Future<void> _stopListeningToUser() async {
-    await _audioStreamPlayer.resume();
-  }
-
-  Future<void> _queueTTS(String text, {bool isLastInCurrentTurn = false}) async {
-    final ttsResult = await _tts.createTTS(
-      text: text,
-      voice: voice,
-      trim: false,
-      // Kokoro voices are in this format 12_name where 1 is the language code's fist letter 2 is the gender's
-      lang: _kokoroToStandardLangCode[voice![0]]!,
-    );
+  /// Generate and queue TTS audio
+  Future<void> generateTts(String text, {bool isLastInCurrentTurn = false}) async {
+    final ttsResult = _tts.generateSpeech(text: text, voice: voice!, speed: 1.0);
 
     await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
     if (isLastInCurrentTurn) {
@@ -117,15 +61,3 @@ class VoiceChatPipeline {
     }
   }
 }
-
-const _kokoroToStandardLangCode = {
-  "a": "en-us",
-  "b": "en-gb",
-  "e": "es",
-  "f": "fr-fr",
-  "h": "hi",
-  "i": "it",
-  "p": "pt-br",
-  "j": "ja",
-  "z": "zh",
-};

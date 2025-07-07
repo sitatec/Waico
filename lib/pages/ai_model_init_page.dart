@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/gemma3n_model.dart';
-import 'package:waico/core/kokoro_model.dart';
+import 'package:waico/core/tts_model.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 
@@ -340,9 +340,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       final gemmaModelPath = await _modelsToDownload[0].downloadedFilePath;
       await Gemma3nModel.loadBaseModel(gemmaModelPath);
 
-      final kokoroModelPath = await _modelsToDownload[1].downloadedFilePath;
-      final kokoroVoicesPath = await _modelsToDownload[2].downloadedFilePath;
-      await KokoroModel.initialize(modelPath: kokoroModelPath, voicesPath: kokoroVoicesPath);
+      final ttsModelPath = await _modelsToDownload[1].downloadedFilePath;
+      await TtsModel.initialize(modelPath: ttsModelPath);
 
       // Model loaded successfully, set to 100%
       _progressTimer?.cancel();
@@ -351,13 +350,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         isInitializationComplete = true;
       });
 
-      widget.onDone?.call(
-        DownloadedModelPaths(
-          kokoroPath: kokoroModelPath,
-          kokoroVoicesPath: kokoroVoicesPath,
-          gemma3nPath: gemmaModelPath,
-        ),
-      );
+      widget.onDone?.call(DownloadedModelPaths(ttsModelPath: ttsModelPath, gemma3nPath: gemmaModelPath));
     } catch (e) {
       // Handle error
       _progressTimer?.cancel();

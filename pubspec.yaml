@@ -19,14 +19,11 @@ dependencies:
   audio_session: ^0.2.2
   siri_wave: ^2.3.0
   provider: ^6.1.5
+  sherpa_onnx: ^1.12.4
   vad:
     git:
       url: https://github.com/sitatec/vad.git
       ref: master
-  kokoro_tts_flutter:
-    git: 
-      url: https://github.com/sitatec/Kokoro-TTS-Flutter.git
-      ref: main
 
 dev_dependencies:
   flutter_test:
