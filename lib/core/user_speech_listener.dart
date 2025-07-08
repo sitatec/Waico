@@ -138,7 +138,12 @@ class UserSpeechListener {
       _vad.pop();
     }
     if (_speechBuffer.isNotEmpty) {
-      _speechController.add(_mergeFloat32Lists(_speechBuffer));
+      if (_speechBuffer.length == 1) {
+        _speechController.add(_speechBuffer.first);
+      } else {
+        _speechController.add(_mergeFloat32Lists(_speechBuffer));
+      }
+      _speechBuffer.clear();
     }
   }
 
