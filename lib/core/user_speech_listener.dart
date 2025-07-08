@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:typed_data';
 
 import 'package:record/record.dart';
 import 'package:flutter/foundation.dart';
@@ -8,9 +7,32 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 
 import 'stt_model.dart';
 
-/// Voice Activity Detection (VAD) listener for real-time audio processing.
-/// Uses SherpaOnnx for speech detection and streams detected speech segments.
+/// Realtime audio recorder with Voice Activity Detection (VAD) to extract speech.
 class UserSpeechListener {
+  /// Create a speech-to-text listener that combines this speech listener with an STT model.
+  /// Returns a listener that outputs transcribed text whenever the user finishes speaking.
+  static UserSpeechToTextListener withTranscription({
+    required SttModel sttModel,
+    int sampleRate = 16_000,
+    double minSilenceDuration = 0.6,
+    double minSpeechDuration = 0.2,
+    int windowFrameCount = 512,
+    int numThreads = 1,
+    AudioRecorder? audioRecorder,
+  }) {
+    return UserSpeechToTextListener(
+      speechListener: UserSpeechListener(
+        audioRecorder: audioRecorder,
+        sampleRate: sampleRate,
+        minSilenceDuration: minSilenceDuration,
+        minSpeechDuration: minSilenceDuration,
+        windowFrameCount: windowFrameCount,
+        numThreads: numThreads,
+      ),
+      sttModel: sttModel,
+    );
+  }
+
   /// Minimum silence duration in seconds to consider speech ended.
   final double minSilenceDuration;
 
@@ -20,7 +42,7 @@ class UserSpeechListener {
   /// Sample rate of the audio data.
   final int sampleRate;
 
-  /// Window size for VAD processing.
+  /// Window size (number of audio frames to be input to the VAD model at once)
   final int windowFrameCount;
 
   /// Number of threads for VAD processing.
@@ -54,13 +76,13 @@ class UserSpeechListener {
   bool get isBufferingSpeech => _vad.isDetected();
 
   /// Initialize the VAD with the given model path.
-  Future<void> initialize(String modelPath) async {
+  Future<void> initialize(String vadModelPath) async {
     if (_isInitialized) {
       log("UserSpeechListener Already initialized, skipping.");
     }
     try {
       final sileroVadConfig = sherpa_onnx.SileroVadModelConfig(
-        model: modelPath,
+        model: vadModelPath,
         minSilenceDuration: minSilenceDuration,
         minSpeechDuration: minSpeechDuration,
         windowSize: windowFrameCount,
@@ -74,7 +96,7 @@ class UserSpeechListener {
         sampleRate: sampleRate,
       );
 
-      _vad = sherpa_onnx.VoiceActivityDetector(config: config, bufferSizeInSeconds: 60);
+      _vad = sherpa_onnx.VoiceActivityDetector(config: config, bufferSizeInSeconds: sileroVadConfig.maxSpeechDuration);
 
       _isInitialized = true;
     } catch (e, s) {
@@ -131,35 +153,22 @@ class UserSpeechListener {
     return _speechController.stream.listen(onSpeech, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
-  /// Create a speech-to-text listener that combines this speech listener with an STT model.
-  /// Returns a listener that outputs transcribed text whenever the user finishes speaking.
-  static UserSpeechToTextListener withTranscription({
-    required SttModel sttModel,
-    int sampleRate = 16_000,
-    double minSilenceDuration = 0.6,
-    double minSpeechDuration = 0.2,
-    int windowFrameCount = 512,
-    int numThreads = 1,
-    AudioRecorder? audioRecorder,
-  }) {
-    return UserSpeechToTextListener(
-      speechListener: UserSpeechListener(
-        audioRecorder: audioRecorder,
-        sampleRate: sampleRate,
-        minSilenceDuration: minSilenceDuration,
-        minSpeechDuration: minSilenceDuration,
-        windowFrameCount: windowFrameCount,
-        numThreads: numThreads,
-      ),
-      sttModel: sttModel,
-    );
+  Future<void> pause() async {
+    _isPaused = true;
+    _speechBuffer.clear();
+    await _audioRecorder.pause();
+  }
+
+  Future<void> resume() async {
+    _isPaused = false;
+    await _audioRecorder.resume();
   }
 
   /// Process audio data from bytes.
   Future<void> _processAudioData(Uint8List audioBytes) async {
     _vad.acceptWaveform(_convertPcm16ToFloat32(audioBytes));
 
-    while (!_vad.isEmpty()) {
+    while (!_vad.isEmpty() && !_isPaused) {
       _speechBuffer.add(_vad.front().samples);
       _vad.pop();
     }
@@ -204,6 +213,7 @@ class UserSpeechToTextListener {
   /// Buffer to accumulate transcribed text while user is speaking or pausing
   final List<String> _textBuffer = [];
   final List<Float32List> _speechBuffer = [];
+  bool _isPaused = false;
 
   /// Flag to track if we're currently processing/transcribing
   bool _isProcessing = false;
@@ -232,8 +242,24 @@ class UserSpeechToTextListener {
     return _textController.stream.listen(onText, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
+  /// Pause and return any buffered transcription
+  Future<String> pause() async {
+    _isPaused = true;
+    _speechBuffer.clear();
+    final bufferedText = _textBuffer.join(' ');
+    _textBuffer.clear();
+    await _speechListener.pause();
+    return bufferedText;
+  }
+
+  Future<void> resume() async {
+    _isPaused = false;
+    await _speechListener.resume();
+  }
+
   /// Handle incoming speech data by transcribing it and managing text buffer
   Future<void> _handleSpeechData(Float32List audioData) async {
+    if (_isPaused) return;
     if (_isProcessing) {
       _speechBuffer.add(audioData);
       return;
@@ -244,7 +270,7 @@ class UserSpeechToTextListener {
     try {
       _transcribeAndBuffer(audioData);
 
-      while (_speechBuffer.isNotEmpty) {
+      while (_speechBuffer.isNotEmpty && !_isPaused) {
         final speech = _speechBuffer.length == 1 ? _speechBuffer.first : _mergeFloat32Lists(_speechBuffer);
         _speechBuffer.clear();
         _transcribeAndBuffer(speech);
@@ -273,7 +299,7 @@ class UserSpeechToTextListener {
   }
 
   Future<void> _emitBufferedText() async {
-    if (_textBuffer.isNotEmpty) {
+    if (_textBuffer.isNotEmpty && !_isPaused) {
       // Combine all buffered text
       final combinedText = _textBuffer.join(' ');
       _textBuffer.clear();
@@ -301,13 +327,13 @@ class UserSpeechToTextListener {
 }
 
 Float32List _mergeFloat32Lists(List<Float32List> lists) {
-  // 1. Compute total length
+  // Compute total length
   final totalLength = lists.fold(0, (sum, currentList) => sum + currentList.length);
 
-  // 2. Allocate one big buffer
+  // Allocate one big buffer
   final merged = Float32List(totalLength);
 
-  // 3. Copy each list into the merged buffer
+  // Copy each list into the merged buffer
   int offset = 0;
   for (final list in lists) {
     merged.setRange(offset, offset + list.length, list);
