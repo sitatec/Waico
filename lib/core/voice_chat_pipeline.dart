@@ -35,6 +35,7 @@ class VoiceChatPipeline {
     // audio, so we can cancel the speech as soon as the model finish generation until IOS support cancelling generation.
     this.voice = voice;
 
+    await _userSpeechToTextListener.initialize();
     _userSpeechToTextListener.listen(_onUserSpeechTranscribed);
     final session = await AudioSession.instance;
     await session.configure(AudioSessionConfiguration.speech());

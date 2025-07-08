@@ -78,7 +78,6 @@ class UserSpeechListener {
   /// User started speaking but not done yet, so the current speech is not emitted to the stream yet, it is buffering.
   bool get isBufferingSpeech => _vad.isDetected();
 
-  /// Initialize the VAD with the given model path.
   Future<void> initialize({String? vadModelPath}) async {
     if (_isInitialized) {
       log("UserSpeechListener Already initialized, skipping.");
@@ -240,6 +239,8 @@ class UserSpeechToTextListener {
   UserSpeechToTextListener({required UserSpeechListener speechListener, SttModel? sttModel})
     : _speechListener = speechListener,
       _sttModel = sttModel ?? SttModel();
+
+  Future<void> initialize({String? vadModelPath}) => _speechListener.initialize(vadModelPath: vadModelPath);
 
   /// Start listening for speech and transcribing it to text.
   /// Returns a stream that emits transcribed text whenever the user finishes speaking.
