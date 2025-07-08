@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive_io.dart' show extractFileToDisk;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:sherpa_onnx/sherpa_onnx.dart';
 
 class TtsModel {
@@ -49,7 +50,7 @@ class TtsModel {
       lang: 'en-us', // TODO: get from preferences
     );
 
-    final modelConfig = OfflineTtsModelConfig(kokoro: kokoro, numThreads: 1, debug: false);
+    final modelConfig = OfflineTtsModelConfig(kokoro: kokoro, numThreads: 1, debug: kDebugMode);
 
     _instance = OfflineTts(OfflineTtsConfig(model: modelConfig));
     log("Tts model initialized successfully");

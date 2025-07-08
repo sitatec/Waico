@@ -20,11 +20,8 @@ dependencies:
   siri_wave: ^2.3.0
   provider: ^6.1.5
   sherpa_onnx: ^1.12.4
-  vad:
-    git:
-      url: https://github.com/sitatec/vad.git
-      ref: master
   archive: ^4.0.7
+  record: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -32,10 +29,6 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 dependency_overrides:
-  record:
-    git:
-      url: https://github.com/keyur2maru/record.git
-      path: record
   record_platform_interface:
     git:
       url: https://github.com/keyur2maru/record.git
@@ -50,3 +43,4 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/silero_vad_v5.onnx
