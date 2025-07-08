@@ -3,7 +3,7 @@ import 'dart:developer';
 
 import 'package:record/record.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
+import 'package:sherpa_onnx/sherpa_onnx.dart';
 
 import 'stt_model.dart';
 
@@ -12,7 +12,7 @@ class UserSpeechListener {
   /// Create a speech-to-text listener that combines this speech listener with an STT model.
   /// Returns a listener that outputs transcribed text whenever the user finishes speaking.
   static UserSpeechToTextListener withTranscription({
-    required SttModel sttModel,
+    SttModel? sttModel,
     int sampleRate = 16_000,
     double minSilenceDuration = 0.6,
     double minSpeechDuration = 0.2,
@@ -49,7 +49,7 @@ class UserSpeechListener {
   final int numThreads;
 
   final AudioRecorder _audioRecorder;
-  late final sherpa_onnx.VoiceActivityDetector _vad;
+  late final VoiceActivityDetector _vad;
   bool _isInitialized = false;
   bool _isPaused = false;
 
@@ -81,7 +81,7 @@ class UserSpeechListener {
       log("UserSpeechListener Already initialized, skipping.");
     }
     try {
-      final sileroVadConfig = sherpa_onnx.SileroVadModelConfig(
+      final sileroVadConfig = SileroVadModelConfig(
         model: vadModelPath,
         minSilenceDuration: minSilenceDuration,
         minSpeechDuration: minSpeechDuration,
@@ -89,14 +89,14 @@ class UserSpeechListener {
         maxSpeechDuration: 60,
       );
 
-      final config = sherpa_onnx.VadModelConfig(
+      final config = VadModelConfig(
         sileroVad: sileroVadConfig,
         numThreads: numThreads,
         debug: kDebugMode,
         sampleRate: sampleRate,
       );
 
-      _vad = sherpa_onnx.VoiceActivityDetector(config: config, bufferSizeInSeconds: sileroVadConfig.maxSpeechDuration);
+      _vad = VoiceActivityDetector(config: config, bufferSizeInSeconds: sileroVadConfig.maxSpeechDuration);
 
       _isInitialized = true;
     } catch (e, s) {
@@ -219,9 +219,9 @@ class UserSpeechToTextListener {
   bool _isProcessing = false;
 
   /// Create a new speech-to-text listener.
-  UserSpeechToTextListener({required UserSpeechListener speechListener, required SttModel sttModel})
+  UserSpeechToTextListener({required UserSpeechListener speechListener, SttModel? sttModel})
     : _speechListener = speechListener,
-      _sttModel = sttModel;
+      _sttModel = sttModel ?? SttModel();
 
   /// Start listening for speech and transcribing it to text.
   /// Returns a stream that emits transcribed text whenever the user finishes speaking.
