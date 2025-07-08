@@ -24,7 +24,9 @@ class VoiceChatPipeline {
 
   Future<void> startChat({required String voice}) async {
     this.voice = voice;
-
+    // TODO: Add interruption support (user can interrupt ai). On android cancelling generation is supported by mediapipe
+    // But not in flutter yet. On IOS we interrupt but with delay, model generation is generally faster then the synthesized
+    // audio, so we can cancel the speech as soon as the model finish generation until IOS support cancelling generation.
     final session = await AudioSession.instance;
     await session.configure(AudioSessionConfiguration.speech());
     _startListeningToUser();

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:sherpa_onnx/sherpa_onnx.dart';
 
 class TtsModel {
+  /// Loading the model in GPU takes time, so we load once for the app lifecycle and use a singleton instance
   static OfflineTts? _instance;
 
   TtsModel() {

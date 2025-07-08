@@ -12,6 +12,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   static const _reservedTokenCount = 300;
   static const _maxTokenCount = 4096;
 
+  /// Loading the model in GPU takes time, so we load once for the app lifecycle and use a singleton instance
   /// The base Gemma 3n model. This need to be loaded once and reused as it is or with LoRA.
   static InferenceModel? _model;
 
