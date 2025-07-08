@@ -6,6 +6,8 @@ import 'package:record/record.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 
+import 'stt_model.dart';
+
 /// Voice Activity Detection (VAD) listener for real-time audio processing.
 /// Uses SherpaOnnx for speech detection and streams detected speech segments.
 class UserSpeechListener {
@@ -129,6 +131,30 @@ class UserSpeechListener {
     return _speechController.stream.listen(onSpeech, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   }
 
+  /// Create a speech-to-text listener that combines this speech listener with an STT model.
+  /// Returns a listener that outputs transcribed text whenever the user finishes speaking.
+  static UserSpeechToTextListener withTranscription({
+    required SttModel sttModel,
+    int sampleRate = 16_000,
+    double minSilenceDuration = 0.6,
+    double minSpeechDuration = 0.2,
+    int windowFrameCount = 512,
+    int numThreads = 1,
+    AudioRecorder? audioRecorder,
+  }) {
+    return UserSpeechToTextListener(
+      speechListener: UserSpeechListener(
+        audioRecorder: audioRecorder,
+        sampleRate: sampleRate,
+        minSilenceDuration: minSilenceDuration,
+        minSpeechDuration: minSilenceDuration,
+        windowFrameCount: windowFrameCount,
+        numThreads: numThreads,
+      ),
+      sttModel: sttModel,
+    );
+  }
+
   /// Process audio data from bytes.
   Future<void> _processAudioData(Uint8List audioBytes) async {
     _vad.acceptWaveform(_convertPcm16ToFloat32(audioBytes));
@@ -159,21 +185,134 @@ class UserSpeechListener {
 
     return floatSamples;
   }
+}
 
-  Float32List _mergeFloat32Lists(List<Float32List> lists) {
-    // 1. Compute total length
-    final totalLength = lists.fold(0, (sum, currentList) => sum + currentList.length);
+/// Internal class that combines UserSpeechListener and SttModel for real-time speech-to-text transcription.
+/// This class listens to speech from UserSpeechListener and transcribes it using SttModel,
+/// outputting the transcribed text in a stream whenever the user finishes speaking.
+///
+/// Handles cases where multiple speech events are emitted during pauses by accumulating
+/// transcribed text and emitting it only when no new audio events are received and speech is not buffering.
+class UserSpeechToTextListener {
+  final UserSpeechListener _speechListener;
+  final SttModel _sttModel;
+  StreamSubscription<Float32List>? _speechSubscription;
 
-    // 2. Allocate one big buffer
-    final merged = Float32List(totalLength);
+  /// Stream controller for transcribed text.
+  final StreamController<String> _textController = StreamController<String>.broadcast();
 
-    // 3. Copy each list into the merged buffer
-    int offset = 0;
-    for (final list in lists) {
-      merged.setRange(offset, offset + list.length, list);
-      offset += list.length;
+  /// Buffer to accumulate transcribed text while user is speaking or pausing
+  final List<String> _textBuffer = [];
+  final List<Float32List> _speechBuffer = [];
+
+  /// Flag to track if we're currently processing/transcribing
+  bool _isProcessing = false;
+
+  /// Create a new speech-to-text listener.
+  UserSpeechToTextListener({required UserSpeechListener speechListener, required SttModel sttModel})
+    : _speechListener = speechListener,
+      _sttModel = sttModel;
+
+  /// Start listening for speech and transcribing it to text.
+  /// Returns a stream that emits transcribed text whenever the user finishes speaking.
+  StreamSubscription<String> listen(
+    void Function(String text) onText, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    // Start listening to speech
+    _speechSubscription = _speechListener.listen(
+      _handleSpeechData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+
+    return _textController.stream.listen(onText, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+  }
+
+  /// Handle incoming speech data by transcribing it and managing text buffer
+  Future<void> _handleSpeechData(Float32List audioData) async {
+    if (_isProcessing) {
+      _speechBuffer.add(audioData);
+      return;
     }
 
-    return merged;
+    _isProcessing = true;
+
+    try {
+      _transcribeAndBuffer(audioData);
+
+      while (_speechBuffer.isNotEmpty) {
+        final speech = _speechBuffer.length == 1 ? _speechBuffer.first : _mergeFloat32Lists(_speechBuffer);
+        _speechBuffer.clear();
+        _transcribeAndBuffer(speech);
+      }
+
+      if (_speechListener.isBufferingSpeech) {
+        // Don't do anything, when done buffering it will emit a speech event
+      } else {
+        await _emitBufferedText();
+      }
+    } catch (e, s) {
+      log('Error transcribing speech', error: e, stackTrace: s);
+      _textController.addError(e, s);
+    } finally {
+      _isProcessing = false;
+    }
   }
+
+  void _transcribeAndBuffer(Float32List audioData) {
+    final transcribedText = _sttModel.transcribeAudio(samples: audioData, sampleRate: _speechListener.sampleRate);
+
+    final cleanedText = transcribedText.trim();
+    if (cleanedText.isNotEmpty) {
+      _textBuffer.add(cleanedText);
+    }
+  }
+
+  Future<void> _emitBufferedText() async {
+    if (_textBuffer.isNotEmpty) {
+      // Combine all buffered text
+      final combinedText = _textBuffer.join(' ');
+      _textBuffer.clear();
+      // Emit the combined text to the stream
+      if (combinedText.isNotEmpty) {
+        _textController.add(combinedText);
+      }
+    }
+  }
+
+  /// Check if the user is currently speaking (buffering speech).
+  bool get isBufferingSpeech => _speechListener.isBufferingSpeech;
+
+  /// Check if the listener is currently processing/transcribing audio
+  bool get isProcessing => _isProcessing;
+
+  /// Stop listening and clean up resources.
+  Future<void> dispose() async {
+    await _speechSubscription?.cancel();
+    _speechSubscription = null;
+
+    _textBuffer.clear();
+    await _textController.close();
+  }
+}
+
+Float32List _mergeFloat32Lists(List<Float32List> lists) {
+  // 1. Compute total length
+  final totalLength = lists.fold(0, (sum, currentList) => sum + currentList.length);
+
+  // 2. Allocate one big buffer
+  final merged = Float32List(totalLength);
+
+  // 3. Copy each list into the merged buffer
+  int offset = 0;
+  for (final list in lists) {
+    merged.setRange(offset, offset + list.length, list);
+    offset += list.length;
+  }
+
+  return merged;
 }
