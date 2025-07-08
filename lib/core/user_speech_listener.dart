@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDirectory;
 import 'package:record/record.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart';
@@ -76,13 +79,15 @@ class UserSpeechListener {
   bool get isBufferingSpeech => _vad.isDetected();
 
   /// Initialize the VAD with the given model path.
-  Future<void> initialize(String vadModelPath) async {
+  Future<void> initialize({String? vadModelPath}) async {
     if (_isInitialized) {
       log("UserSpeechListener Already initialized, skipping.");
+      return;
     }
+
     try {
       final sileroVadConfig = SileroVadModelConfig(
-        model: vadModelPath,
+        model: vadModelPath ?? await _loadVadModelFromAssets(),
         minSilenceDuration: minSilenceDuration,
         minSpeechDuration: minSpeechDuration,
         windowSize: windowFrameCount,
@@ -103,6 +108,19 @@ class UserSpeechListener {
       log('VAD model initialization failed: $e', error: e, stackTrace: s);
       rethrow;
     }
+  }
+
+  Future<String> _loadVadModelFromAssets() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final modelFile = File('${dir.path}/asset_models/silero_vad_v5.onnx');
+
+    if (!await modelFile.exists()) {
+      // First app open or model was removed from app doc dir.
+      final byteData = await rootBundle.load('assets/silero_vad_v5.onnx');
+      await modelFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+    }
+
+    return modelFile.path;
   }
 
   /// Release the VAD listener resources.

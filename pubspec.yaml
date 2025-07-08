@@ -22,6 +22,7 @@ dependencies:
   sherpa_onnx: ^1.12.4
   archive: ^4.0.7
   record: ^6.0.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
