@@ -21,7 +21,6 @@ class SttModel {
       log("SttModel Already initialized, Skipping.");
       return;
     }
-    if (!await File(modelPath).exists()) throw Exception("Model path not found: $modelPath");
 
     // modelPath path point to a tar.gz archive containing all the model weights and extras
     final modelDirPath = await extractModelData(modelPath);

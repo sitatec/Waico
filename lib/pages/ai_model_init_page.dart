@@ -66,11 +66,11 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     DownloadItem(
       url: "${DownloadItem.baseUrl}/parakeet-tdt-0.6b-v2-int8.tar.gz",
       fileName: "parakeet-tdt-0.6b-v2-int8.tar.gz",
-      displayName: "Whisper STT",
+      displayName: "Parakeet v2",
     ),
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
-      fileName: "kokoro-v1_0.tar.bz2",
+      url: "${DownloadItem.baseUrl}/kokoro-v1_0-int8.tar.gz",
+      fileName: "kokoro-v1_0-int8.tar.gz",
       displayName: "Kokoro TTS",
     ),
     DownloadItem(
@@ -435,6 +435,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                 ],
               ],
             ),
+            Text("Models are downloaded only the first time you open the app", style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             for (final item in _modelsToDownload)
               ConstrainedBox(

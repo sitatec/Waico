@@ -1,3 +1,4 @@
+import 'dart:developer' show log;
 import 'dart:io';
 
 import 'package:archive/archive_io.dart' show extractFileToDisk;
@@ -15,6 +16,9 @@ Future<String> extractModelData(String modelArchivePath) async {
   final modelDir = Directory(modelDirPath);
 
   if (!await modelDir.exists()) {
+    if (!await File(modelArchivePath).exists()) {
+      throw Exception("Model path not found: $modelArchivePath");
+    }
     // Before extraction modelBaseDir doesn't exist when we extract in it's parent, it will
     await extractFileToDisk(modelArchivePath, modelDir.parent.path);
 
@@ -22,6 +26,7 @@ Future<String> extractModelData(String modelArchivePath) async {
       // Extracted successfully, delete archive
       await File(modelArchivePath).delete(recursive: true);
     }
+    log("Extracted folder content: ${modelDir.listSync()}");
   }
   return modelDirPath;
 }

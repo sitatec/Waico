@@ -21,18 +21,17 @@ class TtsModel {
       log("TtsModel Already initialized, Skipping.");
       return;
     }
-    if (!await File(modelPath).exists()) throw Exception("Model path not found: $modelPath");
 
     // modelPath path point to a tar.gz archive containing all the model weights and extras
-    final modelDirPath = extractModelData(modelPath);
+    final modelDirPath = await extractModelData(modelPath);
 
-    final modelFile = File('$modelDirPath/model.onnx');
+    final modelFile = File('$modelDirPath/model.int8.onnx');
     final voicesFile = File('$modelDirPath/voices.bin');
     final tokensFile = File('$modelDirPath/tokens.txt');
     final espeakDataDir = Directory('$modelDirPath/espeak-ng-data');
     final dictDir = Directory('$modelDirPath/dict');
 
-    if (!await modelFile.exists()) throw Exception("model.onnx not found in $modelDirPath");
+    if (!await modelFile.exists()) throw Exception("model.int8.onnx not found in $modelDirPath");
     if (!await voicesFile.exists()) throw Exception("voices.bin not found in $modelDirPath");
     if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
     if (!await espeakDataDir.exists()) throw Exception("espeak-ng-data directory not found in $modelDirPath");

@@ -242,7 +242,11 @@ class UserSpeechToTextListener {
 
   Future<bool> get hasRecordingPermission => _speechListener.hasRecordingPermission;
 
-  Future<void> initialize({String? vadModelPath}) => _speechListener.initialize(vadModelPath: vadModelPath);
+  Future<void> initialize({String? vadModelPath}) async {
+    if (await hasRecordingPermission) {
+      await _speechListener.initialize(vadModelPath: vadModelPath);
+    }
+  }
 
   /// Start listening for speech and transcribing it to text.
   /// Returns a stream that emits transcribed text whenever the user finishes speaking.
