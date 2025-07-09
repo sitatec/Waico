@@ -111,7 +111,7 @@ class UserSpeechListener {
 
   Future<String> _loadVadModelFromAssets() async {
     final dir = await getApplicationDocumentsDirectory();
-    final modelFile = File('${dir.path}/asset_models/silero_vad_v5.onnx');
+    final modelFile = File('${dir.path}/silero_vad_v5.onnx');
 
     if (!await modelFile.exists()) {
       // First app open or model was removed from app doc dir.
@@ -240,6 +240,8 @@ class UserSpeechToTextListener {
     : _speechListener = speechListener,
       _sttModel = sttModel ?? SttModel();
 
+  Future<bool> get hasRecordingPermission => _speechListener.hasRecordingPermission;
+
   Future<void> initialize({String? vadModelPath}) => _speechListener.initialize(vadModelPath: vadModelPath);
 
   /// Start listening for speech and transcribing it to text.
@@ -309,7 +311,9 @@ class UserSpeechToTextListener {
   }
 
   void _transcribeAndBuffer(Float32List audioData) {
+    final now = DateTime.now();
     final transcribedText = _sttModel.transcribeAudio(samples: audioData, sampleRate: _speechListener.sampleRate);
+    print("STT took: ${DateTime.now().difference(now)} s");
 
     final cleanedText = transcribedText.trim();
     if (cleanedText.isNotEmpty) {

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/chat_model.dart';
+import 'package:waico/core/stt_model.dart';
 import 'package:waico/core/tts_model.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
@@ -63,14 +64,19 @@ class AiModelsInitializationPage extends StatefulWidget {
 class _AiModelsInitializationPageState extends State<AiModelsInitializationPage> {
   final _modelsToDownload = <DownloadItem>[
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it.task",
-      fileName: "gemma-3n-E2B-it.task",
-      displayName: "Gemma 3n E2B",
+      url: "${DownloadItem.baseUrl}/parakeet-tdt-0.6b-v2-int8.tar.gz",
+      fileName: "parakeet-tdt-0.6b-v2-int8.tar.gz",
+      displayName: "Whisper STT",
     ),
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/kokoro-bundle-v1_0.tar.bz2",
-      fileName: "kokoro-bundle-v1_0.tar.bz2",
+      url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
+      fileName: "kokoro-v1_0.tar.bz2",
       displayName: "Kokoro TTS",
+    ),
+    DownloadItem(
+      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
+      fileName: "gemma-3n-E2B-it-int4.task",
+      displayName: "Gemma 3n E2B",
     ),
   ];
 
@@ -336,11 +342,14 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     _startModelLoadingProgressSimulation();
 
     try {
-      final gemmaModelPath = await _modelsToDownload[0].downloadedFilePath;
+      final gemmaModelPath = await _modelsToDownload[2].downloadedFilePath;
       await ChatModel.loadBaseModel(gemmaModelPath);
 
       final ttsModelPath = await _modelsToDownload[1].downloadedFilePath;
       await TtsModel.initialize(modelPath: ttsModelPath);
+
+      final sttModelPath = await _modelsToDownload[0].downloadedFilePath;
+      await SttModel.initialize(modelPath: sttModelPath);
 
       // Model loaded successfully, set to 100%
       _progressTimer?.cancel();
@@ -350,7 +359,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       });
 
       widget.onDone?.call(DownloadedModelPaths(ttsModelPath: ttsModelPath, gemma3nPath: gemmaModelPath));
-    } catch (e) {
+    } catch (e, s) {
+      log("Model initialization failed:", error: e, stackTrace: s);
       // Handle error
       _progressTimer?.cancel();
       setState(() {
@@ -377,7 +387,10 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
           // 0-25%: add 3% every second
           modelLoadingProgress += 0.03;
         } else if (modelLoadingProgress < 0.75) {
-          // 50-90%: add 1% every 5 seconds
+          // 25-60%: add 1% every second
+          modelLoadingProgress += 0.01;
+        } else if (modelLoadingProgress < 0.75) {
+          // 75-90%: add 1% every 5 seconds
           if (secondsElapsed % 5 == 0) {
             modelLoadingProgress += 0.01;
           }

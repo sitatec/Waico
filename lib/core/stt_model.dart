@@ -2,9 +2,9 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive_io.dart' show extractFileToDisk;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:sherpa_onnx/sherpa_onnx.dart';
+import 'package:waico/core/utils/model_download_utils.dart';
 
 class SttModel {
   /// Loading the model in GPU takes time, so we load once for the app lifecycle and use a singleton instance
@@ -23,27 +23,29 @@ class SttModel {
     }
     if (!await File(modelPath).exists()) throw Exception("Model path not found: $modelPath");
 
-    // The modelPath is a compressed archive containing all the whisper model data
-    final modelBaseDir = modelPath.replaceAll(".tar.bz2", "");
-    if (!await Directory(modelBaseDir).exists()) {
-      await extractFileToDisk(modelPath, modelBaseDir);
-    }
+    // modelPath path point to a tar.gz archive containing all the model weights and extras
+    final modelDirPath = await extractModelData(modelPath);
 
-    final encoderFile = File('$modelBaseDir/encoder.onnx');
-    final decoderFile = File('$modelBaseDir/decoder.onnx');
-    final tokensFile = File('$modelBaseDir/tokens.txt');
+    final encoderFile = File('$modelDirPath/encoder.int8.onnx');
+    final decoderFile = File('$modelDirPath/decoder.int8.onnx');
+    final joinerFile = File('$modelDirPath/joiner.int8.onnx');
+    final tokensFile = File('$modelDirPath/tokens.txt');
 
-    if (!await encoderFile.exists()) throw Exception("encoder.onnx not found in $modelBaseDir");
-    if (!await decoderFile.exists()) throw Exception("decoder.onnx not found in $modelBaseDir");
-    if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelBaseDir");
+    if (!await encoderFile.exists()) throw Exception("joiner.int8.onnx not found in $modelDirPath");
+    if (!await decoderFile.exists()) throw Exception("decoder.int8.onnx not found in $modelDirPath");
+    if (!await joinerFile.exists()) throw Exception("joiner.int8.onnx not found in $modelDirPath");
+    if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
 
-    // Create whisper model configuration
-    final whisper = OfflineWhisperModelConfig(encoder: encoderFile.path, decoder: decoderFile.path);
+    // Create parakeet-tdt-0.6b-v2 model configuration
+    final parakeetConfig = OfflineTransducerModelConfig(
+      encoder: encoderFile.path,
+      decoder: decoderFile.path,
+      joiner: joinerFile.path,
+    );
 
     final modelConfig = OfflineModelConfig(
-      whisper: whisper,
+      transducer: parakeetConfig,
       tokens: tokensFile.path,
-      modelType: 'whisper',
       debug: kDebugMode,
       numThreads: 1,
     );
