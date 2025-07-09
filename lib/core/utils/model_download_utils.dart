@@ -12,7 +12,7 @@ class DownloadedModelPaths {
 }
 
 Future<String> extractModelData(String modelArchivePath) async {
-  final modelDirPath = modelArchivePath.replaceAll(".tar.gz", "");
+  final modelDirPath = modelArchivePath.replaceAll(RegExp(r"\.tar\.(gz|bz2|xz)$"), "");
   final modelDir = Directory(modelDirPath);
 
   if (!await modelDir.exists()) {

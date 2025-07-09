@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:developer' show log;
 
-import 'package:audio_session/audio_session.dart' show AudioSession, AudioSessionConfiguration;
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show LlmProvider, ImageFileAttachment;
 import 'package:waico/core/audio_stream_player.dart';
@@ -37,8 +36,6 @@ class VoiceChatPipeline {
 
     await _userSpeechToTextListener.initialize();
     _userSpeechToTextListener.listen(_onUserSpeechTranscribed);
-    final session = await AudioSession.instance;
-    await session.configure(AudioSessionConfiguration.speech());
     _startListeningToUser();
   }
 
@@ -109,7 +106,7 @@ class VoiceChatPipeline {
 
   /// Generate and queue TTS audio
   Future<void> _generateSpeech(String text, {bool isLastInCurrentTurn = false}) async {
-    final ttsResult = _tts.generateSpeech(text: text, voice: voice!, speed: 1.0);
+    final ttsResult = await _tts.generateSpeech(text: text, voice: voice!, speed: 1.0);
 
     await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
     if (isLastInCurrentTurn) {

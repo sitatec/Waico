@@ -69,8 +69,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       displayName: "Parakeet v2",
     ),
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/kokoro-v1_0-int8.tar.gz",
-      fileName: "kokoro-v1_0-int8.tar.gz",
+      url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
+      fileName: "kokoro-v1_0.tar.gz",
       displayName: "Kokoro TTS",
     ),
     DownloadItem(

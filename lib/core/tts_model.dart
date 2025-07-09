@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -8,66 +10,189 @@ import 'package:waico/core/utils/model_download_utils.dart';
 
 class TtsModel {
   /// Loading the model in GPU takes time, so we load once for the app lifecycle and use a singleton instance
-  static OfflineTts? _instance;
+  static Isolate? _isolate;
+  static SendPort? _sendPort;
+  static ReceivePort? _receivePort;
+  static int _requestCounter = 0;
+  static final Map<int, Completer<TtsResult>> _pendingRequests = {};
 
   TtsModel() {
-    if (_instance == null) {
+    if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call TtsModel.initialize first");
     }
   }
 
   static Future<void> initialize({required String modelPath}) async {
-    if (_instance != null) {
+    if (_isolate != null) {
       log("TtsModel Already initialized, Skipping.");
       return;
     }
 
-    // modelPath path point to a tar.gz archive containing all the model weights and extras
-    final modelDirPath = await extractModelData(modelPath);
+    _receivePort = ReceivePort();
+    _isolate = await Isolate.spawn(_isolateEntryPoint, _receivePort!.sendPort);
 
-    final modelFile = File('$modelDirPath/model.int8.onnx');
-    final voicesFile = File('$modelDirPath/voices.bin');
-    final tokensFile = File('$modelDirPath/tokens.txt');
-    final espeakDataDir = Directory('$modelDirPath/espeak-ng-data');
-    final dictDir = Directory('$modelDirPath/dict');
+    // Get the send port from the isolate and handle all responses
+    final completer = Completer<SendPort>();
+    bool handshakeCompleted = false;
 
-    if (!await modelFile.exists()) throw Exception("model.int8.onnx not found in $modelDirPath");
-    if (!await voicesFile.exists()) throw Exception("voices.bin not found in $modelDirPath");
-    if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
-    if (!await espeakDataDir.exists()) throw Exception("espeak-ng-data directory not found in $modelDirPath");
-    if (!await dictDir.exists()) throw Exception("dict directory not found in $modelDirPath");
+    _receivePort!.listen((message) {
+      if (!handshakeCompleted && message is SendPort) {
+        // Initial handshake - get the send port
+        _sendPort = message;
+        handshakeCompleted = true;
+        completer.complete(message);
+      } else if (handshakeCompleted && message is Map<String, dynamic>) {
+        // Handle TTS responses
+        final requestId = message['requestId'] as int;
+        final pendingCompleter = _pendingRequests.remove(requestId);
+        if (pendingCompleter != null) {
+          if (message['error'] != null) {
+            pendingCompleter.completeError(Exception(message['error']));
+          } else if (message['action'] == 'initialize') {
+            // Special case for initialization - return a dummy TtsResult
+            pendingCompleter.complete(TtsResult(samples: Float32List(0), sampleRate: 0));
+          } else {
+            final samples = message['samples'] as Float32List;
+            final sampleRate = message['sampleRate'] as int;
+            pendingCompleter.complete(TtsResult(samples: samples, sampleRate: sampleRate));
+          }
+        }
+      }
+    });
 
-    // Create kokoro model configuration
-    final kokoro = OfflineTtsKokoroModelConfig(
-      model: modelFile.path,
-      voices: voicesFile.path,
-      tokens: tokensFile.path,
-      dataDir: espeakDataDir.path,
-      dictDir: dictDir.path,
-      lang: 'en-us', // TODO: get from preferences
-    );
+    await completer.future;
 
-    final modelConfig = OfflineTtsModelConfig(kokoro: kokoro, numThreads: 1, debug: kDebugMode);
+    // Initialize the model in the isolate
+    final initCompleter = Completer<TtsResult>();
+    final initRequestId = _requestCounter++;
+    _pendingRequests[initRequestId] = initCompleter;
 
-    _instance = OfflineTts(OfflineTtsConfig(model: modelConfig));
+    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath});
+
+    await initCompleter.future;
     log("Tts model initialized successfully");
   }
 
   static Future<void> dispose() async {
-    _instance?.free();
-    _instance = null;
+    if (_isolate != null) {
+      _sendPort?.send({'action': 'dispose'});
+      _isolate?.kill(priority: Isolate.immediate);
+      _receivePort?.close();
+      _isolate = null;
+      _sendPort = null;
+      _receivePort = null;
+      _pendingRequests.clear();
+    }
   }
 
   /// Generate TTS audio from text
-  TtsResult generateSpeech({required String text, required String voice, double speed = 1.0}) {
-    if (_instance == null) {
+  Future<TtsResult> generateSpeech({required String text, required String voice, double speed = 1.0}) async {
+    if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call TtsModel.initialize first");
     }
-    final audio = _instance!.generate(text: text, sid: _getSpeakerId(voice), speed: speed);
-    return TtsResult(samples: audio.samples, sampleRate: audio.sampleRate);
+
+    final completer = Completer<TtsResult>();
+    final requestId = _requestCounter++;
+    _pendingRequests[requestId] = completer;
+
+    _sendPort!.send({'action': 'generate', 'requestId': requestId, 'text': text, 'voice': voice, 'speed': speed});
+
+    return completer.future;
   }
 
-  int _getSpeakerId(String voice) {
+  static void _isolateEntryPoint(SendPort mainSendPort) {
+    initBindings();
+
+    final receivePort = ReceivePort();
+    mainSendPort.send(receivePort.sendPort);
+
+    OfflineTts? tts;
+
+    receivePort.listen((message) async {
+      try {
+        if (message is Map<String, dynamic>) {
+          final action = message['action'] as String;
+          final requestId = message['requestId'] as int?;
+
+          switch (action) {
+            case 'initialize':
+              try {
+                final modelPath = message['modelPath'] as String;
+
+                // modelPath path point to a tar.gz archive containing all the model weights and extras
+                final modelDirPath = await extractModelData(modelPath);
+
+                final modelFile = File('$modelDirPath/model.onnx');
+                final voicesFile = File('$modelDirPath/voices.bin');
+                final tokensFile = File('$modelDirPath/tokens.txt');
+                final espeakDataDir = Directory('$modelDirPath/espeak-ng-data');
+                final dictDir = Directory('$modelDirPath/dict');
+
+                if (!await modelFile.exists()) throw Exception("model.int8.onnx not found in $modelDirPath");
+                if (!await voicesFile.exists()) throw Exception("voices.bin not found in $modelDirPath");
+                if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
+                if (!await dictDir.exists()) throw Exception("dict directory not found in $modelDirPath");
+                if (!await espeakDataDir.exists()) {
+                  throw Exception("espeak-ng-data directory not found in $modelDirPath");
+                }
+
+                // Create kokoro model configuration
+                final kokoro = OfflineTtsKokoroModelConfig(
+                  model: modelFile.path,
+                  voices: voicesFile.path,
+                  tokens: tokensFile.path,
+                  dataDir: espeakDataDir.path,
+                  dictDir: dictDir.path,
+                  lang: 'en-us', // TODO: get from preferences
+                );
+
+                final modelConfig = OfflineTtsModelConfig(kokoro: kokoro, numThreads: 1, debug: kDebugMode);
+
+                tts = OfflineTts(OfflineTtsConfig(model: modelConfig));
+
+                mainSendPort.send({
+                  'requestId': requestId,
+                  'action': 'initialize',
+                  'samples': Float32List(0), // Dummy response
+                  'sampleRate': 0,
+                });
+              } catch (e) {
+                mainSendPort.send({'requestId': requestId, 'error': e.toString()});
+              }
+              break;
+
+            case 'generate':
+              try {
+                if (tts == null) {
+                  throw StateError("TTS not initialized");
+                }
+
+                final text = message['text'] as String;
+                final voice = message['voice'] as String;
+                final speed = message['speed'] as double;
+
+                final speakerId = _getSpeakerId(voice);
+                final audio = tts!.generate(text: text, sid: speakerId, speed: speed);
+
+                mainSendPort.send({'requestId': requestId, 'samples': audio.samples, 'sampleRate': audio.sampleRate});
+              } catch (e) {
+                mainSendPort.send({'requestId': requestId, 'error': e.toString()});
+              }
+              break;
+
+            case 'dispose':
+              tts?.free();
+              tts = null;
+              Isolate.exit();
+          }
+        }
+      } catch (e) {
+        log('Error in TTS isolate: $e');
+      }
+    });
+  }
+
+  static int _getSpeakerId(String voice) {
     final speakerId = _voiceToSpeakerId[voice];
     if (speakerId == null) {
       throw ArgumentError("Invalid voice: $voice. Supported voice: \n${_voiceToSpeakerId.keys}");

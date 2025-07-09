@@ -293,12 +293,12 @@ class UserSpeechToTextListener {
     _isProcessing = true;
 
     try {
-      _transcribeAndBuffer(audioData);
+      await _transcribeAndBuffer(audioData);
 
       while (_speechBuffer.isNotEmpty && !_isPaused) {
         final speech = _speechBuffer.length == 1 ? _speechBuffer.first : _mergeFloat32Lists(_speechBuffer);
         _speechBuffer.clear();
-        _transcribeAndBuffer(speech);
+        await _transcribeAndBuffer(speech);
       }
 
       if (_speechListener.isBufferingSpeech) {
@@ -314,10 +314,11 @@ class UserSpeechToTextListener {
     }
   }
 
-  void _transcribeAndBuffer(Float32List audioData) {
+  Future<void> _transcribeAndBuffer(Float32List audioData) async {
     final now = DateTime.now();
-    final transcribedText = _sttModel.transcribeAudio(samples: audioData, sampleRate: _speechListener.sampleRate);
-    print("STT took: ${DateTime.now().difference(now)} s");
+    final transcribedText = await _sttModel.transcribeAudio(samples: audioData, sampleRate: _speechListener.sampleRate);
+    print("STT result: $transcribedText");
+    print("STT took: ${DateTime.now().difference(now).inMilliseconds / 1000} seconds");
 
     final cleanedText = transcribedText.trim();
     if (cleanedText.isNotEmpty) {
