@@ -150,6 +150,7 @@ class TtsModel {
                   kokoro: kokoro,
                   numThreads: Platform.numberOfProcessors,
                   debug: kDebugMode,
+                  provider: Platform.isAndroid ? "nnapi" : "coreml",
                 );
 
                 tts = OfflineTts(OfflineTtsConfig(model: modelConfig));

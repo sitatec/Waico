@@ -136,6 +136,7 @@ class SttModel {
                   tokens: tokensFile.path,
                   debug: kDebugMode,
                   numThreads: Platform.numberOfProcessors,
+                  provider: Platform.isAndroid ? "xnnpack" : "cpu",
                 );
 
                 recognizer = OfflineRecognizer(OfflineRecognizerConfig(model: modelConfig));

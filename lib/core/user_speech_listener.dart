@@ -155,7 +155,7 @@ class UserSpeechListener {
       androidConfig: AndroidRecordConfig(
         audioManagerMode: AudioManagerMode.modeInCommunication,
         audioSource: AndroidAudioSource.voiceCommunication,
-        setSpeakerphoneOn: true,
+        speakerphone: true,
       ),
     );
 

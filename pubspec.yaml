@@ -31,14 +31,12 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 dependency_overrides:
-  record_platform_interface:
+  # Override with a sherpa_onnx_android that doesn't content prebuilt native .so libs
+  # We will include our own that support GPU inference because the original doesn't
+  sherpa_onnx_android:
     git:
-      url: https://github.com/keyur2maru/record.git
-      path: record_platform_interface
-  record_android:
-    git:
-      url: https://github.com/keyur2maru/record.git
-      path: record_android
+      url: https://github.com/sitatec/sherpa-onnx.git
+      path: flutter/sherpa_onnx_android
 
 flutter:
   uses-material-design: true
