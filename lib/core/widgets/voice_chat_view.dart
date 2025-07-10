@@ -41,6 +41,12 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   }
 
   @override
+  void dispose() {
+    widget.voiceChatPipeline.endChat();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [

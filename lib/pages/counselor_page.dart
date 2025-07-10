@@ -14,7 +14,7 @@ class CounselorPage extends StatefulWidget {
 
 class _CounselorPageState extends State<CounselorPage> {
   String _conversationMode = 'speech';
-  final _chatModel = ChatModel();
+  ChatModel? _chatModel;
   VoiceChatPipeline? _voiceChat;
   bool _initialized = false;
 
@@ -28,9 +28,10 @@ class _CounselorPageState extends State<CounselorPage> {
   }
 
   Future<void> init() async {
-    await _chatModel.initialize();
+    _chatModel = ChatModel();
+    await _chatModel!.initialize();
     // ignore: use_build_context_synchronously
-    _voiceChat = VoiceChatPipeline(llm: _chatModel);
+    _voiceChat = VoiceChatPipeline(llm: _chatModel!);
     setState(() {
       _initialized = true;
     });
@@ -39,7 +40,7 @@ class _CounselorPageState extends State<CounselorPage> {
   @override
   void dispose() {
     _voiceChat?.dispose();
-    _chatModel.dispose();
+    _chatModel?.dispose();
     super.dispose();
   }
 
@@ -78,7 +79,7 @@ class _CounselorPageState extends State<CounselorPage> {
           body: _initialized
               ? _isSpeechMode
                     ? VoiceChatView(voiceChatPipeline: _voiceChat!)
-                    : LlmChatView(provider: _chatModel, enableVoiceNotes: false)
+                    : LlmChatView(provider: _chatModel!, enableVoiceNotes: false)
               : null,
         ),
         if (!_initialized) LoadingWidget(message: "Initializing Chat"),

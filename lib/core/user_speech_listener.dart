@@ -317,8 +317,8 @@ class UserSpeechToTextListener {
   Future<void> _transcribeAndBuffer(Float32List audioData) async {
     final now = DateTime.now();
     final transcribedText = await _sttModel.transcribeAudio(samples: audioData, sampleRate: _speechListener.sampleRate);
-    print("STT result: $transcribedText");
-    print("STT took: ${DateTime.now().difference(now).inMilliseconds / 1000} seconds");
+    log("STT result: $transcribedText");
+    log("STT took: ${DateTime.now().difference(now).inMilliseconds / 1000} seconds");
 
     final cleanedText = transcribedText.trim();
     if (cleanedText.isNotEmpty) {

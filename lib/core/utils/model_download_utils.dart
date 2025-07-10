@@ -1,4 +1,3 @@
-import 'dart:developer' show log;
 import 'dart:io';
 
 import 'package:archive/archive_io.dart' show extractFileToDisk;
@@ -26,7 +25,6 @@ Future<String> extractModelData(String modelArchivePath) async {
       // Extracted successfully, delete archive
       await File(modelArchivePath).delete(recursive: true);
     }
-    log("Extracted folder content: ${modelDir.listSync()}");
   }
   return modelDirPath;
 }

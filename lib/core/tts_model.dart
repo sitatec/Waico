@@ -85,7 +85,7 @@ class TtsModel {
     }
   }
 
-  /// Generate TTS audio from text
+  /// Generate audio from text
   Future<TtsResult> generateSpeech({required String text, required String voice, double speed = 1.0}) async {
     if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call TtsModel.initialize first");
@@ -146,7 +146,11 @@ class TtsModel {
                   lang: 'en-us', // TODO: get from preferences
                 );
 
-                final modelConfig = OfflineTtsModelConfig(kokoro: kokoro, numThreads: 1, debug: kDebugMode);
+                final modelConfig = OfflineTtsModelConfig(
+                  kokoro: kokoro,
+                  numThreads: Platform.numberOfProcessors,
+                  debug: kDebugMode,
+                );
 
                 tts = OfflineTts(OfflineTtsConfig(model: modelConfig));
 
@@ -171,8 +175,10 @@ class TtsModel {
                 final voice = message['voice'] as String;
                 final speed = message['speed'] as double;
 
+                final start = DateTime.now();
                 final speakerId = _getSpeakerId(voice);
                 final audio = tts!.generate(text: text, sid: speakerId, speed: speed);
+                log("[InIsolate | TTS took: ${DateTime.now().difference(start).inMilliseconds / 1000} seconds");
 
                 mainSendPort.send({'requestId': requestId, 'samples': audio.samples, 'sampleRate': audio.sampleRate});
               } catch (e) {

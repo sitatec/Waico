@@ -135,7 +135,7 @@ class SttModel {
                   transducer: parakeetConfig,
                   tokens: tokensFile.path,
                   debug: kDebugMode,
-                  numThreads: 1,
+                  numThreads: Platform.numberOfProcessors,
                 );
 
                 recognizer = OfflineRecognizer(OfflineRecognizerConfig(model: modelConfig));

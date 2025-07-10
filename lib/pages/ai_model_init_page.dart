@@ -30,6 +30,7 @@ class DownloadItem {
   final String? displayName;
   final String fileName;
   double progress;
+  String? fileSize;
   bool isCompleted;
   bool isError;
   bool isPaused;
@@ -161,6 +162,9 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
               }
             case TaskProgressUpdate():
               _modelsToDownload[itemIndex].progress = update.progress;
+              if (update.hasExpectedFileSize) {
+                _modelsToDownload[itemIndex].fileSize = _formatBytes(update.expectedFileSize);
+              }
               break;
           }
         });
@@ -204,6 +208,9 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       item.progress = taskRecord.progress;
       item.isCompleted = taskRecord.status == TaskStatus.complete;
       item.isError = [TaskStatus.canceled, TaskStatus.failed, TaskStatus.notFound].contains(taskRecord.status);
+      if (taskRecord.expectedFileSize >= 0) {
+        item.fileSize = _formatBytes(taskRecord.expectedFileSize);
+      }
     }
   }
 
@@ -459,6 +466,11 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                                         color: item.isCompleted ? null : Colors.black54, // null = default color
                                       ),
                                     ),
+                                    if (item.fileSize?.isNotEmpty == true)
+                                      Text(
+                                        " (${item.fileSize})",
+                                        style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                      ),
                                     if (item.isError) ...[
                                       const SizedBox(width: 16),
                                       Flexible(
@@ -608,4 +620,19 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       );
     }
   }
+}
+
+String _formatBytes(int bytes, [int decimals = 1]) {
+  if (bytes < 1024) return '$bytes B';
+
+  const suffixes = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB'];
+  var i = -1;
+  double size = bytes.toDouble();
+
+  do {
+    size /= 1024;
+    i++;
+  } while (size >= 1024 && i < suffixes.length - 1);
+
+  return '${size.toStringAsFixed(decimals)} ${suffixes[i]}';
 }

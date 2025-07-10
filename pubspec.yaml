@@ -23,6 +23,7 @@ dependencies:
   archive: ^4.0.7
   record: ^6.0.0
   path_provider: ^2.1.5
+  synchronized: ^3.4.0
 
 dev_dependencies:
   flutter_test:

@@ -3,9 +3,11 @@ import 'dart:developer' show log;
 
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show LlmProvider, ImageFileAttachment;
+import 'package:synchronized/synchronized.dart';
 import 'package:waico/core/audio_stream_player.dart';
 import 'package:waico/core/tts_model.dart';
 import 'package:waico/core/user_speech_listener.dart';
+import 'package:waico/core/utils/string_utils.dart';
 
 class VoiceChatPipeline {
   final LlmProvider llm;
@@ -15,6 +17,8 @@ class VoiceChatPipeline {
   String? voice;
   final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _userSpeechStreamSubscription;
+  // Used wait until the current TTS task complete before starting the next one.
+  final _asyncLock = Lock();
 
   /// Can be used to animate the AI speech waves widget
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
@@ -49,43 +53,43 @@ class VoiceChatPipeline {
     // the ai speech to finish
 
     _stopListeningToUser(); // Stop listening to the user since interruption is not supported yet.
+
     final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
     _pendingImages.clear();
 
     String sentenceBuffer = "";
-    llm
-        .sendMessageStream(text, attachments: attachments)
-        .listen(
-          (textChunk) {
-            sentenceBuffer += textChunk;
+    await for (final textChunk in llm.sendMessageStream(text, attachments: attachments)) {
+      sentenceBuffer += textChunk;
 
-            // A sentence detection logic. This reduces LLm response latency since we don't have to wait for the full
-            // response, we can send the sentences to the TTS model as they are detected in the stream.
+      // A logic detect readable chunk of a text. It can be a full sentence or up to a comma, anything that cause a pause
+      // when reading. So that the next chunk can be read and it will feel natural.
+      // This reduces LLm response latency since we don't have to wait for the full
+      // response, we can send the sentences to the TTS model as they are detected in the stream.
 
-            // It splits the text by sentence-ending punctuation followed by a space or at the end of the string.
-            final sentenceEndings = RegExp(r'(?<=[.?!])\s+');
-            final potentialSentences = sentenceBuffer.split(sentenceEndings);
+      final readableChunkSplitter = RegExp(r'(?<=[.,;:?!])\s+|\n+');
+      final potentialReadableChunks = sentenceBuffer.split(readableChunkSplitter);
 
-            // Process all but the last part, which might be an incomplete sentence.
-            for (var i = 0; i < potentialSentences.length - 1; i++) {
-              final sentence = potentialSentences[i].trim();
-              if (sentence.isNotEmpty) {
-                log('Detected sentence: $sentence');
-                _generateSpeech(sentence);
-              }
-            }
-            // The last part is kept in the buffer until the next sentence is detected or stream is done
-            sentenceBuffer = potentialSentences.last;
-          },
-          onDone: () {
-            if (sentenceBuffer.isNotEmpty) {
-              log('Remaining sentence: $sentenceBuffer');
-              _generateSpeech(sentenceBuffer, isLastInCurrentTurn: true);
-            } else {
-              _startListeningToUser();
-            }
-          },
-        );
+      // Process all but the last, which might be incomplete.
+      while (potentialReadableChunks.length > 1) {
+        final sentence = potentialReadableChunks.removeAt(0).removeEmojis().trim();
+        if (sentence.isNotEmpty) {
+          log('Detected sentence: $sentence');
+          await _generateSpeech(sentence);
+        }
+      }
+
+      // The last part is kept in the buffer until the next sentence is detected or stream is done
+      sentenceBuffer = potentialReadableChunks.isNotEmpty ? potentialReadableChunks.last.removeEmojis().trim() : '';
+    }
+
+    // Now the stream is done — process any remaining sentence
+    if (sentenceBuffer.isNotEmpty) {
+      log('Remaining sentence: $sentenceBuffer');
+      await _generateSpeech(sentenceBuffer, isLastInCurrentTurn: true);
+    } else {
+      // Use _asyncLock to make sure we start listening to the user after the last tts task is complete.
+      await _asyncLock.synchronized(() => _audioStreamPlayer.appendCallback(_startListeningToUser));
+    }
   }
 
   void addImages(List<XFile> imageFiles) {
@@ -106,17 +110,22 @@ class VoiceChatPipeline {
 
   /// Generate and queue TTS audio
   Future<void> _generateSpeech(String text, {bool isLastInCurrentTurn = false}) async {
-    final ttsResult = await _tts.generateSpeech(text: text, voice: voice!, speed: 1.0);
+    await _asyncLock.synchronized(() async {
+      final start = DateTime.now();
+      final ttsResult = await _tts.generateSpeech(text: text, voice: voice!, speed: 1.0);
+      await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
+      log("TTS took: ${DateTime.now().difference(start).inMilliseconds / 1000} seconds");
+    });
 
-    await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
     if (isLastInCurrentTurn) {
-      // Start listening again when the last AI speech is done. TODO: Remove when interruption support added.
-      _audioStreamPlayer.appendCallback(_startListeningToUser);
+      // Start listening again when the last AI speech is done.
+      await _audioStreamPlayer.appendCallback(_startListeningToUser);
     }
   }
 
   Future<void> dispose() async {
     await _userSpeechStreamSubscription?.cancel();
+    await _userSpeechToTextListener.dispose();
     await _audioStreamPlayer.dispose();
     _userSpeechStreamSubscription = null;
   }
