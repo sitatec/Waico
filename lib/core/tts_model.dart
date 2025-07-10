@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:developer';
+import 'dart:developer' show log;
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' show min;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -128,7 +129,7 @@ class TtsModel {
                 final espeakDataDir = Directory('$modelDirPath/espeak-ng-data');
                 final dictDir = Directory('$modelDirPath/dict');
 
-                if (!await modelFile.exists()) throw Exception("model.int8.onnx not found in $modelDirPath");
+                if (!await modelFile.exists()) throw Exception("model.onnx not found in $modelDirPath");
                 if (!await voicesFile.exists()) throw Exception("voices.bin not found in $modelDirPath");
                 if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
                 if (!await dictDir.exists()) throw Exception("dict directory not found in $modelDirPath");
@@ -148,7 +149,9 @@ class TtsModel {
 
                 final modelConfig = OfflineTtsModelConfig(
                   kokoro: kokoro,
-                  numThreads: Platform.numberOfProcessors,
+                  // Although we are using nnapi, it may pick cpu backend, so we are still configuring numThread
+                  // If device have more than 4 cores, use 4 threads, otherwise use all the cores
+                  numThreads: min(Platform.numberOfProcessors, 4),
                   debug: kDebugMode,
                   provider: Platform.isAndroid ? "nnapi" : "coreml",
                 );

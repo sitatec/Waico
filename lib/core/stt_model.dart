@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:developer';
+import 'dart:developer' show log;
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' show min;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -135,7 +136,8 @@ class SttModel {
                   transducer: parakeetConfig,
                   tokens: tokensFile.path,
                   debug: kDebugMode,
-                  numThreads: Platform.numberOfProcessors,
+                  // If device have more than 4 cores, use 4 threads, otherwise use all the cores
+                  numThreads: min(Platform.numberOfProcessors, 4),
                   provider: Platform.isAndroid ? "xnnpack" : "cpu",
                 );
 
