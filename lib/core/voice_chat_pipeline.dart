@@ -20,7 +20,7 @@ class VoiceChatPipeline {
   // Used wait until the current TTS task complete before starting the next one.
   final _asyncLock = Lock();
 
-  /// Can be used to animate the AI speech waves widget
+  /// Can be used to animate the AI speech waves widget (value range 0-1)
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
 
   VoiceChatPipeline({

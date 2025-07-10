@@ -18,7 +18,7 @@ class AudioStreamPlayer {
   bool get isPlaying => _playerBackend.playing;
   Stream<String?> get captionStream => _captionStreamController.stream;
 
-  /// Can be used to animate the AI speech waves for example
+  /// Can be used to animate the AI speech waves for example (value range 0-1)
   Stream<double> get loudnessStream => _loudnessMonitor.loudnessStream;
   AudioStreamPlayerState get state => _playerBackend.processingState;
 
@@ -170,6 +170,7 @@ class AudioLoudnessMonitor {
     });
   }
 
+  // Return current audio loudness in the range 0-1
   double _calculateLoudnessAtPosition(Duration position) {
     if (_currentAudioData == null || _currentAudioData!.isEmpty) return 0.0;
 

@@ -8,19 +8,18 @@ class AIVoiceWaveform extends StatefulWidget {
   final Color backgroundColor;
   final List<Color> waveColors;
   final BorderRadius borderRadius;
-  final Duration animationDuration;
 
   const AIVoiceWaveform({
     super.key,
     required this.loudnessStream,
-    this.backgroundColor = const Color(0xFFF4F6F8),
+    this.backgroundColor = const Color.fromARGB(255, 238, 243, 247),
     this.waveColors = const [
       Color(0xFF66BB6A), // Leaf Green
       Color(0xFF26A69A), // Sea Green/Teal
       Color(0xFF5C9DFF), // Sky Blue
     ],
     this.borderRadius = const BorderRadius.all(Radius.circular(24)),
-    this.animationDuration = const Duration(seconds: 4),
+    // The animation speed is now controlled by loudness, so duration is removed.
   });
 
   @override
@@ -28,20 +27,38 @@ class AIVoiceWaveform extends StatefulWidget {
 }
 
 class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProviderStateMixin {
+  static const _minLoudness = 0.28;
+
   late final AnimationController _controller;
   StreamSubscription<double>? _loudnessSubscription;
-  double _targetLoudness = 0.0;
+  double _targetLoudness = _minLoudness;
   double _currentLoudness = 0.0;
+
+  // << NEW: This variable will hold the animation's progress, updated on every frame.
+  double _animationPhase = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.animationDuration)..repeat();
+    // The controller is now just a "ticker" to drive the animation frame-by-frame.
+    // Its duration is constant and does not affect the visual speed directly.
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
 
     _subscribeToLoudnessStream();
 
     _controller.addListener(() {
+      // Define the range for the animation speed.
+      const double idleSpeed = 0.0; // Speed when loudness is 0
+      const double maxSpeed = 1.0; // Speed when loudness is 1
+
+      // Interpolate the speed based on the current (smoothed) loudness.
+      final speed = lerpDouble(idleSpeed, maxSpeed, _currentLoudness)!;
+
+      // Increment the animation phase. The multiplier (0.18) adjusts the overall speed.
+      _animationPhase = (_animationPhase + speed * 0.18) % (2 * pi);
+
       setState(() {
+        // Smoothly update the loudness value.
         _currentLoudness = lerpDouble(_currentLoudness, _targetLoudness, 0.08)!;
       });
     });
@@ -52,7 +69,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
     _loudnessSubscription = widget.loudnessStream.listen((loudness) {
       if (mounted) {
         setState(() {
-          _targetLoudness = loudness.clamp(0.0, 1.0);
+          _targetLoudness = loudness.clamp(_minLoudness, 0.8);
         });
       }
     });
@@ -64,14 +81,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
     if (widget.loudnessStream != oldWidget.loudnessStream) {
       _subscribeToLoudnessStream();
     }
-
-    // << BUG FIX: This block now correctly updates the animation speed
-    if (widget.animationDuration != oldWidget.animationDuration) {
-      _controller.duration = widget.animationDuration;
-      // Restart the animation controller to apply the new duration immediately.
-      // Without this, the new duration only applies on the next loop.
-      _controller.repeat();
-    }
+    // The logic for updating animationDuration is no longer needed.
   }
 
   @override
@@ -91,7 +101,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
           imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 5, tileMode: TileMode.decal),
           child: CustomPaint(
             size: Size.infinite,
-            painter: _WavePainter(animation: _controller, loudness: _currentLoudness, waveColors: widget.waveColors),
+            painter: _WavePainter(phase: _animationPhase, loudness: _currentLoudness, waveColors: widget.waveColors),
           ),
         ),
       ),
@@ -100,19 +110,18 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
 }
 
 class _WavePainter extends CustomPainter {
-  final Animation<double> animation;
+  // << MODIFIED: Takes a simple double for phase, not the whole animation.
+  final double phase;
   final double loudness;
   final List<Color> waveColors;
 
-  // << PERFORMANCE: Caching paint objects and size
   final List<Paint> _paints = [];
   Size? _lastSize;
 
-  _WavePainter({required this.animation, required this.loudness, required this.waveColors}) : super(repaint: animation);
+  _WavePainter({required this.phase, required this.loudness, required this.waveColors})
+    : super(repaint: Listenable.merge([ValueNotifier(phase), ValueNotifier(loudness)]));
 
-  // << PERFORMANCE: This method creates the Paint objects only when needed
   void _updatePaints(Size size) {
-    // If the size and colors haven't changed, do nothing.
     if (size == _lastSize && _paints.isNotEmpty) return;
 
     _lastSize = size;
@@ -124,8 +133,9 @@ class _WavePainter extends CustomPainter {
         ..blendMode = BlendMode.overlay
         ..shader = LinearGradient(
           colors: [
-            waveColors[i % waveColors.length].withValues(alpha: 0.7),
-            waveColors[(i + 1) % waveColors.length].withValues(alpha: 0.4),
+            // << BUG FIX: Changed .withValues() to the correct .withOpacity()
+            waveColors[i % waveColors.length].withOpacity(0.6),
+            waveColors[(i + 1) % waveColors.length].withOpacity(0.4),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -136,14 +146,13 @@ class _WavePainter extends CustomPainter {
 
   List<List<num>> _getWaveConfigs() => [
     // Config: [frequency, speed (int), baseAmplitude]
-    [2.5, 1, 7.0],
-    [3.5, -1, 10.0],
-    [4.0, 2.5, 6.0],
+    [2.5, 1, 5.0],
+    [3.5, -1, 8.0],
+    [4.0, 2, 4.0],
   ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Update paints only if size changes, this is a major performance boost.
     _updatePaints(size);
 
     final waveConfigs = _getWaveConfigs();
@@ -157,16 +166,14 @@ class _WavePainter extends CustomPainter {
       final path = Path();
       path.moveTo(0, size.height / 2);
 
-      final maxAmplitude = baseAmplitude + (size.height / 2.5 * loudness);
-      final centerY = size.height / 2;
-
-      // << PERFORMANCE: Instead of calculating for every pixel, we use a step.
-      // The blur effect hides the loss of resolution, giving a huge performance win.
+      final maxAmplitude = baseAmplitude + (size.height / 4 * loudness);
+      final centerY = size.height / 2.5;
       const double step = 5.0;
 
       for (double x = 0; x <= size.width + step; x += step) {
-        final phase = animation.value * 2 * pi * speed;
-        final sine = sin((x * 2 * pi / (size.width * frequency)) + phase);
+        // << MODIFIED: The main animation phase is now provided directly.
+        final sinePhase = this.phase * speed;
+        final sine = sin((x * 2 * pi / (size.width * frequency)) + sinePhase);
         final y = centerY + sine * maxAmplitude;
         path.lineTo(x, y);
       }
@@ -181,8 +188,7 @@ class _WavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _WavePainter oldDelegate) {
-    // The painter should only repaint if loudness or colors change.
-    // The animation itself triggers repaints via the `repaint` notifier in the constructor.
-    return loudness != oldDelegate.loudness || waveColors != oldDelegate.waveColors;
+    // Repaint if the phase, loudness, or colors change.
+    return oldDelegate.phase != phase || oldDelegate.loudness != loudness || oldDelegate.waveColors != waveColors;
   }
 }
