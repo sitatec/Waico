@@ -17,6 +17,7 @@ class VoiceChatPipeline {
   String? voice;
   final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _userSpeechStreamSubscription;
+  bool _hasChatEnded = false;
   // Used wait until the current TTS task complete before starting the next one.
   final _asyncLock = Lock();
 
@@ -37,13 +38,14 @@ class VoiceChatPipeline {
     // But not in flutter yet. On IOS we interrupt but with delay, model generation is generally faster then the synthesized
     // audio, so we can cancel the speech as soon as the model finish generation until IOS support cancelling generation.
     this.voice = voice;
-
+    _hasChatEnded = false;
     await _userSpeechToTextListener.initialize();
-    _userSpeechToTextListener.listen(_onUserSpeechTranscribed);
+    _userSpeechStreamSubscription = _userSpeechToTextListener.listen(_onUserSpeechTranscribed);
     _startListeningToUser();
   }
 
   Future<void> endChat() async {
+    _hasChatEnded = true;
     await _userSpeechStreamSubscription?.cancel();
     await _audioStreamPlayer.stop();
   }
@@ -59,6 +61,10 @@ class VoiceChatPipeline {
 
     String sentenceBuffer = "";
     await for (final textChunk in llm.sendMessageStream(text, attachments: attachments)) {
+      if (_hasChatEnded) {
+        // Currently there is no way to cancel generation once it starts, so we use this variable stop handling.
+        return;
+      }
       sentenceBuffer += textChunk;
 
       // A logic detect readable chunk of a text. It can be a full sentence or up to a comma, anything that cause a pause

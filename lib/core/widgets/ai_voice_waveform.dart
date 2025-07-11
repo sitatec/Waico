@@ -13,11 +13,7 @@ class AIVoiceWaveform extends StatefulWidget {
     super.key,
     required this.loudnessStream,
     this.backgroundColor = const Color.fromARGB(255, 238, 243, 247),
-    this.waveColors = const [
-      Color(0xFF66BB6A), // Leaf Green
-      Color(0xFF26A69A), // Sea Green/Teal
-      Color(0xFF5C9DFF), // Sky Blue
-    ],
+    this.waveColors = const [Color(0xFF66BB6A), Color(0xFF4B9B6E), const Color.fromARGB(255, 66, 165, 245)],
     this.borderRadius = const BorderRadius.all(Radius.circular(24)),
     // The animation speed is now controlled by loudness, so duration is removed.
   });
@@ -27,7 +23,7 @@ class AIVoiceWaveform extends StatefulWidget {
 }
 
 class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProviderStateMixin {
-  static const _minLoudness = 0.28;
+  static const _minLoudness = 0.15;
 
   late final AnimationController _controller;
   StreamSubscription<double>? _loudnessSubscription;
@@ -42,7 +38,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
     super.initState();
     // The controller is now just a "ticker" to drive the animation frame-by-frame.
     // Its duration is constant and does not affect the visual speed directly.
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..repeat();
 
     _subscribeToLoudnessStream();
 
@@ -54,8 +50,8 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
       // Interpolate the speed based on the current (smoothed) loudness.
       final speed = lerpDouble(idleSpeed, maxSpeed, _currentLoudness)!;
 
-      // Increment the animation phase. The multiplier (0.18) adjusts the overall speed.
-      _animationPhase = (_animationPhase + speed * 0.18) % (2 * pi);
+      // Increment the animation phase. The multiplier (0.1) adjusts the overall speed.
+      _animationPhase = (_animationPhase + speed * 0.1) % (2 * pi);
 
       setState(() {
         // Smoothly update the loudness value.
@@ -69,7 +65,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
     _loudnessSubscription = widget.loudnessStream.listen((loudness) {
       if (mounted) {
         setState(() {
-          _targetLoudness = loudness.clamp(_minLoudness, 0.8);
+          _targetLoudness = loudness.clamp(_minLoudness, 1);
         });
       }
     });
@@ -133,9 +129,8 @@ class _WavePainter extends CustomPainter {
         ..blendMode = BlendMode.overlay
         ..shader = LinearGradient(
           colors: [
-            // << BUG FIX: Changed .withValues() to the correct .withOpacity()
-            waveColors[i % waveColors.length].withOpacity(0.6),
             waveColors[(i + 1) % waveColors.length].withOpacity(0.4),
+            waveColors[i % waveColors.length].withOpacity(0.6),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -166,7 +161,7 @@ class _WavePainter extends CustomPainter {
       final path = Path();
       path.moveTo(0, size.height / 2);
 
-      final maxAmplitude = baseAmplitude + (size.height / 4 * loudness);
+      final maxAmplitude = baseAmplitude + (size.height / 3 * loudness);
       final centerY = size.height / 2.5;
       const double step = 5.0;
 

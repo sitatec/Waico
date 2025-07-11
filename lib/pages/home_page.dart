@@ -11,22 +11,22 @@ class HomePage extends StatelessWidget {
     final features = <Map<String, dynamic>>[
       {
         'title': 'Meditation',
-        'color': const Color.fromARGB(99, 191, 89, 1),
+        'color': const Color.fromARGB(98, 201, 94, 0),
         'image': {'url': 'assets/images/meditation.png', 'size': 80.0},
       },
       {
         'title': 'Sleep',
-        'color': const Color.fromARGB(98, 0, 51, 171),
+        'color': const Color.fromARGB(97, 0, 58, 192),
         'image': {'url': 'assets/images/sleep.png', 'size': 90.0},
       },
       {
         'title': 'Nutrition',
-        'color': const Color.fromARGB(106, 0, 105, 68),
+        'color': const Color.fromARGB(106, 0, 113, 73),
         'image': {'url': 'assets/images/nutrition.png', 'size': 70.0},
       },
       {
         'title': 'Workout',
-        'color': const Color.fromARGB(92, 196, 144, 0),
+        'color': const Color.fromARGB(92, 210, 154, 1),
         'image': {'url': 'assets/images/workout.png', 'size': 90.0},
       },
     ];
@@ -128,7 +128,7 @@ class FeatureCard extends StatelessWidget {
             left: 16,
             child: Text(
               title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
+              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, color: Colors.white),
             ),
           ),
           Positioned(

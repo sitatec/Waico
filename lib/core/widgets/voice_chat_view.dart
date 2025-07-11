@@ -38,11 +38,15 @@ class _VoiceChatViewState extends State<VoiceChatView> {
     return Stack(
       children: [
         Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            SizedBox(
-              height: 150,
-              child: AIVoiceWaveform(loudnessStream: widget.voiceChatPipeline.aiSpeechLoudnessStream),
+            SizedBox(width: double.infinity),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 125, maxWidth: 350),
+                child: AIVoiceWaveform(loudnessStream: widget.voiceChatPipeline.aiSpeechLoudnessStream),
+              ),
             ),
           ],
         ),
