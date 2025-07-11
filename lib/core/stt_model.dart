@@ -118,22 +118,22 @@ class SttModel {
 
                 final encoderFile = File('$modelDirPath/encoder.int8.onnx');
                 final decoderFile = File('$modelDirPath/decoder.int8.onnx');
-                final joinerFile = File('$modelDirPath/joiner.int8.onnx');
                 final tokensFile = File('$modelDirPath/tokens.txt');
 
                 if (!await encoderFile.exists()) throw Exception("encoder.int8.onnx not found in $modelDirPath");
                 if (!await decoderFile.exists()) throw Exception("decoder.int8.onnx not found in $modelDirPath");
-                if (!await joinerFile.exists()) throw Exception("joiner.int8.onnx not found in $modelDirPath");
                 if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
 
-                final parakeetConfig = OfflineTransducerModelConfig(
+                final canaryConfig = OfflineCanaryModelConfig(
                   encoder: encoderFile.path,
                   decoder: decoderFile.path,
-                  joiner: joinerFile.path,
+                  srcLang: 'en',
+                  tgtLang: 'en',
+                  usePnc: true,
                 );
 
                 final modelConfig = OfflineModelConfig(
-                  transducer: parakeetConfig,
+                  canary: canaryConfig,
                   tokens: tokensFile.path,
                   debug: kDebugMode,
                   // If device have more than 4 cores, use 4 threads, otherwise use all the cores

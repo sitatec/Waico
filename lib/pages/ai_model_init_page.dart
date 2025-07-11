@@ -65,9 +65,9 @@ class AiModelsInitializationPage extends StatefulWidget {
 class _AiModelsInitializationPageState extends State<AiModelsInitializationPage> {
   final _modelsToDownload = <DownloadItem>[
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/parakeet-tdt-0.6b-v2-int8.tar.gz",
-      fileName: "parakeet-tdt-0.6b-v2-int8.tar.gz",
-      displayName: "Parakeet v2",
+      url: "${DownloadItem.baseUrl}/canary-180m-flash-int8.tar.gz",
+      fileName: "canary-180m-flash-int8.tar.gz",
+      displayName: "Canary Flash",
     ),
     DownloadItem(
       url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
