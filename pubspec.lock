@@ -908,10 +908,10 @@ packages:
     dependency: "direct main"
     description:
       name: sherpa_onnx
-      sha256: "754ac62c7011181c931010da1e193c4e14a73280b5aa6dc39c95e8a212044faf"
+      sha256: "3138b07ed6993db4e81b67ad6c3d9c116396ade53c66fae6a0553311f5d63fa3"
       url: "https://pub.dev"
     source: hosted
-    version: "1.12.4"
+    version: "1.12.5"
   sherpa_onnx_android:
     dependency: "direct overridden"
     description:
@@ -925,34 +925,34 @@ packages:
     dependency: transitive
     description:
       name: sherpa_onnx_ios
-      sha256: "35d47cdfc610b668f85fd7caab5712719ab91f06459b4ba9268fc144f9fd736f"
+      sha256: "7857262543143f7ec58219c74a10ab038405895117c27eb9c8c58332e9a83f3d"
       url: "https://pub.dev"
     source: hosted
-    version: "1.12.4"
+    version: "1.12.5"
   sherpa_onnx_linux:
     dependency: transitive
     description:
       name: sherpa_onnx_linux
-      sha256: "12837eea899da7034c0b8b14fb779055f1bcfbd50d7eb7d5bfe2b24e4de16223"
+      sha256: fb7234def54a596957ab227a07086ed176eee83718ec83439284b6c357bc5576
       url: "https://pub.dev"
     source: hosted
-    version: "1.12.4"
+    version: "1.12.5"
   sherpa_onnx_macos:
     dependency: transitive
     description:
       name: sherpa_onnx_macos
-      sha256: c3db3adea561af34240ec9834992a09f5512c201104090838b8d4bb9dcf186fe
+      sha256: b5a93210c9e05b3151596b0d119cef5c013b6b5bc6a539a9583d63c962f45c7f
       url: "https://pub.dev"
     source: hosted
-    version: "1.12.4"
+    version: "1.12.5"
   sherpa_onnx_windows:
     dependency: transitive
     description:
       name: sherpa_onnx_windows
-      sha256: cb614a2da6995e022e9915f46819d20d88bf64719614bbba7529cbfb300e83ca
+      sha256: ff30cad5f78ab64e0828dd8d56ad39565661058ab37ce989e74b60800084a6fb
       url: "https://pub.dev"
     source: hosted
-    version: "1.12.4"
+    version: "1.12.5"
   sky_engine:
     dependency: transitive
     description: flutter
