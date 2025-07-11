@@ -35,15 +35,24 @@ class ChatModel extends LlmProvider with ChangeNotifier {
 
   List<ChatMessage> _history = [];
   int _chatTokenCount = 0;
+  int _systemPromptTokenCount = 0;
   late final InferenceModelSession _chatSession;
 
   final String? loraPath;
+  final String? systemPrompt;
   final double temperature;
   final int topK;
   final double topP;
   final bool supportImageInput;
 
-  ChatModel({this.loraPath, this.temperature = 1.0, this.topK = 64, this.topP = 0.95, this.supportImageInput = true});
+  ChatModel({
+    this.loraPath,
+    this.systemPrompt,
+    this.temperature = 1.0,
+    this.topK = 64,
+    this.topP = 0.95,
+    this.supportImageInput = true,
+  });
 
   /// Initializes the chat session. The base model must be loaded before using this provider.
   /// When called again, it will act as a reset.
@@ -58,7 +67,24 @@ class ChatModel extends LlmProvider with ChangeNotifier {
     );
     _chatTokenCount = 0;
     _history = [];
+
+    await _handleSystemPrompt();
+
     notifyListeners();
+  }
+
+  Future<void> _handleSystemPrompt() async {
+    if (systemPrompt == null) return;
+
+    final formattedSysPrompt = "<system-prompt>\n$systemPrompt\n</system-prompt>";
+    final sysPromptConfirmation =
+        "Understood. From now on, I will take the system prompt into account in all my responses.";
+
+    await _chatSession.addQueryChunk(Message.text(text: formattedSysPrompt, isUser: true));
+    await _chatSession.addQueryChunk(Message.text(text: sysPromptConfirmation, isUser: false));
+
+    _systemPromptTokenCount = await _chatSession.sizeInTokens(formattedSysPrompt + sysPromptConfirmation);
+    _chatTokenCount += _systemPromptTokenCount;
   }
 
   @override
@@ -79,7 +105,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
         }
         newTokenCount += message.attachments.length * 256; // Assuming 256 tokens per image attachment
       }
-      _chatTokenCount = newTokenCount;
+      _chatTokenCount = newTokenCount + _systemPromptTokenCount;
       notifyListeners();
     })();
   }
