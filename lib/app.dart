@@ -3,9 +3,11 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'package:waico/core/chat_model.dart';
+import 'package:waico/core/constants.dart';
 import 'package:waico/core/stt_model.dart';
 import 'package:waico/core/tts_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
+import 'package:waico/examples/calendar_example.dart';
 import 'package:waico/pages/ai_model_init_page.dart';
 import 'package:waico/pages/home_page.dart';
 import 'package:provider/provider.dart';
@@ -45,7 +47,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final defaultTheme = Theme.of(context);
-    final primaryColor = Color(0xFF4B9B6E);
+
     return MaterialApp(
       title: 'Waico',
       theme: defaultTheme.copyWith(
@@ -54,14 +56,15 @@ class _AppState extends State<App> with WidgetsBindingObserver {
       ),
       home: Builder(
         builder: (context) {
-          return AiModelsInitializationPage(
-            onDone: (downloadedModelPaths) {
-              context.navigateTo(
-                Provider.value(value: downloadedModelPaths, updateShouldNotify: (_, _) => false, child: HomePage()),
-                replaceCurrent: true,
-              );
-            },
-          );
+          return CalendarServiceWidget();
+          // return AiModelsInitializationPage(
+          //   onDone: (downloadedModelPaths) {
+          //     context.navigateTo(
+          //       Provider.value(value: downloadedModelPaths, updateShouldNotify: (_, _) => false, child: HomePage()),
+          //       replaceCurrent: true,
+          //     );
+          //   },
+          // );
         },
       ),
     );
