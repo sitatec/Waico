@@ -116,8 +116,8 @@ class SttModel {
                 final modelPath = message['modelPath'] as String;
                 modelDirPath = await extractModelData(modelPath);
 
-                final encoderFile = File('$modelDirPath/encoder.int8.onnx');
-                final decoderFile = File('$modelDirPath/decoder.int8.onnx');
+                final encoderFile = File('$modelDirPath/encoder.onnx');
+                final decoderFile = File('$modelDirPath/decoder.onnx');
                 final tokensFile = File('$modelDirPath/tokens.txt');
 
                 if (!await encoderFile.exists()) throw Exception("encoder.int8.onnx not found in $modelDirPath");

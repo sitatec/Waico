@@ -65,8 +65,8 @@ class AiModelsInitializationPage extends StatefulWidget {
 class _AiModelsInitializationPageState extends State<AiModelsInitializationPage> {
   final _modelsToDownload = <DownloadItem>[
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/canary-180m-flash-int8.tar.gz",
-      fileName: "canary-180m-flash-int8.tar.gz",
+      url: "${DownloadItem.baseUrl}/canary-180m-flash.tar.gz",
+      fileName: "canary-180m-flash.tar.gz",
       displayName: "Canary Flash",
     ),
     DownloadItem(
