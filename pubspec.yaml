@@ -25,6 +25,9 @@ dependencies:
   synchronized: ^3.4.0
   device_calendar: ^4.3.3
   flutter_timezone: ^4.1.1
+  flutter_mailer: ^3.0.1
+  url_launcher: ^6.3.2
+  flutter_phone_direct_caller: ^2.2.1
 
 dev_dependencies:
   flutter_test:
