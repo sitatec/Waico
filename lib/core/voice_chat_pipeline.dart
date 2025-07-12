@@ -4,9 +4,9 @@ import 'dart:developer' show log;
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show LlmProvider, ImageFileAttachment;
 import 'package:synchronized/synchronized.dart';
-import 'package:waico/core/audio_stream_player.dart';
-import 'package:waico/core/tts_model.dart';
-import 'package:waico/core/user_speech_listener.dart';
+import 'package:waico/core/services/audio_stream_player.dart';
+import 'package:waico/core/ai_models/tts_model.dart';
+import 'package:waico/core/services/user_speech_listener.dart';
 import 'package:waico/core/utils/string_utils.dart';
 
 class VoiceChatPipeline {

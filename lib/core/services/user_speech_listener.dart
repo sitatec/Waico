@@ -8,7 +8,7 @@ import 'package:record/record.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart';
 
-import 'stt_model.dart';
+import '../ai_models/stt_model.dart';
 
 /// Realtime audio recorder with Voice Activity Detection (VAD) to extract speech.
 class UserSpeechListener {

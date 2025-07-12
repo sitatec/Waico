@@ -4,9 +4,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
-import 'package:waico/core/chat_model.dart';
-import 'package:waico/core/stt_model.dart';
-import 'package:waico/core/tts_model.dart';
+import 'package:waico/core/ai_models/chat_model.dart';
+import 'package:waico/core/ai_models/stt_model.dart';
+import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 

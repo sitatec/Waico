@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:waico/core/chat_model.dart';
+import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
