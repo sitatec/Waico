@@ -1,1 +1,1 @@
--keep class ai.onnxruntime.** { *; }
+-keep class com.builttoroam.devicecalendar.** { *; }

@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>To enable the AI to hear you, we need access to the microphone.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>We need access to your calendar to schedule you sessions (workout, mediation, counseling...)</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>We need access to your calendar to schedule you sessions (workout, mediation, counseling...)</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

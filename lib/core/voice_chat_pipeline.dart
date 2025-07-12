@@ -67,10 +67,12 @@ class VoiceChatPipeline {
       }
       sentenceBuffer += textChunk;
 
-      // A logic detect readable chunk of a text. It can be a full sentence or up to a comma, anything that cause a pause
+      // A logic to detect readable chunk of a text. It can be a full sentence or up to a comma, or anything that causes a pause
       // when reading. So that the next chunk can be read and it will feel natural.
       // This reduces LLm response latency since we don't have to wait for the full
       // response, we can send the sentences to the TTS model as they are detected in the stream.
+      // Also since the TTS mode may it self introduce some latency, smaller chunks will ensure the user
+      // Start hearing the response quickly, thus improving the overall "real-timeness".
 
       final readableChunkSplitter = RegExp(r'(?<=[.,;:?!])\s+|\n+');
       final potentialReadableChunks = sentenceBuffer.split(readableChunkSplitter);
