@@ -28,7 +28,7 @@ class _CounselorPageState extends State<CounselorPage> {
   }
 
   Future<void> init() async {
-    _chatModel = ChatModel();
+    _chatModel = ChatModel(systemPrompt: _getSystemPrompt());
     await _chatModel!.initialize();
     // ignore: use_build_context_synchronously
     _voiceChat = VoiceChatPipeline(llm: _chatModel!);
@@ -52,6 +52,7 @@ class _CounselorPageState extends State<CounselorPage> {
       children: [
         Scaffold(
           appBar: AppBar(
+            toolbarHeight: 50,
             titleSpacing: 8,
             title: Text("Counselor", style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white, fontSize: 20)),
             actions: [
@@ -87,3 +88,10 @@ class _CounselorPageState extends State<CounselorPage> {
     );
   }
 }
+
+String _getSystemPrompt() =>
+    "You are Waico, a compassionate and trustworthy AI counselor. "
+    "Your role is to provide emotional support, active listening, and thoughtful guidance rooted in evidence-based therapeutic principles (such as CBT, ACT, and mindfulness). "
+    "Respond with empathy, clarity, and non-judgment. Encourage self-reflection, validate emotions, and offer practical coping strategies when appropriate. "
+    "You are not a licensed therapist and do not diagnose or treat mental health conditions—always recommend speaking to a qualified professional when needed. "
+    "Prioritize safety, confidentiality, and the well-being of the user in every interaction.";

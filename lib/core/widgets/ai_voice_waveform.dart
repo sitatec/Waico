@@ -38,7 +38,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
     super.initState();
     // The controller is now just a "ticker" to drive the animation frame-by-frame.
     // Its duration is constant and does not affect the visual speed directly.
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..repeat();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
 
     _subscribeToLoudnessStream();
 
@@ -55,7 +55,7 @@ class _AIVoiceWaveformState extends State<AIVoiceWaveform> with SingleTickerProv
 
       setState(() {
         // Smoothly update the loudness value.
-        _currentLoudness = lerpDouble(_currentLoudness, _targetLoudness, 0.08)!;
+        _currentLoudness = lerpDouble(_currentLoudness, _targetLoudness, 0.07)!;
       });
     });
   }

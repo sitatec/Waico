@@ -48,8 +48,8 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   ChatModel({
     this.loraPath,
     this.systemPrompt,
-    this.temperature = 1.0,
-    this.topK = 64,
+    this.temperature = 0.9,
+    this.topK = 40,
     this.topP = 0.95,
     this.supportImageInput = true,
   });
