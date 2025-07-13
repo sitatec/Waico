@@ -5,6 +5,7 @@ import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:flutter_gemma/core/model.dart' show ModelType;
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/pigeon.g.dart' show PreferredBackend;
+import 'package:intl/intl.dart';
 
 class ChatModel extends LlmProvider with ChangeNotifier {
   /// Used to prevent the model from exceeding the maximum context length.
@@ -48,8 +49,8 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   ChatModel({
     this.loraPath,
     this.systemPrompt,
-    this.temperature = 0.9,
-    this.topK = 40,
+    this.temperature = 1.0,
+    this.topK = 64,
     this.topP = 0.95,
     this.supportImageInput = true,
   });
@@ -76,9 +77,18 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   Future<void> _handleSystemPrompt() async {
     if (systemPrompt == null) return;
 
-    final formattedSysPrompt = "<system-prompt>\n$systemPrompt\n</system-prompt>";
+    final now = DateTime.now();
+    final formattedDateAndTime = DateFormat('EEEE, MMMM d, y – h:mm a').format(now);
+
+    final formattedSysPrompt =
+        '<system_prompt>\n'
+        '$systemPrompt\n'
+        'Your knowledge base was last updated on August 2024.\n'
+        'The current date and time is $formattedDateAndTime.\n'
+        '</system_prompt>';
+
     final sysPromptConfirmation =
-        "Understood. From now on, I will take the system prompt into account in all my responses.";
+        'Understood. From now on, I will take the system prompt into account in all my responses.';
 
     await _chatSession.addQueryChunk(Message.text(text: formattedSysPrompt, isUser: true));
     await _chatSession.addQueryChunk(Message.text(text: sysPromptConfirmation, isUser: false));

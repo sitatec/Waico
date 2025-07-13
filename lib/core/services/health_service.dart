@@ -80,6 +80,7 @@ class HealthService extends ChangeNotifier {
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.SLEEP_ASLEEP,
     HealthDataType.WATER,
+    HealthDataType.WEIGHT, // TODO: show in the dashboard
   ];
 
   /// Initialize the health service
