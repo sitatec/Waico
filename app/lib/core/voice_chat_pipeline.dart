@@ -2,15 +2,16 @@ import 'dart:async';
 import 'dart:developer' show log;
 
 import 'package:cross_file/cross_file.dart' show XFile;
-import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show LlmProvider, ImageFileAttachment;
+import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ImageFileAttachment;
 import 'package:synchronized/synchronized.dart';
+import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/services/audio_stream_player.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/services/user_speech_listener.dart';
 import 'package:waico/core/utils/string_utils.dart';
 
 class VoiceChatPipeline {
-  final LlmProvider llm;
+  final ChatModel llm;
   final UserSpeechToTextListener _userSpeechToTextListener;
   final TtsModel _tts;
   final List<XFile> _pendingImages = [];
