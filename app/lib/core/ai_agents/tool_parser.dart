@@ -120,15 +120,16 @@ class ToolParser implements StreamTransformer<String, String> {
     final args = <String, dynamic>{};
     if (argsString.trim().isEmpty) return args;
 
-    // Match patterns: param='value' or param=value
-    final matches = RegExp(r"(\w+)\s*=\s*(?:'([^']*)'|([^,]+))").allMatches(argsString);
+    // Match patterns: param='value' or param="value" or param=value
+    final matches = RegExp(r'''(\w+)\s*=\s*(?:'([^']*)'|"([^"]*)"|([^,]+))''').allMatches(argsString);
 
     for (final match in matches) {
       final name = match.group(1)!;
-      final quotedValue = match.group(2);
-      final unquotedValue = match.group(3)?.trim();
+      final singleQuotedValue = match.group(2);
+      final doubleQuotedValue = match.group(3);
+      final unquotedValue = match.group(4)?.trim();
 
-      args[name] = quotedValue ?? _parseValue(unquotedValue!);
+      args[name] = singleQuotedValue ?? doubleQuotedValue ?? _parseValue(unquotedValue!);
     }
 
     return args;
