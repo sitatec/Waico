@@ -78,22 +78,18 @@ class ChatModel extends LlmProvider with ChangeNotifier {
     if (systemPrompt == null) return;
 
     final now = DateTime.now();
-    final formattedDateAndTime = DateFormat('EEEE, MMMM d, y – h:mm a').format(now);
+    final formattedDateAndTime = DateFormat('EEEE, MMMM d, y – HH:mm').format(now);
 
     final formattedSysPrompt =
         '<system_prompt>\n'
-        '$systemPrompt\n'
+        '$systemPrompt\n\n'
         'Your knowledge base was last updated on August 2024.\n'
         'The current date and time is $formattedDateAndTime.\n'
-        '</system_prompt>';
-
-    final sysPromptConfirmation =
-        'Understood. From now on, I will take the system prompt into account in all my responses.';
+        '</system_prompt>\n\n';
 
     await _chatSession.addQueryChunk(Message.text(text: formattedSysPrompt, isUser: true));
-    await _chatSession.addQueryChunk(Message.text(text: sysPromptConfirmation, isUser: false));
 
-    _systemPromptTokenCount = await _chatSession.sizeInTokens(formattedSysPrompt + sysPromptConfirmation);
+    _systemPromptTokenCount = await _chatSession.sizeInTokens(formattedSysPrompt);
     _chatTokenCount += _systemPromptTokenCount;
   }
 
@@ -106,6 +102,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
     _history.addAll(history);
 
     // Use an immediately invoked async function since we cannot use async in a setter. Not robust, but works for now.
+    // TODO: user Lock from the synchronized pacakge
     (() async {
       // Recalculate token count based on the new history
       int newTokenCount = 0;
