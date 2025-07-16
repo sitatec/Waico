@@ -15,6 +15,7 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import '../core/entities/conversation.dart';
+import '../core/entities/conversation_memory.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -55,17 +56,53 @@ final _entities = <obx_int.ModelEntity>[
         type: 9,
         flags: 0,
       ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'memories',
+        srcEntity: 'ConversationMemory',
+        srcField: 'conversation',
+      ),
+    ],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(2, 5697885661381816381),
+    name: 'ConversationMemory',
+    lastPropertyId: const obx_int.IdUid(4, 2732217944615821771),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(6, 6933633824755297981),
+        id: const obx_int.IdUid(1, 2129053777933098174),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 3913860355338299821),
+        name: 'memory',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 8740622706670844385),
         name: 'embeddings',
         type: 28,
         flags: 8,
-        indexId: const obx_int.IdUid(1, 195901725711995868),
+        indexId: const obx_int.IdUid(2, 1377078954586485806),
         hnswParams: obx_int.ModelHnswParams(
           dimensions: 384,
           indexingSearchCount: 200,
           distanceType: 3,
         ),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 2732217944615821771),
+        name: 'conversationId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(3, 4852819179156216796),
+        relationTarget: 'Conversation',
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -111,13 +148,13 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(1, 7391831151089593972),
-    lastIndexId: const obx_int.IdUid(1, 195901725711995868),
+    lastEntityId: const obx_int.IdUid(2, 5697885661381816381),
+    lastIndexId: const obx_int.IdUid(3, 4852819179156216796),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
-    retiredIndexUids: const [],
-    retiredPropertyUids: const [],
+    retiredIndexUids: const [195901725711995868],
+    retiredPropertyUids: const [6933633824755297981],
     retiredRelationUids: const [],
     modelVersion: 5,
     modelVersionParserMinimum: 5,
@@ -128,7 +165,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
     Conversation: obx_int.EntityDefinition<Conversation>(
       model: _entities[0],
       toOneRelations: (Conversation object) => [],
-      toManyRelations: (Conversation object) => {},
+      toManyRelations: (Conversation object) => {
+        obx_int.RelInfo<ConversationMemory>.toOneBacklink(
+          4,
+          object.id,
+          (ConversationMemory srcObject) => srcObject.conversation,
+        ): object.memories,
+      },
       getId: (Conversation object) => object.id,
       setId: (Conversation object, int id) {
         object.id = id;
@@ -136,14 +179,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (Conversation object, fb.Builder fbb) {
         final observationsOffset = fbb.writeString(object.observations);
         final summaryOffset = fbb.writeString(object.summary);
-        final embeddingsOffset = fbb.writeListFloat32(object.embeddings);
         fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.createdAt.millisecondsSinceEpoch);
         fbb.addInt64(2, object.updatedAt.millisecondsSinceEpoch);
         fbb.addOffset(3, observationsOffset);
         fbb.addOffset(4, summaryOffset);
-        fbb.addOffset(5, embeddingsOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -162,10 +203,6 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final updatedAtParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 8, 0),
         );
-        final embeddingsParam = const fb.ListReader<double>(
-          fb.Float32Reader(),
-          lazy: false,
-        ).vTableGet(buffer, rootOffset, 14, []);
         final summaryParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 12, '');
@@ -176,11 +213,68 @@ obx_int.ModelDefinition getObjectBoxModel() {
           id: idParam,
           createdAt: createdAtParam,
           updatedAt: updatedAtParam,
-          embeddings: embeddingsParam,
           summary: summaryParam,
           observations: observationsParam,
         );
-
+        obx_int.InternalToManyAccess.setRelInfo<Conversation>(
+          object.memories,
+          store,
+          obx_int.RelInfo<ConversationMemory>.toOneBacklink(
+            4,
+            object.id,
+            (ConversationMemory srcObject) => srcObject.conversation,
+          ),
+        );
+        return object;
+      },
+    ),
+    ConversationMemory: obx_int.EntityDefinition<ConversationMemory>(
+      model: _entities[1],
+      toOneRelations: (ConversationMemory object) => [object.conversation],
+      toManyRelations: (ConversationMemory object) => {},
+      getId: (ConversationMemory object) => object.id,
+      setId: (ConversationMemory object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ConversationMemory object, fb.Builder fbb) {
+        final memoryOffset = fbb.writeString(object.memory);
+        final embeddingsOffset = fbb.writeListFloat32(object.embeddings);
+        fbb.startTable(5);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, memoryOffset);
+        fbb.addOffset(2, embeddingsOffset);
+        fbb.addInt64(3, object.conversation.targetId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final memoryParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final embeddingsParam = const fb.ListReader<double>(
+          fb.Float32Reader(),
+          lazy: false,
+        ).vTableGet(buffer, rootOffset, 8, []);
+        final object = ConversationMemory(
+          id: idParam,
+          memory: memoryParam,
+          embeddings: embeddingsParam,
+        );
+        object.conversation.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        object.conversation.attach(store);
         return object;
       },
     ),
@@ -216,8 +310,33 @@ class Conversation_ {
     _entities[0].properties[4],
   );
 
-  /// See [Conversation.embeddings].
-  static final embeddings = obx.QueryHnswProperty<Conversation>(
-    _entities[0].properties[5],
+  /// see [Conversation.memories]
+  static final memories =
+      obx.QueryBacklinkToMany<ConversationMemory, Conversation>(
+        ConversationMemory_.conversation,
+      );
+}
+
+/// [ConversationMemory] entity fields to define ObjectBox queries.
+class ConversationMemory_ {
+  /// See [ConversationMemory.id].
+  static final id = obx.QueryIntegerProperty<ConversationMemory>(
+    _entities[1].properties[0],
   );
+
+  /// See [ConversationMemory.memory].
+  static final memory = obx.QueryStringProperty<ConversationMemory>(
+    _entities[1].properties[1],
+  );
+
+  /// See [ConversationMemory.embeddings].
+  static final embeddings = obx.QueryHnswProperty<ConversationMemory>(
+    _entities[1].properties[2],
+  );
+
+  /// See [ConversationMemory.conversation].
+  static final conversation =
+      obx.QueryRelationToOne<ConversationMemory, Conversation>(
+        _entities[1].properties[3],
+      );
 }

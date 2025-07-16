@@ -1,13 +1,8 @@
 import 'package:objectbox/objectbox.dart';
+import 'package:waico/core/entities/conversation_memory.dart';
 
 @Entity()
 class Conversation {
-  /// Currently multilingual-e5-small is used, so the embeddings dimension is 384.
-  static const embeddingsDimension = 384;
-
-  /// multilingual-e5-small's scores range from 0.7 to 1.0, so we set the threshold to 0.8 for now
-  static const embeddingsScoreThreshold = 0.8;
-
   @Id()
   int id;
 
@@ -25,19 +20,17 @@ class Conversation {
   String observations;
 
   /// Summary of the conversation
-  /// Can serve as a memory for the assistant. When needed, can be included in reports sent to healthcare professionals.
+  /// When needed, can be included in reports sent to healthcare professionals.
   String summary;
 
-  /// Embeddings of the conversation (summary and observations combined)
-  @HnswIndex(dimensions: embeddingsDimension, distanceType: VectorDistanceType.dotProduct, indexingSearchCount: 200)
-  @Property(type: PropertyType.floatVector)
-  List<double> embeddings;
+  /// Memories associated with this conversation
+  @Backlink('conversation')
+  final memories = ToMany<ConversationMemory>();
 
   Conversation({
     this.id = 0,
     DateTime? createdAt,
     DateTime? updatedAt,
-    this.embeddings = const [],
     required this.summary,
     required this.observations,
   }) : createdAt = createdAt ?? DateTime.now(),
@@ -54,7 +47,6 @@ class Conversation {
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
         'observations: $observations, '
-        'summary: $summary, '
-        'embeddings: ${embeddings.length} elements)';
+        'summary: $summary)';
   }
 }

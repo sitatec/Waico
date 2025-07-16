@@ -33,27 +33,58 @@
           "id": "5:2063453041677220906",
           "name": "summary",
           "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:5697885661381816381",
+      "lastPropertyId": "4:2732217944615821771",
+      "name": "ConversationMemory",
+      "properties": [
+        {
+          "id": "1:2129053777933098174",
+          "name": "id",
+          "type": 6,
+          "flags": 1
         },
         {
-          "id": "6:6933633824755297981",
+          "id": "2:3913860355338299821",
+          "name": "memory",
+          "type": 9
+        },
+        {
+          "id": "3:8740622706670844385",
           "name": "embeddings",
           "type": 28,
           "flags": 8,
-          "indexId": "1:195901725711995868"
+          "indexId": "2:1377078954586485806"
+        },
+        {
+          "id": "4:2732217944615821771",
+          "name": "conversationId",
+          "type": 11,
+          "flags": 520,
+          "indexId": "3:4852819179156216796",
+          "relationTarget": "Conversation"
         }
       ],
       "relations": []
     }
   ],
-  "lastEntityId": "1:7391831151089593972",
-  "lastIndexId": "1:195901725711995868",
+  "lastEntityId": "2:5697885661381816381",
+  "lastIndexId": "3:4852819179156216796",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
   "modelVersionParserMinimum": 5,
   "retiredEntityUids": [],
-  "retiredIndexUids": [],
-  "retiredPropertyUids": [],
+  "retiredIndexUids": [
+    195901725711995868
+  ],
+  "retiredPropertyUids": [
+    6933633824755297981
+  ],
   "retiredRelationUids": [],
   "version": 1
 }
