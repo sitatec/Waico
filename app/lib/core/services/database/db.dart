@@ -7,20 +7,20 @@ import 'repository.dart';
 ///
 /// You should only use this inside repositories or db related classes.
 /// Repositories should be only way to access db in business logic.
-class DatabaseService {
-  static DatabaseService? _instance;
+class ObjectBoxProvider {
+  static ObjectBoxProvider? _instance;
   static final _lock = Lock();
 
   Store? _store;
   final Map<Type, Repository> _repositories = {};
 
-  DatabaseService._();
+  ObjectBoxProvider._();
 
   /// Get the singleton instance
-  static Future<DatabaseService> get instance async {
+  static Future<ObjectBoxProvider> get instance async {
     if (_instance == null) {
       await _lock.synchronized(() async {
-        _instance ??= DatabaseService._();
+        _instance ??= ObjectBoxProvider._();
         await _instance!._initialize();
       });
     }
@@ -92,18 +92,18 @@ class DatabaseService {
 
 /// Convenience class for database operations
 class DB {
-  static DatabaseService? _service;
+  static ObjectBoxProvider? _service;
 
   /// Initialize the database service
   static Future<void> init() async {
-    _service = await DatabaseService.instance;
+    _service = await ObjectBoxProvider.instance;
   }
 
   /// Get the database service instance
   ///
   /// You should only use this inside repositories or db related classes.
   /// Repositories should be only way to access db in business logic.
-  static DatabaseService get service {
+  static ObjectBoxProvider get provider {
     if (_service == null) {
       throw StateError('Database not initialized. Call DB.init() first.');
     }
@@ -111,13 +111,13 @@ class DB {
   }
 
   /// Get a repository for entity type T
-  static Repository<T> repo<T>() => service.getRepository<T>();
+  static Repository<T> repo<T>() => provider.getRepository<T>();
 
   /// Execute a transaction
-  static R transaction<R>(R Function() fn) => service.runInTransaction(fn);
+  static R transaction<R>(R Function() fn) => provider.runInTransaction(fn);
 
   /// Execute a read transaction
-  static R readTransaction<R>(R Function() fn) => service.runInReadTransaction(fn);
+  static R readTransaction<R>(R Function() fn) => provider.runInReadTransaction(fn);
 
   /// Close the database
   static Future<void> close() async {
