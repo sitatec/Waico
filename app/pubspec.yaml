@@ -29,11 +29,15 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_phone_direct_caller: ^2.2.1
   intl: ^0.20.2
+  objectbox: ^4.3.0
+  objectbox_flutter_libs: any
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  build_runner: ^2.5.4
+  objectbox_generator: any
 
 dependency_overrides:
   # Override with a sherpa_onnx_android that doesn't content prebuilt native .so libs
@@ -49,3 +53,7 @@ flutter:
   assets:
     - assets/images/
     - assets/silero_vad_v5.onnx
+
+
+objectbox:
+  output_dir: generated
