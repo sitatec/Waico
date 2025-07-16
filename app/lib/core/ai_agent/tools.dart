@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:health/health.dart' show HealthDataType, HealthDataPoint, NumericHealthValue;
+import 'package:intl/intl.dart' show DateFormat;
+import 'package:waico/core/ai_models/embedding_model.dart';
+import 'package:waico/core/repositories/conversation_memory_repository.dart';
+import 'package:waico/core/repositories/conversation_repository.dart';
 import 'package:waico/core/services/calendar_service.dart';
 import 'package:waico/core/services/communication_service.dart';
 import 'package:waico/core/services/health_service.dart' show HealthService;
@@ -32,6 +36,12 @@ class PhoneCallTool extends Tool {
 }
 
 class ReportTool extends Tool {
+  final ConversationRepository _conversationRepository;
+  final dateFormatter = DateFormat('EEEE, MMMM d, y – HH:mm');
+
+  ReportTool({ConversationRepository? conversationRepository})
+    : _conversationRepository = conversationRepository ?? ConversationRepository();
+
   @override
   String get definition =>
       'send_report_to(required String recipient_email):\nSend a report generated based on observations from previous conversations. This can be sent to a health or wellbeing professional trusted by the user. This function should only be called upon the user’s request or with their explicit approval.';
@@ -40,13 +50,51 @@ class ReportTool extends Tool {
   String get name => 'send_report_to';
 
   @override
-  FutureOr<String> call(Map<String, dynamic> arguments) {
-    // TODO: implement call
-    throw UnimplementedError("ReportTool.call is not implemented yet. Need vector db");
+  Future<String> call(Map<String, dynamic> arguments) async {
+    try {
+      if (!arguments.containsKey("recipient_email")) {
+        return 'Error: Missing required parameter "recipient_email" for sending report.';
+      }
+
+      final String recipientEmail = arguments["recipient_email"];
+      final conversations = await _conversationRepository.getLatestConversations(count: 5);
+
+      if (conversations.isEmpty) {
+        return 'No conversations found to generate a report.';
+      }
+
+      // Generate a report based on the conversations
+      final String reportContent = conversations
+          .map((conversation) {
+            return 'Date: ${dateFormatter.format(conversation.createdAt)}\n\n'
+                'Observation: ${conversation.observations}\n\n'
+                'Conversation Summary: ${conversation.summary}\n\n';
+          })
+          .join('\n\n------------------------------------------\n\n');
+
+      // Send the report via email
+      final response = await CommunicationService.sendEmail(
+        body: reportContent,
+        subject: "[Username]'s Wellbeing Report", // TODO: Replace [Username] with the actual username
+        recipients: [recipientEmail],
+      );
+
+      return response.message;
+    } catch (e, s) {
+      log('Error while handling ReportTool.call: $e', error: e, stackTrace: s);
+      return 'Error: $e';
+    }
   }
 }
 
 class SearchMemoryTool extends Tool {
+  final ConversationMemoryRepository _conversationMemoryRepository;
+  final EmbeddingModel _embeddingModel;
+
+  SearchMemoryTool({ConversationMemoryRepository? conversationMemoryRepository, EmbeddingModel? embeddingModel})
+    : _conversationMemoryRepository = conversationMemoryRepository ?? ConversationMemoryRepository(),
+      _embeddingModel = embeddingModel ?? EmbeddingModel();
+
   @override
   String get definition =>
       'search_memory(required String query):\nSearch your memory (Waico’s memory, not the user’s) from past conversations for relevant information.\nThe query parameter is a relevant fact, expression, event, person, expression.';
@@ -55,8 +103,26 @@ class SearchMemoryTool extends Tool {
   String get name => 'search_memory';
 
   @override
-  FutureOr<String> call(Map<String, dynamic> arguments) {
-    throw UnimplementedError('SearchMemoryTool.call is not implemented yet. Need vector db');
+  Future<String> call(Map<String, dynamic> arguments) async {
+    try {
+      if (!arguments.containsKey("query")) {
+        return 'Error: Missing required parameter "query" for searching memory.';
+      }
+
+      final String query = arguments["query"];
+      final List<double> queryVector = await _embeddingModel.getEmbeddings(query);
+
+      final memories = await _conversationMemoryRepository.searchMemories(queryVector: queryVector);
+
+      if (memories.isEmpty) {
+        return 'No relevant memories found for the query: $query';
+      }
+
+      return memories.first.content; // The memories are sorted by most relevant, so we return the first one
+    } catch (e, s) {
+      log('Error while handling SearchMemoryTool.call: $e', error: e, stackTrace: s);
+      return 'Error: $e';
+    }
   }
 }
 
@@ -88,8 +154,8 @@ class GetHealthDataTool extends Tool {
         return 'Error: Missing required parameters for retrieving health data.';
       }
 
-      final String healthDataType = arguments["health_data_type"];
-      final String period = arguments["period"];
+      final String healthDataType = arguments["health_data_type"].toUpperCase();
+      final String period = arguments["period"].toUpperCase();
 
       if (!healthDataTypeMap.containsKey(healthDataType)) {
         return 'Error: Invalid health_data_type. Must be one of: ${healthDataTypeMap.keys.join(', ')}';
@@ -163,6 +229,8 @@ class DisplayUserProgressTool extends Tool {
         return 'Error: Missing required parameters for displaying user progress.';
       }
 
+      // final String healthDataType = arguments["health_data_type"].toUpperCase();
+      // final String period = arguments["period"].toUpperCase();
       throw UnimplementedError('DisplayUserProgressTool.call is not implemented yet.');
     } catch (e, s) {
       log('Error while handling DisplayUserProgressTool.call: $e', error: e, stackTrace: s);
