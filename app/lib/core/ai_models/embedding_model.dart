@@ -2,14 +2,10 @@ import 'dart:async';
 import 'dart:developer' show log;
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:math' show min;
-import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:sherpa_onnx/sherpa_onnx.dart';
-import 'package:waico/core/utils/model_download_utils.dart';
+import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 
-class SttModel {
+class EmbeddingModel {
   /// Loading the model in GPU/CPU takes time, so we load once for the app lifecycle and use a singleton instance
   static Isolate? _isolate;
   static SendPort? _sendPort;
@@ -17,14 +13,15 @@ class SttModel {
   static int _requestCounter = 0;
   static final Map<int, Completer<dynamic>> _pendingRequests = {};
 
-  SttModel() {
+  EmbeddingModel() {
     if (_isolate == null || _sendPort == null) {
-      throw StateError("Model not initialized. Call SttModel.initialize first");
+      throw StateError("Model not initialized. Call EmbeddingModel.initialize first");
     }
   }
+
   static Future<void> initialize({required String modelPath}) async {
     if (_isolate != null) {
-      log("SttModel Already initialized, Skipping.");
+      log("EmbeddingModel Already initialized, Skipping.");
       return;
     }
 
@@ -42,7 +39,7 @@ class SttModel {
         handshakeCompleted = true;
         completer.complete(message);
       } else if (handshakeCompleted && message is Map<String, dynamic>) {
-        // Handle STT responses
+        // Handle embedding responses
         final requestId = message['requestId'] as int;
         final pendingCompleter = _pendingRequests.remove(requestId);
         if (pendingCompleter != null) {
@@ -65,7 +62,7 @@ class SttModel {
     _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath});
 
     await initCompleter.future;
-    log("Stt model initialized successfully");
+    log("Embedding model initialized successfully");
   }
 
   static Future<void> dispose() async {
@@ -80,29 +77,26 @@ class SttModel {
     }
   }
 
-  /// Transcribe audio data to text
-  Future<String> transcribeAudio({required Float32List samples, required int sampleRate}) async {
+  /// Generate embeddings for the given text
+  Future<List<double>> getEmbeddings(String text) async {
     if (_isolate == null || _sendPort == null) {
-      throw StateError("Model not initialized. Call SttModel.initialize first");
+      throw StateError("Model not initialized. Call EmbeddingModel.initialize first");
     }
 
-    final completer = Completer<String>();
+    final completer = Completer<List<double>>();
     final requestId = _requestCounter++;
     _pendingRequests[requestId] = completer;
 
-    _sendPort!.send({'action': 'transcribe', 'requestId': requestId, 'samples': samples, 'sampleRate': sampleRate});
+    _sendPort!.send({'action': 'getEmbeddings', 'requestId': requestId, 'text': text});
 
     return completer.future;
   }
 
   static void _isolateEntryPoint(SendPort mainSendPort) {
-    initBindings();
-
     final receivePort = ReceivePort();
     mainSendPort.send(receivePort.sendPort);
 
-    OfflineRecognizer? recognizer;
-    String? modelDirPath;
+    Llama? embedModel;
 
     receivePort.listen((message) async {
       try {
@@ -114,34 +108,18 @@ class SttModel {
             case 'initialize':
               try {
                 final modelPath = message['modelPath'] as String;
-                modelDirPath = await extractModelData(modelPath);
 
-                final encoderFile = File('$modelDirPath/encoder.onnx');
-                final decoderFile = File('$modelDirPath/decoder.onnx');
-                final tokensFile = File('$modelDirPath/tokens.txt');
+                final modelFile = File(modelPath);
+                if (!await modelFile.exists()) {
+                  throw Exception("Model file not found: $modelPath");
+                }
 
-                if (!await encoderFile.exists()) throw Exception("encoder.int8.onnx not found in $modelDirPath");
-                if (!await decoderFile.exists()) throw Exception("decoder.int8.onnx not found in $modelDirPath");
-                if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
+                final modelParams = ModelParams();
+                final contextParams = ContextParams()
+                  ..embeddings = true
+                  ..nCtx = 512; // multilingual-e5-small's max context length
 
-                final canaryConfig = OfflineCanaryModelConfig(
-                  encoder: encoderFile.path,
-                  decoder: decoderFile.path,
-                  srcLang: 'en',
-                  tgtLang: 'en',
-                  usePnc: true,
-                );
-
-                final modelConfig = OfflineModelConfig(
-                  canary: canaryConfig,
-                  tokens: tokensFile.path,
-                  debug: kDebugMode,
-                  // If device have more than 4 cores, use 4 threads, otherwise use all the cores
-                  numThreads: min(Platform.numberOfProcessors, 4),
-                  provider: Platform.isAndroid ? "xnnpack" : "cpu",
-                );
-
-                recognizer = OfflineRecognizer(OfflineRecognizerConfig(model: modelConfig));
+                embedModel = Llama(modelPath, modelParams, contextParams, SamplerParams());
 
                 mainSendPort.send({'requestId': requestId, 'result': 'initialized'});
               } catch (e) {
@@ -149,37 +127,29 @@ class SttModel {
               }
               break;
 
-            case 'transcribe':
+            case 'getEmbeddings':
               try {
-                if (recognizer == null) {
-                  throw StateError("Recognizer not initialized");
+                if (embedModel == null) {
+                  throw StateError("Embedding model not initialized");
                 }
 
-                final samples = message['samples'] as Float32List;
-                final sampleRate = message['sampleRate'] as int;
+                final text = message['text'] as String;
+                final embeddings = embedModel!.getEmbeddings(text);
 
-                final stream = recognizer!.createStream();
-                try {
-                  stream.acceptWaveform(samples: samples, sampleRate: sampleRate);
-                  recognizer!.decode(stream);
-                  final result = recognizer!.getResult(stream);
-                  mainSendPort.send({'requestId': requestId, 'result': result.text});
-                } finally {
-                  stream.free();
-                }
+                mainSendPort.send({'requestId': requestId, 'result': embeddings});
               } catch (e) {
                 mainSendPort.send({'requestId': requestId, 'error': e.toString()});
               }
               break;
 
             case 'dispose':
-              recognizer?.free();
-              recognizer = null;
+              embedModel?.dispose();
+              embedModel = null;
               Isolate.exit();
           }
         }
       } catch (e) {
-        log('Error in STT isolate: $e');
+        log('Error in Embedding isolate: $e');
       }
     });
   }

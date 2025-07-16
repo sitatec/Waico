@@ -4,10 +4,10 @@ import 'package:archive/archive_io.dart' show extractFileToDisk;
 
 class DownloadedModelPaths {
   final String ttsModelPath;
-  final String? kokoroVoicesPath;
   final String gemma3nPath;
+  final String embeddingModelPath;
 
-  DownloadedModelPaths({required this.ttsModelPath, this.kokoroVoicesPath, required this.gemma3nPath});
+  DownloadedModelPaths({required this.ttsModelPath, required this.gemma3nPath, required this.embeddingModelPath});
 }
 
 Future<String> extractModelData(String modelArchivePath) async {

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/ai_models/chat_model.dart';
+import 'package:waico/core/ai_models/embedding_model.dart';
 import 'package:waico/core/ai_models/stt_model.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
@@ -70,14 +71,19 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       displayName: "Canary Flash",
     ),
     DownloadItem(
+      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
+      fileName: "gemma-3n-E2B-it-int4.task",
+      displayName: "Gemma 3n E2B",
+    ),
+    DownloadItem(
       url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
       fileName: "kokoro-v1_0.tar.gz",
       displayName: "Kokoro TTS",
     ),
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
-      fileName: "gemma-3n-E2B-it-int4.task",
-      displayName: "Gemma 3n E2B",
+      url: "${DownloadItem.baseUrl}/multilingual-e5-small-fp32.gguf",
+      fileName: "multilingual-e5-small-fp32.gguf",
+      displayName: "mE5 Small",
     ),
   ];
 
@@ -349,14 +355,21 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     _startModelLoadingProgressSimulation();
 
     try {
-      final gemmaModelPath = await _modelsToDownload[2].downloadedFilePath;
+      // Loading all the model is not memory efficient but if we don't load them here,
+      // every time the user opens a chat screen they will wait for a long time.
+      // Even with the current approach, creating a new chat session takes 5-15 seconds
+      // On a Samsung S21 Ultra. TODO: do lazy loading
+      final gemmaModelPath = await _modelsToDownload[1].downloadedFilePath;
       await ChatModel.loadBaseModel(gemmaModelPath);
 
-      final ttsModelPath = await _modelsToDownload[1].downloadedFilePath;
+      final ttsModelPath = await _modelsToDownload[2].downloadedFilePath;
       await TtsModel.initialize(modelPath: ttsModelPath);
 
       final sttModelPath = await _modelsToDownload[0].downloadedFilePath;
       await SttModel.initialize(modelPath: sttModelPath);
+
+      final embeddingModelPath = await _modelsToDownload[3].downloadedFilePath;
+      await EmbeddingModel.initialize(modelPath: embeddingModelPath);
 
       // Model loaded successfully, set to 100%
       _progressTimer?.cancel();
@@ -365,7 +378,13 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         isInitializationComplete = true;
       });
 
-      widget.onDone?.call(DownloadedModelPaths(ttsModelPath: ttsModelPath, gemma3nPath: gemmaModelPath));
+      widget.onDone?.call(
+        DownloadedModelPaths(
+          ttsModelPath: ttsModelPath,
+          gemma3nPath: gemmaModelPath,
+          embeddingModelPath: embeddingModelPath,
+        ),
+      );
     } catch (e, s) {
       log("Model initialization failed:", error: e, stackTrace: s);
       // Handle error
