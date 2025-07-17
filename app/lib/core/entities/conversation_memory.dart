@@ -3,11 +3,12 @@ import 'package:waico/core/entities/conversation.dart';
 
 @Entity()
 class ConversationMemory {
-  /// Currently multilingual-e5-small is used, so the embeddings dimension is 384.
-  static const embeddingsDimension = 384;
+  /// Currently Qwen3-Embedding-0.6B is used, so the embeddings dimension is 1024.
+  static const embeddingsDimension = 1024;
 
-  /// multilingual-e5-small's scores range from 0.7 to 1.0, so we set the threshold to 0.8 for now
-  static const embeddingsScoreThreshold = 0.8;
+  /// The threshold for similarity score when comparing embeddings.
+  /// Embeddings with a score below this threshold should be discarded from search results.
+  static const embeddingsScoreThreshold = 0.6;
 
   @Id()
   int id;

@@ -81,9 +81,9 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       displayName: "Kokoro TTS",
     ),
     DownloadItem(
-      url: "${DownloadItem.baseUrl}/multilingual-e5-small-fp32.gguf",
-      fileName: "multilingual-e5-small-fp32.gguf",
-      displayName: "mE5 Small",
+      url: "${DownloadItem.baseUrl}/Qwen3-Embedding-0.6B-Q8_0.gguf",
+      fileName: "Qwen3-Embedding-0.6B-Q8_0.gguf",
+      displayName: "Qwen3 Embedding",
     ),
   ];
 
@@ -214,8 +214,14 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       item.progress = taskRecord.progress;
       item.isCompleted = taskRecord.status == TaskStatus.complete;
       item.isError = [TaskStatus.canceled, TaskStatus.failed, TaskStatus.notFound].contains(taskRecord.status);
+
       if (taskRecord.expectedFileSize >= 0) {
         item.fileSize = _formatBytes(taskRecord.expectedFileSize);
+      } else {
+        final fileSize = await item.task!.expectedFileSize();
+        if (fileSize > 0) {
+          item.fileSize = _formatBytes(fileSize);
+        }
       }
     }
   }

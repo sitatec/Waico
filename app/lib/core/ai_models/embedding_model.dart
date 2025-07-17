@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:developer' show log;
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' show min;
 
+import 'package:flutter/foundation.dart';
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 
 class EmbeddingModel {
@@ -117,7 +119,13 @@ class EmbeddingModel {
                 final modelParams = ModelParams();
                 final contextParams = ContextParams()
                   ..embeddings = true
-                  ..nCtx = 512; // multilingual-e5-small's max context length
+                  ..nCtx = 8192
+                  // LlamaPoolingType.last for qwen3 embeddings models
+                  ..poolingType = LlamaPoolingType.last
+                  ..flashAttn = true
+                  ..noPerfTimings = kDebugMode
+                  // If device have more than 4 cores, use 4 threads, otherwise use all the cores
+                  ..nThreads = min(Platform.numberOfProcessors, 4);
 
                 embedModel = Llama(modelPath, modelParams, contextParams, SamplerParams());
 
