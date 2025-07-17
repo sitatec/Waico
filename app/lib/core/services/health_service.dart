@@ -1,6 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:synchronized/synchronized.dart' show Lock;
 
 /// Health metrics data model
 class HealthMetrics {
@@ -40,7 +43,7 @@ class HealthMetrics {
 }
 
 /// Health service status
-enum HealthServiceStatus { loading, permissionsRequired, healthConnectRequired, ready, error }
+enum HealthServiceStatus { loading, permissionsRequired, healthConnectRequired, ready, error, uninitialized }
 
 /// A service that provides a simple and intuitive API for health data
 class HealthService extends ChangeNotifier {
@@ -49,8 +52,9 @@ class HealthService extends ChangeNotifier {
   HealthService._internal();
 
   final Health _health = Health();
+  final Lock _lock = Lock();
 
-  HealthServiceStatus _status = HealthServiceStatus.loading;
+  HealthServiceStatus _status = HealthServiceStatus.uninitialized;
   HealthMetrics _metrics = HealthMetrics(
     steps: 0,
     heartRate: 0.0,
@@ -85,34 +89,42 @@ class HealthService extends ChangeNotifier {
 
   /// Initialize the health service
   Future<void> initialize() async {
-    try {
-      _updateStatus(HealthServiceStatus.loading);
-
-      // Configure health plugin
-      await _health.configure();
-
-      // Check if Health Connect is available
-      if (!await _health.isHealthConnectAvailable()) {
-        _updateStatus(HealthServiceStatus.healthConnectRequired);
+    // Ensure initialization is only done once
+    await _lock.synchronized(() async {
+      if (_status != HealthServiceStatus.uninitialized) {
+        log('Health service is already initialized or in progress, skipping initialization.');
         return;
       }
 
-      // Request activity recognition permission for Android
-      await Permission.activityRecognition.request();
+      try {
+        _updateStatus(HealthServiceStatus.loading);
 
-      // Request health permissions
-      bool authorized = await _health.requestAuthorization(_healthDataTypes);
+        // Configure health plugin
+        await _health.configure();
 
-      if (authorized) {
-        await refreshData();
-        _updateStatus(HealthServiceStatus.ready);
-      } else {
-        _updateStatus(HealthServiceStatus.permissionsRequired);
+        // Check if Health Connect is available
+        if (!await _health.isHealthConnectAvailable()) {
+          _updateStatus(HealthServiceStatus.healthConnectRequired);
+          return;
+        }
+
+        // Request activity recognition permission for Android
+        await Permission.activityRecognition.request();
+
+        // Request health permissions
+        bool authorized = await _health.requestAuthorization(_healthDataTypes);
+
+        if (authorized) {
+          await refreshData();
+          _updateStatus(HealthServiceStatus.ready);
+        } else {
+          _updateStatus(HealthServiceStatus.permissionsRequired);
+        }
+      } catch (e) {
+        _setError('Failed to initialize health service: $e');
+        debugPrint('Health service initialization error: $e');
       }
-    } catch (e) {
-      _setError('Failed to initialize health service: $e');
-      debugPrint('Health service initialization error: $e');
-    }
+    });
   }
 
   /// Install Health Connect (Android only)

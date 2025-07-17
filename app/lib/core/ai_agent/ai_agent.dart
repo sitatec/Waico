@@ -8,7 +8,7 @@ import 'package:waico/core/ai_models/chat_model.dart';
 
 /// A robust AI agent that manages chat interactions and tool executions
 class AiAgent {
-  final ChatModel _chatModel;
+  final ChatModel chatModel;
   final Map<String, Tool> _tools;
   final int _maxToolIterations;
 
@@ -22,7 +22,7 @@ class AiAgent {
     int topK = 64,
     double topP = 0.95,
     bool supportImageInput = true,
-  }) : _chatModel =
+  }) : chatModel =
            chatModel ??
            ChatModel(
              systemPrompt: _enhanceSystemPromptWithTools(systemPrompt, tools),
@@ -33,31 +33,6 @@ class AiAgent {
            ),
        _tools = {for (var tool in tools) tool.name: tool},
        _maxToolIterations = maxToolIterations;
-
-  /// Factory method to create a counselor AI agent with predefined system prompt
-  factory AiAgent.counselor({
-    required List<Tool> tools,
-    int maxToolIterations = 5,
-    double temperature = 1.0,
-    int topK = 64,
-    double topP = 0.95,
-  }) {
-    const systemPrompt =
-        "You are Waico, a compassionate and trustworthy AI counselor. "
-        "Your role is to provide emotional support, active listening, and thoughtful guidance rooted in evidence-based therapeutic principles (such as CBT, ACT, and mindfulness). "
-        "Respond with empathy, clarity, and non-judgment. Encourage self-reflection, validate emotions, and offer practical coping strategies when appropriate. "
-        "You are not a licensed therapist and do not diagnose or treat mental health conditions—always recommend speaking to a qualified professional when needed. "
-        "Prioritize safety, confidentiality, and the well-being of the user in every interaction.";
-
-    return AiAgent(
-      systemPrompt: systemPrompt,
-      tools: tools,
-      maxToolIterations: maxToolIterations,
-      temperature: temperature,
-      topK: topK,
-      topP: topP,
-    );
-  }
 
   /// Enhances the system prompt with tool information
   static String _enhanceSystemPromptWithTools(String? basePrompt, List<Tool> tools) {
@@ -78,7 +53,7 @@ class AiAgent {
 
   /// Initializes the AI agent by setting up the chat model
   Future<void> initialize() async {
-    await _chatModel.initialize();
+    await chatModel.initialize();
   }
 
   /// Sends a message to the AI agent and returns a stream of text
@@ -90,7 +65,7 @@ class AiAgent {
 
       while (iterationCount < _maxToolIterations) {
         final toolParser = ToolParser();
-        final responseStream = _chatModel.sendMessageStream(currentMessage, attachments: attachments);
+        final responseStream = chatModel.sendMessageStream(currentMessage, attachments: attachments);
 
         // Transform the stream to parse tool calls
         final textStream = responseStream.transform(toolParser);
@@ -165,14 +140,14 @@ class AiAgent {
   }
 
   /// Gets the current chat history
-  Iterable<ChatMessage> get history => _chatModel.history;
+  Iterable<ChatMessage> get history => chatModel.history;
 
   /// Sets the chat history (useful for restoring previous conversations)
-  set history(Iterable<ChatMessage> history) => _chatModel.history = history;
+  set history(Iterable<ChatMessage> history) => chatModel.history = history;
 
   /// Clears the current conversation history
   Future<void> clearHistory() async {
-    await _chatModel.initialize(); // Reinitialize to clear history
+    await chatModel.initialize(); // Reinitialize to clear history
   }
 
   /// Gets the available tools and their definitions
@@ -190,7 +165,7 @@ class AiAgent {
 
   /// Disposes of the AI agent and its resources
   Future<void> dispose() async {
-    await _chatModel.dispose();
+    await chatModel.dispose();
   }
 }
 

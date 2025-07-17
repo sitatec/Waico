@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:waico/core/ai_models/chat_model.dart';
+import 'package:waico/core/ai_agent/counselor_agent.dart';
+import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
@@ -14,7 +15,7 @@ class CounselorPage extends StatefulWidget {
 
 class _CounselorPageState extends State<CounselorPage> {
   String _conversationMode = 'speech';
-  ChatModel? _chatModel;
+  CounselorAgent? _agent;
   VoiceChatPipeline? _voiceChat;
   bool _initialized = false;
 
@@ -28,10 +29,12 @@ class _CounselorPageState extends State<CounselorPage> {
   }
 
   Future<void> init() async {
-    _chatModel = ChatModel(systemPrompt: _getSystemPrompt());
-    await _chatModel!.initialize();
+    final healthService = HealthService();
+    await healthService.initialize();
+    _agent = CounselorAgent(healthService: healthService, displayHealthData: _displayHealthData);
+    await _agent!.initialize();
     // ignore: use_build_context_synchronously
-    _voiceChat = VoiceChatPipeline(llm: _chatModel!);
+    _voiceChat = VoiceChatPipeline(agent: _agent!);
     setState(() {
       _initialized = true;
     });
@@ -40,7 +43,7 @@ class _CounselorPageState extends State<CounselorPage> {
   @override
   void dispose() {
     _voiceChat?.dispose();
-    _chatModel?.dispose();
+    _agent?.dispose();
     super.dispose();
   }
 
@@ -80,18 +83,15 @@ class _CounselorPageState extends State<CounselorPage> {
           body: _initialized
               ? _isSpeechMode
                     ? VoiceChatView(voiceChatPipeline: _voiceChat!)
-                    : LlmChatView(provider: _chatModel!, enableVoiceNotes: false)
+                    : LlmChatView(provider: _agent!.chatModel, enableVoiceNotes: false)
               : null,
         ),
         if (!_initialized) LoadingWidget(message: "Initializing Chat"),
       ],
     );
   }
-}
 
-String _getSystemPrompt() =>
-    "You are Waico, a compassionate and trustworthy AI counselor. "
-    "Your role is to provide emotional support, active listening, and thoughtful guidance rooted in evidence-based therapeutic principles (such as CBT, ACT, and mindfulness). "
-    "Respond with empathy, clarity, and non-judgment. Encourage self-reflection, validate emotions, and offer practical coping strategies when appropriate. "
-    "You are not a licensed therapist and do not diagnose or treat mental health conditions—always recommend speaking to a qualified professional when needed. "
-    "Prioritize safety, confidentiality, and the well-being of the user in every interaction.";
+  void _displayHealthData(Map<String, dynamic> healthData) {
+    throw UnimplementedError("Display health data is not implemented yet.");
+  }
+}

@@ -4,14 +4,14 @@ import 'dart:developer' show log;
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ImageFileAttachment;
 import 'package:synchronized/synchronized.dart';
-import 'package:waico/core/ai_models/chat_model.dart';
+import 'package:waico/core/ai_agent/ai_agent.dart';
 import 'package:waico/core/services/audio_stream_player.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/services/user_speech_listener.dart';
 import 'package:waico/core/utils/string_utils.dart';
 
 class VoiceChatPipeline {
-  final ChatModel llm;
+  final AiAgent agent;
   final UserSpeechToTextListener _userSpeechToTextListener;
   final TtsModel _tts;
   final List<XFile> _pendingImages = [];
@@ -26,7 +26,7 @@ class VoiceChatPipeline {
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
 
   VoiceChatPipeline({
-    required this.llm,
+    required this.agent,
     UserSpeechToTextListener? userSpeechToTextListener,
     TtsModel? tts,
     AudioStreamPlayer? audioStreamPlayer,
@@ -61,7 +61,7 @@ class VoiceChatPipeline {
     _pendingImages.clear();
 
     String sentenceBuffer = "";
-    await for (final textChunk in llm.sendMessageStream(text, attachments: attachments)) {
+    await for (final textChunk in agent.sendMessage(text, attachments: attachments)) {
       if (_hasChatEnded) {
         // Currently there is no way to cancel generation once it starts, so we use this variable stop handling.
         return;

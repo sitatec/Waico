@@ -72,7 +72,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
 
   Widget _buildContent(ThemeData theme) {
     switch (_healthService.status) {
-      case HealthServiceStatus.loading:
+      case HealthServiceStatus.loading || HealthServiceStatus.uninitialized:
         return const Center(child: CircularProgressIndicator(color: Colors.white));
 
       case HealthServiceStatus.healthConnectRequired:
