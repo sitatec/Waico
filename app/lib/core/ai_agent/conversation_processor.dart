@@ -1,0 +1,428 @@
+import 'dart:convert';
+import 'dart:developer' show log;
+import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ChatMessage;
+import 'package:waico/core/ai_models/chat_model.dart';
+import 'package:waico/core/ai_models/embedding_model.dart';
+import 'package:waico/core/entities/conversation.dart';
+import 'package:waico/core/entities/conversation_memory.dart';
+import 'package:waico/core/repositories/conversation_memory_repository.dart';
+import 'package:waico/core/repositories/conversation_repository.dart';
+import 'package:waico/core/repositories/user_repository.dart';
+
+/// Process a conversation to extract useful insights
+///
+/// Used to summarize conversations, extract user info (name, preferences,...) and long-term memories from them,
+/// and generate observations about the conversation that can serve the assistant and a professional
+/// (therapist, coach, doctor,...) to better assist the user.
+class ConversationProcessor {
+  static const _summaryPrompt = '''
+You are an expert at creating concise, clear summaries of therapeutic or coaching conversations.
+
+First, think through the conversation step by step:
+1. What were the main topics discussed?
+2. What key points did the user raise?
+3. Were there any important decisions or commitments made?
+4. What was the overall tone and emotional context?
+5. Were there any significant developments or changes?
+etc.
+
+Then provide a summary that captures these elements. Keep it factual, objective, and focused on the most important elements. The summary should be 1-4 paragraphs and serve as a quick reference for understanding what happened in this conversation without missing any important details.
+''';
+
+  static const _userInfoPrompt = '''
+You are an expert at extracting user information from conversations.
+Given a conversation and the current user information (which can be empty), your goal is to extract new or updated user information.
+
+First, analyze the conversation step by step:
+1. What personal information did the user explicitly mention?
+2. What can be reasonably inferred from their statements?
+3. What preferences, interests, or goals did they express (present goals not past)?
+4. What demographic or circumstantial information is evident?
+5. Did the user provide any information (contact details, location, name, etc.) about their healthcare/wellbeing professionals?
+6. Anything that is important to remember about the user for future interactions?
+etc.
+
+Only include information that is explicitly mentioned or can be reasonably inferred.
+
+If the current user information is not empty, merge the new information from the conversation with the existing user information prioritizing the new information to keep it up-to-date.
+
+Your final answer should a concise paragraph summarizing the user information, formatted as the following 2 examples:
+
+Example 1:
+Let's start with a step by step analysis of the conversation...(Your reasoning here)
+```text
+The user's goals are to improve their mental health, manage anxiety, and build better relationships. They are interested in mindfulness practices and have a therapist named Alex that they see weekly. Their therapist Alex phone number is 123-456-7890.
+They prefer to communicate via email and are located in San Francisco, CA. The user is 28 years old and works as a software engineer.
+```
+
+Example 2:
+Step by step analysis of the conversation... (This is your reasoning)
+```text
+The user is a 35-year-old male named John Doe. He is married with two children and lives in New York City. He works as a marketing manager and enjoys hiking and cooking.
+He has a Gym coach hose email is mason@gymwarriors.com, he sometimes struggles with work-life balance and is interested in improving his time management skills.
+He is considering starting therapy to address his body image issues which is the reason he started going to the gym. Going to the gym has significantly improved the way he feels about himself.
+```
+''';
+
+  static const _memoriesPrompt = '''
+You are an expert at identifying significant moments and information that should be remembered long-term from conversations.
+
+First, analyze the conversation step by step:
+1. What significant life events or milestones were mentioned?
+2. What important decisions or commitments were made?
+3. Were there any emotional moments or breakthroughs?
+4. What key insights or realizations occurred?
+5. What important relationships or connections were mentioned?
+6. Were any significant life goals set or achievements celebrated?
+7. What challenges or difficulties were discussed?
+8. Were there any personal growth moments?
+9. What important dates or future plans were mentioned?
+etc.
+
+Then extract important memories. Each memory should be:
+- A clear, concise statement or paragraph summarizing the key point
+- Self-contained and meaningful for future reference
+- Focused on significant moments, not small talk
+
+
+For every memory detected, include all relevant context and details from the conversation that are related to that memory.
+
+When you are done analyzing the conversation step by step, format your final answer as the following 2 examples:
+
+Example 1:
+Let's think through the conversation step by step... (Your reasoning here)
+```json
+[
+  "When the user was 10 years old, they moved to a new city with their family, which was a significant change for them. They remember feeling excited but also nervous about making new friends.",
+  "The user's first job was at a local bookstore, where they developed a love for reading and customer service. They worked there for 3 years during high school. This experience shaped their career interests, leading them to pursue a degree in business.",
+  "The user had an cousin named Sarah who has been a significant influence in their life. They often discuss personal growth and career goals with her, and she has helped them through difficult times. But one day, Sarah had a car accident and passed away, which was a very difficult time for the user.",
+]
+```
+
+Example 2:
+Let's start with a step by step analysis of the conversation... (This is your reasoning)
+```json
+[
+  "The user's math professor, Dr. Smith, is a significant figure in their academic journey. Dr. Smith has been a mentor, providing guidance and support throughout the user's studies. The user often seeks Dr. Smith's advice on academic and career decisions."
+]
+```
+
+If no significant memories are found, return an empty array:
+```json
+[]
+```
+''';
+
+  static const _observationPrompt = '''
+You are a professional clinical observer writing notes for healthcare providers, therapists, or coaches.
+
+First, analyze the conversation systematically:
+1. What is the user's current emotional state and mood patterns?
+2. How is their communication style and engagement level?
+3. What key concerns or issues did they present?
+4. Are there any signs of progress or changes from previous interactions?
+5. What risk factors or areas of concern are evident?
+6. What strengths and positive indicators do you observe?
+8. What notable behaviors or patterns emerged?
+9. What did the user and the assistant agree on to talk about in the next conversation (if any)?
+etc.
+
+Then provide a professional observation that would be valuable for someone providing care or guidance to this person. Write in a professional, objective tone suitable for clinical documentation. Be empathetic but maintain professional boundaries. Focus on observable behaviors and stated concerns rather than making diagnoses.
+
+Keep the observation concise but comprehensive (1 paragraph maximum).
+
+Your final answer should formatted as follows:
+Let's think through the conversation step by step... (This is your reasoning)
+```text
+The user appears to be experiencing a high level of anxiety related to their work performance. They expressed feelings of being overwhelmed and mentioned difficulty sleeping due to racing thoughts about deadlines.
+The user also indicated a desire to improve their time management skills and is considering seeking professional help to address these issues. 
+The user doesn't appear to be making significant progress in managing their anxiety, and they have not yet implemented the coping strategies discussed in previous sessions.
+```
+
+If the conversation doesn't contain enough information for a meaningful observation, return an empty string.
+''';
+
+  final UserRepository _userRepository;
+  final ConversationRepository _conversationRepository;
+  final ConversationMemoryRepository _conversationMemoryRepository;
+
+  ConversationProcessor({
+    UserRepository? userRepository,
+    ConversationRepository? conversationRepository,
+    ConversationMemoryRepository? conversationMemoryRepository,
+  }) : _userRepository = userRepository ?? UserRepository(),
+       _conversationRepository = conversationRepository ?? ConversationRepository(),
+       _conversationMemoryRepository = conversationMemoryRepository ?? ConversationMemoryRepository();
+
+  /// Processes a conversation to extract useful information with comprehensive error handling.
+  ///
+  /// This method analyzes the conversation extract key insights such as (summary, user info, memories, and observations).
+  /// and stores them in the database. Handles failures gracefully and logs detailed error information.
+  Future<void> processConversation(List<ChatMessage> conversation) async {
+    if (conversation.isEmpty) {
+      log('ConversationProcessor: Empty conversation provided, skipping processing');
+      return;
+    }
+
+    try {
+      final conversationText = formatConversationToText(conversation);
+      // Ensure that if one extraction fails, the others can still proceed
+      final userInfo = await _returnDefaultOnError(() => extractUserInfo(conversationText), '');
+      final memories = await _returnDefaultOnError(() => extractMemories(conversationText), []);
+      final observation = await _returnDefaultOnError(() => extractObservation(conversationText), '');
+      final summary = await _returnDefaultOnError(() => summarizeConversation(conversationText), '');
+
+      if (userInfo.isEmpty && memories.isEmpty && observation.isEmpty && summary.isEmpty) {
+        throw Exception('All extractions returned empty contents');
+      }
+
+      // Store the extracted information in the databases
+      await Future.wait([_storeUserInfo(userInfo), _storeConversationAndMemories(summary, observation, memories)]);
+    } catch (e, stackTrace) {
+      log(
+        'ConversationProcessor.processConversation: Failed to process conversation',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ConversationProcessingException(
+        'Failed to process conversation',
+        e is Exception ? e : Exception(e.toString()),
+      );
+    }
+  }
+
+  T _returnDefaultOnError<T>(T Function() action, defaultValue) {
+    try {
+      return action();
+    } catch (e, stackTrace) {
+      log('ConversationProcessor: Error during processing', error: e, stackTrace: stackTrace);
+      return defaultValue;
+    }
+  }
+
+  /// Formats a list of ChatMessage objects into a well-structured string
+  String formatConversationToText(List<ChatMessage> conversation) {
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < conversation.length; i++) {
+      final message = conversation[i];
+      final isLastMessage = i == conversation.length - 1;
+
+      if (message.origin.isUser) {
+        if (message.text?.contains('```tool_output') == true) {
+          buffer.write('Tool Result: ${message.text ?? ""}');
+        } else {
+          buffer.write('User: ${message.text ?? ""}');
+          if (message.attachments.isNotEmpty) {
+            buffer.write('\nUser Uploaded Files: ${message.attachments.map((a) => a.name).join(', ')}');
+          }
+        }
+      } else if (message.origin.isLlm) {
+        buffer.write('Assistant: ${message.text ?? ""}');
+      }
+
+      if (!isLastMessage) {
+        buffer.write('\n\n');
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  /// Extracts a concise summary of the conversation using chain-of-thought reasoning
+  Future<String> summarizeConversation(String conversation) async {
+    ChatModel? chatModel;
+    try {
+      chatModel = ChatModel(systemPrompt: _summaryPrompt);
+      await chatModel.initialize();
+
+      final response = StringBuffer();
+      await for (final chunk in chatModel.sendMessageStream(
+        'Analyze and summarize this conversation:\n\n$conversation',
+      )) {
+        response.write(chunk);
+      }
+
+      return response.toString().trim();
+    } catch (e, stackTrace) {
+      log('ConversationProcessor: Error extracting summary', error: e, stackTrace: stackTrace);
+      throw ExtractionException('summary', e.toString(), e is Exception ? e : Exception(e.toString()));
+    } finally {
+      await chatModel?.dispose();
+    }
+  }
+
+  /// Extracts user information with chain-of-thought reasoning and text parsing
+  Future<String> extractUserInfo(String conversation) async {
+    ChatModel? chatModel;
+    try {
+      chatModel = ChatModel(systemPrompt: _userInfoPrompt);
+      await chatModel.initialize();
+
+      final response = StringBuffer();
+      await for (final chunk in chatModel.sendMessageStream(
+        'Analyze this conversation and extract user information:\n\n$conversation',
+      )) {
+        response.write(chunk);
+      }
+
+      final responseText = response.toString();
+      // Extract text from markdown code block if present
+      final textMatch = RegExp(r'```text\s*([\s\S]*?)\s*```').firstMatch(responseText);
+      return textMatch?.group(1) ?? responseText.trim();
+    } catch (e, stackTrace) {
+      log('ConversationProcessor: Error extracting user info', error: e, stackTrace: stackTrace);
+      throw ExtractionException('user info', e.toString(), e is Exception ? e : Exception(e.toString()));
+    } finally {
+      await chatModel?.dispose();
+    }
+  }
+
+  /// Extracts memorable moments with chain-of-thought reasoning and JSON parsing
+  Future<List<String>> extractMemories(String conversation) async {
+    ChatModel? chatModel;
+    try {
+      chatModel = ChatModel(systemPrompt: _memoriesPrompt);
+      await chatModel.initialize();
+
+      final response = StringBuffer();
+      await for (final chunk in chatModel.sendMessageStream(
+        'Extract important memories from this conversation:\n\n$conversation',
+      )) {
+        response.write(chunk);
+      }
+
+      final responseText = response.toString();
+      // Extract JSON from markdown code block if present
+      final jsonMatch = RegExp(r'```json\s*([\s\S]*?)\s*```').firstMatch(responseText);
+      final jsonText = jsonMatch?.group(1) ?? responseText.trim();
+
+      final decoded = json.decode(jsonText);
+      if (decoded is List) {
+        return decoded.cast<String>();
+      }
+      return <String>[];
+    } catch (e, stackTrace) {
+      log('ConversationProcessor: Error extracting memories', error: e, stackTrace: stackTrace);
+      throw ExtractionException('memories', e.toString(), e is Exception ? e : Exception(e.toString()));
+    } finally {
+      await chatModel?.dispose();
+    }
+  }
+
+  /// Generates professional observations with chain-of-thought reasoning and text parsing
+  Future<String> extractObservation(String conversation) async {
+    ChatModel? chatModel;
+    try {
+      chatModel = ChatModel(systemPrompt: _observationPrompt);
+      await chatModel.initialize();
+
+      final response = StringBuffer();
+      await for (final chunk in chatModel.sendMessageStream(
+        'Provide a professional observation of this conversation:\n\n$conversation',
+      )) {
+        response.write(chunk);
+      }
+
+      final responseText = response.toString();
+      // Extract text from markdown code block if present
+      final textMatch = RegExp(r'```text\s*([\s\S]*?)\s*```').firstMatch(responseText);
+      final extractedText = textMatch?.group(1) ?? responseText.trim();
+
+      return extractedText.trim();
+    } catch (e, stackTrace) {
+      log('ConversationProcessor: Error extracting observation', error: e, stackTrace: stackTrace);
+      throw ExtractionException('observation', e.toString(), e is Exception ? e : Exception(e.toString()));
+    } finally {
+      await chatModel?.dispose();
+    }
+  }
+
+  /// Stores extracted user information in the user repository
+  Future<void> _storeUserInfo(String userInfo) async {
+    if (userInfo.isNotEmpty) {
+      try {
+        // Store user information using the existing updateUserInfo method
+        await _userRepository.updateUserInfo(userInfo);
+        log('ConversationProcessor: Successfully stored user info with ${userInfo.length} fields');
+      } catch (e, stackTrace) {
+        log('ConversationProcessor: Error storing user info', error: e, stackTrace: stackTrace);
+        throw StorageException('user info', e.toString(), e is Exception ? e : Exception(e.toString()));
+      }
+    }
+  }
+
+  /// Stores conversation, observations, and memories in a single transaction
+  Future<void> _storeConversationAndMemories(String summary, String observation, List<String> memories) async {
+    if (summary.isEmpty && observation.isEmpty && memories.isEmpty) {
+      log('ConversationProcessor: No content to store, skipping storage');
+      return;
+    }
+
+    try {
+      // Create conversation record
+      final conversation = Conversation(
+        summary: summary.isNotEmpty ? summary : 'No summary',
+        observations: observation.isNotEmpty ? observation : 'No observations',
+      );
+
+      // Save the conversation
+      _conversationRepository.save(conversation);
+      log(
+        'ConversationProcessor: Stored conversation with summary: ${summary.length} chars, observation: ${observation.length} chars',
+      );
+
+      // Generate embeddings and save memories if any exist
+      if (memories.isNotEmpty) {
+        final embeddingModel = EmbeddingModel();
+        int successfulMemories = 0;
+
+        for (final memory in memories) {
+          try {
+            // Generate embeddings for the memory
+            final embeddings = await embeddingModel.getEmbeddings(memory);
+            final conversationMemory = ConversationMemory(content: memory, embeddings: embeddings);
+            // Link to the conversation
+            conversationMemory.conversation.target = conversation;
+            _conversationMemoryRepository.save(conversationMemory);
+            successfulMemories++;
+          } catch (e) {
+            log('ConversationProcessor: Failed to save memory: $memory', error: e);
+            // Continue processing other memories if one fails
+            continue;
+          }
+        }
+
+        log('ConversationProcessor: Successfully stored $successfulMemories out of ${memories.length} memories');
+      }
+    } catch (e, stackTrace) {
+      log('ConversationProcessor: Error storing conversation and memories', error: e, stackTrace: stackTrace);
+      throw StorageException('conversation and memories', e.toString(), e is Exception ? e : Exception(e.toString()));
+    }
+  }
+}
+
+// Exception classes for better error handling
+class ConversationProcessingException implements Exception {
+  final String message;
+  final Exception? cause;
+
+  const ConversationProcessingException(this.message, [this.cause]);
+
+  @override
+  String toString() => 'ConversationProcessingException: $message${cause != null ? ' (caused by: $cause)' : ''}';
+}
+
+class ExtractionException extends ConversationProcessingException {
+  final String extractionType;
+
+  const ExtractionException(this.extractionType, String message, [Exception? cause])
+    : super('Failed to extract $extractionType: $message', cause);
+}
+
+class StorageException extends ConversationProcessingException {
+  final String storageType;
+
+  const StorageException(this.storageType, String message, [Exception? cause])
+    : super('Failed to store $storageType: $message', cause);
+}

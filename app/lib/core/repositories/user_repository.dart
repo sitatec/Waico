@@ -14,29 +14,29 @@ class UserRepository extends ObjectBoxBaseRepository<User> {
 
   /// Create or update the current user
   /// In a single-user app, this will update the existing user or create a new one
-  Future<User> saveUser(String name, {Map<String, String>? preferences}) async {
+  Future<User> saveUser(String name, {String? info}) async {
     final existingUser = await getUser();
 
     if (existingUser != null) {
       existingUser.preferredName = name;
-      if (preferences != null) {
-        existingUser.preferences = preferences;
+      if (info != null) {
+        existingUser.userInfo = info;
       }
       existingUser.touch();
       save(existingUser);
       return existingUser;
     } else {
-      final newUser = User(preferredName: name, preferences: preferences);
+      final newUser = User(preferredName: name, userInfo: info);
       save(newUser);
       return newUser;
     }
   }
 
-  /// Update user preferences
-  Future<void> updatePreferences(Map<String, String> preferences) async {
+  /// Update user info
+  Future<void> updateUserInfo(String info) async {
     final user = await getUser();
     if (user != null) {
-      user.preferences = preferences;
+      user.userInfo = info;
       user.touch();
       save(user);
     }

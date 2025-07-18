@@ -139,30 +139,6 @@ class AiAgent {
         '```';
   }
 
-  /// Gets the current chat history
-  Iterable<ChatMessage> get history => chatModel.history;
-
-  /// Sets the chat history (useful for restoring previous conversations)
-  set history(Iterable<ChatMessage> history) => chatModel.history = history;
-
-  /// Clears the current conversation history
-  Future<void> clearHistory() async {
-    await chatModel.initialize(); // Reinitialize to clear history
-  }
-
-  /// Gets the available tools and their definitions
-  Map<String, String> get availableTools => _tools.map((name, tool) => MapEntry(name, tool.definition));
-
-  /// Adds a new tool to the agent
-  void addTool(Tool tool) {
-    _tools[tool.name] = tool;
-  }
-
-  /// Removes a tool from the agent
-  void removeTool(String toolName) {
-    _tools.remove(toolName);
-  }
-
   /// Disposes of the AI agent and its resources
   Future<void> dispose() async {
     await chatModel.dispose();

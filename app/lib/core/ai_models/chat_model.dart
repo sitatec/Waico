@@ -7,6 +7,7 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/pigeon.g.dart' show PreferredBackend;
 import 'package:intl/intl.dart';
 
+// TODO: Remove direct dependency and exposing the flutter_ai_toolkit class as part of the ChatModel interface
 class ChatModel extends LlmProvider with ChangeNotifier {
   /// Used to prevent the model from exceeding the maximum context length.
   /// It ensures that the model has enough tokens left for the response.
@@ -165,7 +166,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
     }
 
     if ((_chatTokenCount + currentMessageTokenCount) >= (_maxTokenCount - _reservedTokenCount)) {
-      throw Gemma3nMaxTokensExceededException(
+      throw MaxTokensExceededException(
         'Maximum token count exceeded. Current: ${_chatTokenCount + currentMessageTokenCount}, Max: $_maxTokenCount, Reserved: $_reservedTokenCount',
       );
     }
@@ -204,10 +205,10 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   }
 }
 
-class Gemma3nMaxTokensExceededException implements Exception {
+class MaxTokensExceededException implements Exception {
   final String message;
 
-  Gemma3nMaxTokensExceededException([this.message = 'Maximum token count exceeded']);
+  MaxTokensExceededException([this.message = 'Maximum token count exceeded']);
 
   @override
   String toString() => 'Gemma3nMaxTokensExceededException: $message';

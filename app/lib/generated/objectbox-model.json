@@ -39,7 +39,7 @@
     },
     {
       "id": "2:5697885661381816381",
-      "lastPropertyId": "4:2732217944615821771",
+      "lastPropertyId": "5:2669593327413781358",
       "name": "ConversationMemory",
       "properties": [
         {
@@ -47,11 +47,6 @@
           "name": "id",
           "type": 6,
           "flags": 1
-        },
-        {
-          "id": "2:3913860355338299821",
-          "name": "memory",
-          "type": 9
         },
         {
           "id": "3:8740622706670844385",
@@ -67,12 +62,51 @@
           "flags": 520,
           "indexId": "3:4852819179156216796",
           "relationTarget": "Conversation"
+        },
+        {
+          "id": "5:2669593327413781358",
+          "name": "content",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:8823447173051830056",
+      "lastPropertyId": "5:9089175368154372475",
+      "name": "User",
+      "properties": [
+        {
+          "id": "1:5228525514244251395",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6884491784261660228",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "3:8958741128853572380",
+          "name": "updatedAt",
+          "type": 10
+        },
+        {
+          "id": "4:1283189109077027113",
+          "name": "preferredName",
+          "type": 9
+        },
+        {
+          "id": "5:9089175368154372475",
+          "name": "userInfo",
+          "type": 9
         }
       ],
       "relations": []
     }
   ],
-  "lastEntityId": "2:5697885661381816381",
+  "lastEntityId": "3:8823447173051830056",
   "lastIndexId": "3:4852819179156216796",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
@@ -83,7 +117,8 @@
     195901725711995868
   ],
   "retiredPropertyUids": [
-    6933633824755297981
+    6933633824755297981,
+    3913860355338299821
   ],
   "retiredRelationUids": [],
   "version": 1
