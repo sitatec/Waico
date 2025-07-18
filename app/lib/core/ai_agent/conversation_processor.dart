@@ -46,7 +46,7 @@ Only include information that is explicitly mentioned or can be reasonably infer
 
 If the current user information is not empty, merge the new information from the conversation with the existing user information prioritizing the new information to keep it up-to-date.
 
-Your final answer should a concise paragraph summarizing the user information, formatted as the following 2 examples:
+Your final answer should a concise paragraph summarizing the user information. Not a summary of the entire conversation, not a summary of everything the user says. Only informations for future reference.
 
 Example 1:
 Let's start with a step by step analysis of the conversation...(Your reasoning here)
@@ -56,11 +56,23 @@ They prefer to communicate via email and are located in San Francisco, CA. The u
 ```
 
 Example 2:
-Step by step analysis of the conversation... (This is your reasoning)
+(Your thoughts)
 ```text
 The user is a 35-year-old male named John Doe. He is married with two children and lives in New York City. He works as a marketing manager and enjoys hiking and cooking.
 He has a Gym coach hose email is mason@gymwarriors.com, he sometimes struggles with work-life balance and is interested in improving his time management skills.
 He is considering starting therapy to address his body image issues which is the reason he started going to the gym. Going to the gym has significantly improved the way he feels about himself.
+```
+
+If there isn't much information, keep it short:
+Step by step analysis of the conversation... (This is your reasoning)
+```text
+The user is hard working, his boss seems to like breaking promises.
+```
+
+If there is not information to extract, output an empty text:
+(Your thoughts here)
+```text
+
 ```
 ''';
 
@@ -132,7 +144,7 @@ Then provide a professional observation that would be valuable for someone provi
 Keep the observation concise but comprehensive (1 paragraph maximum).
 
 Your final answer should formatted as follows:
-Let's think through the conversation step by step... (This is your reasoning)
+(You should think step-by-step here first. Then proceed with the output like below) 
 ```text
 The user appears to be experiencing a high level of anxiety related to their work performance. They expressed feelings of being overwhelmed and mentioned difficulty sleeping due to racing thoughts about deadlines.
 The user also indicated a desire to improve their time management skills and is considering seeking professional help to address these issues. 
@@ -164,10 +176,10 @@ If the conversation doesn't contain enough information for a meaningful observat
   }) async {
     final currentProgress = {
       // True == Complete | False == Incomplete
-      'Memory Generation': false,
-      'User Info Generation': false,
-      'Observations Generation': false,
       'Summary Generation': false,
+      'Memory Generation': false,
+      'User Info Extraction': false,
+      'Observations Generation': false,
     };
     updateProgress?.call(currentProgress);
 
@@ -187,12 +199,6 @@ If the conversation doesn't contain enough information for a meaningful observat
       _markCompleted(currentProgress, 'Summary Generation', updateProgress);
       final userInfo = await _returnDefaultOnError(() => extractUserInfo(conversationText), '');
       _markCompleted(currentProgress, 'User Info Extraction', updateProgress);
-
-      print('ConversationProcessor: Extracted user info: $userInfo');
-      print('ConversationProcessor: Extracted memories: $memories items');
-      print('ConversationProcessor: Extracted observation: $observation');
-      print('ConversationProcessor: Extracted summary: $summary');
-      return;
 
       if (userInfo.isEmpty && memories.isEmpty && observation.isEmpty && summary.isEmpty) {
         throw Exception('All extractions returned empty contents');
@@ -214,6 +220,7 @@ If the conversation doesn't contain enough information for a meaningful observat
   }
 
   void _markCompleted(Map<String, bool> currentProgress, String key, void Function(Map<String, bool>)? updateProgress) {
+    log('Processing "$key" Completed ✅');
     currentProgress[key] = true;
     updateProgress?.call(currentProgress);
   }

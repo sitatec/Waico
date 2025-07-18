@@ -62,7 +62,10 @@ class AiAgent {
   ///
   /// Should be called after the conversation is complete
   Future<void> finalize({void Function(Map<String, bool>)? updateProgress}) async {
-    await _conversationProcessor.processConversation(chatModel.history, updateProgress: updateProgress);
+    final conversation = chatModel.history;
+    // Need to close the current chat session since the processConversation method will start new ones.
+    await chatModel.dispose();
+    await _conversationProcessor.processConversation(conversation, updateProgress: updateProgress);
   }
 
   /// Sends a message to the AI agent and returns a stream of text
@@ -146,11 +149,6 @@ class AiAgent {
     return '```tool_output\n'
         '${output.map((output) => 'From ${output.toolName}:\n${output.result}').join('\n---\n')}\n'
         '```';
-  }
-
-  /// Disposes of the AI agent and its resources
-  Future<void> dispose() async {
-    await chatModel.dispose();
   }
 }
 

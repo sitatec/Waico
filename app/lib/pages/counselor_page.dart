@@ -20,7 +20,7 @@ class _CounselorPageState extends State<CounselorPage> {
   CounselorAgent? _agent;
   VoiceChatPipeline? _voiceChat;
   bool _initialized = false;
-  bool finalizationModalShown = false;
+  bool chatProcessingModalShown = false;
 
   bool get _isSpeechMode => _conversationMode == 'speech';
 
@@ -46,7 +46,6 @@ class _CounselorPageState extends State<CounselorPage> {
   @override
   void dispose() {
     _voiceChat?.dispose();
-    _agent?.dispose();
     super.dispose();
   }
 
@@ -57,9 +56,8 @@ class _CounselorPageState extends State<CounselorPage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop || finalizationModalShown) return;
-        finalizationModalShown = true;
-        _showChatFinalizationProgressModal();
+        if (didPop || chatProcessingModalShown) return;
+        _showChatEndConfirmationBottomSheet();
       },
       child: Stack(
         children: [
@@ -70,7 +68,7 @@ class _CounselorPageState extends State<CounselorPage> {
               leading: BackButton(
                 onPressed: () {
                   if (_initialized) {
-                    _showChatFinalizationProgressModal();
+                    _showChatEndConfirmationBottomSheet();
                   } else {
                     context.navBack();
                   }
@@ -119,92 +117,174 @@ class _CounselorPageState extends State<CounselorPage> {
     throw UnimplementedError("Display health data is not implemented yet.");
   }
 
-  Future<void> _showChatFinalizationProgressModal() {
-    Map<String, bool> progress = {};
-    bool finalizationStarted = false;
+  Future<void> _showChatEndConfirmationBottomSheet() {
     return showModalBottomSheet(
       context: context,
+      isDismissible: false,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            if (!finalizationStarted) {
-              _agent!.finalize(
-                updateProgress: (newProgress) {
-                  setState(() => progress = newProgress);
-                  if (newProgress.isNotEmpty && newProgress.values.every((value) => value)) {
-                    // All tasks completed, close the modal
-                    Future.delayed(const Duration(milliseconds: 700), () {
-                      // Close the finalization modal and the counselor page
-                      if (context.mounted) {
-                        context.navBack();
-                        context.navBack();
-                      }
-                    });
-                  }
-                },
-              );
-              finalizationStarted = true;
-            }
-            return Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Processing conversation", style: Theme.of(context).textTheme.bodyLarge),
-                  const SizedBox(height: 16),
-                  if (progress.isEmpty)
-                    const Text("please wait...") // Initial state before any progress is made
-                  else
-                    ...progress.entries.map((entry) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(entry.key, style: Theme.of(context).textTheme.bodyMedium),
-                          SizedBox(width: 8),
-                          Visibility(
-                            visible: entry.value,
-                            maintainSize: true,
-                            maintainAnimation: true,
-                            maintainState: true,
-                            child: Icon(Icons.check, color: Colors.green, size: 18),
-                          ),
-                        ],
-                      );
-                    }),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [ElevatedButton(onPressed: _confirmFinalizationCancel, child: const Text("Cancel"))],
-                  ),
-                ],
-              ),
-            );
-          },
+        return PopScope(
+          canPop: false,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Are you sure you want to end the chat?", style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    FilledButton(
+                      onPressed: () {
+                        context.navBack(); // Close the confirmation dialog
+                        _showChatProcessingProgressModal();
+                        chatProcessingModalShown = true;
+                      },
+                      child: const Text("End Chat"),
+                    ),
+                    const SizedBox(width: 16),
+                    TextButton(onPressed: context.navBack, child: const Text("Continue Chatting")),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Future<void> _confirmFinalizationCancel() {
+  Future<void> _showChatProcessingProgressModal() {
+    Map<String, bool> progress = {};
+    bool finalizationStarted = false;
+    // The element being processed (elements are processed sequentially, since its on-device llm inference)
+    String currentElement = '';
+    return showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              if (!finalizationStarted) {
+                _voiceChat!.endChat();
+                _agent!.finalize(
+                  updateProgress: (newProgress) {
+                    setState(() {
+                      progress = newProgress;
+                      currentElement = newProgress.entries
+                          // Get the first element that is not complete, if all are complete reset current element to ''
+                          .firstWhere((entry) => entry.value == false, orElse: () => MapEntry('', false))
+                          .key;
+                    });
+                    if (newProgress.isNotEmpty && newProgress.values.every((value) => value)) {
+                      // All tasks completed, close the modal
+                      Future.delayed(const Duration(milliseconds: 700), () {
+                        // Close the finalization modal and the counselor page
+                        if (context.mounted) {
+                          context.navBack();
+                          context.navBack();
+                        }
+                      });
+                    }
+                  },
+                );
+                finalizationStarted = true;
+              }
+              return Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Processing conversation", style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 10),
+                    Text(
+                      "This process helps improve your experience by extracting useful information from the conversation for future reference. All extracted information stays on your device.",
+                    ),
+                    const SizedBox(height: 20),
+                    if (progress.isEmpty)
+                      const Text("please wait...") // Initial state before any progress is made
+                    else
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: progress.entries
+                              .map((entry) {
+                                return Row(
+                                  children: [
+                                    if (entry.key == currentElement)
+                                      // Show loading indicator for the element currently being precessed
+                                      CircularProgressIndicator.adaptive(
+                                        constraints: const BoxConstraints.tightFor(width: 15, height: 15),
+                                        strokeWidth: 2,
+                                      )
+                                    else
+                                      Visibility(
+                                        visible: entry.value,
+                                        maintainSize: true,
+                                        maintainAnimation: true,
+                                        maintainState: true,
+                                        child: Icon(Icons.check, color: Colors.green, size: 17),
+                                      ),
+                                    SizedBox(width: 10),
+                                    Text(entry.key, style: Theme.of(context).textTheme.bodyMedium),
+                                    SizedBox(width: 8),
+                                  ],
+                                );
+                              })
+                              .toList(growable: false),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [TextButton(onPressed: _confirmProcessingCancel, child: const Text("Cancel"))],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmProcessingCancel() {
     return showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Cancel Finalization"),
-          content: const Text(
-            "Are you sure you want to cancel the finalization?\nThis process helps improve your experience by extracting useful information from the conversation for future reference.",
+          title: const Text("Cancel Processing"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Are you sure you want to cancel the precessing the conversation?",
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "This process helps improve your experience by extracting useful information from the conversation for future reference. All extracted information stays on your device.",
+                style: TextStyle(color: Colors.red),
+              ),
+            ],
           ),
           actions: [
-            TextButton(onPressed: context.navBack, child: const Text("No")),
-            const SizedBox(width: 16),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
                 context.navBack(); // Close the confirmation dialog
+                context.navBack(); // Close the Conversation Processing bottom sheet
                 context.navBack(); // Close the counselor page
               },
-              child: const Text("Yes"),
+              child: const Text("Cancel"),
             ),
+            const SizedBox(width: 16),
+            FilledButton(onPressed: context.navBack, child: const Text("Continue Processing")),
           ],
         );
       },

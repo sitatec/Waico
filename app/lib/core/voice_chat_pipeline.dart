@@ -46,6 +46,7 @@ class VoiceChatPipeline {
   }
 
   Future<void> endChat() async {
+    if (_hasChatEnded) return;
     _hasChatEnded = true;
     await _userSpeechStreamSubscription?.cancel();
     await _audioStreamPlayer.stop();
