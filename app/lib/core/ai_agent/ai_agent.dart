@@ -2,17 +2,18 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'package:waico/core/ai_agent/conversation_processor.dart';
 import 'package:waico/core/ai_agent/tool_parser.dart';
 import 'package:waico/core/ai_agent/tools.dart';
 import 'package:waico/core/ai_models/chat_model.dart';
 
-/// A robust AI agent that manages chat interactions and tool executions
+/// An AI agent that manages chat interactions and tool calls and executions
 class AiAgent {
   final ChatModel chatModel;
   final Map<String, Tool> _tools;
   final int _maxToolIterations;
+  final ConversationProcessor _conversationProcessor;
 
-  /// Creates an AI agent with the provided tools and optional chat model
   AiAgent({
     ChatModel? chatModel,
     String? systemPrompt,
@@ -22,6 +23,7 @@ class AiAgent {
     int topK = 64,
     double topP = 0.95,
     bool supportImageInput = true,
+    ConversationProcessor? conversationProcessor,
   }) : chatModel =
            chatModel ??
            ChatModel(
@@ -32,9 +34,9 @@ class AiAgent {
              supportImageInput: supportImageInput,
            ),
        _tools = {for (var tool in tools) tool.name: tool},
-       _maxToolIterations = maxToolIterations;
+       _maxToolIterations = maxToolIterations,
+       _conversationProcessor = conversationProcessor ?? ConversationProcessor();
 
-  /// Enhances the system prompt with tool information
   static String _enhanceSystemPromptWithTools(String? basePrompt, List<Tool> tools) {
     if (basePrompt == null || basePrompt.isEmpty) {
       basePrompt = 'You are Waico, a helpful Wellbeing AI Assistant.';
@@ -54,6 +56,13 @@ class AiAgent {
   /// Initializes the AI agent by setting up the chat model
   Future<void> initialize() async {
     await chatModel.initialize();
+  }
+
+  /// Processes the conversation history and extracts relevant information
+  ///
+  /// Should be called after the conversation is complete
+  Future<void> finalize({void Function(Map<String, bool>)? updateProgress}) async {
+    await _conversationProcessor.processConversation(chatModel.history, updateProgress: updateProgress);
   }
 
   /// Sends a message to the AI agent and returns a stream of text

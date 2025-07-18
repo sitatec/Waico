@@ -158,7 +158,18 @@ If the conversation doesn't contain enough information for a meaningful observat
   ///
   /// This method analyzes the conversation extract key insights such as (summary, user info, memories, and observations).
   /// and stores them in the database. Handles failures gracefully and logs detailed error information.
-  Future<void> processConversation(List<ChatMessage> conversation) async {
+  Future<void> processConversation(
+    List<ChatMessage> conversation, {
+    void Function(Map<String, bool>)? updateProgress,
+  }) async {
+    final currentProgress = {
+      'Memory Generation': false,
+      'User Info Generation': false,
+      'Observations Generation': false,
+      'Summary Generation': false,
+    };
+    updateProgress?.call(currentProgress);
+
     if (conversation.isEmpty) {
       log('ConversationProcessor: Empty conversation provided, skipping processing');
       return;
@@ -166,11 +177,15 @@ If the conversation doesn't contain enough information for a meaningful observat
 
     try {
       final conversationText = formatConversationToText(conversation);
-      // Ensure that if one extraction fails, the others can still proceed
-      final userInfo = await _returnDefaultOnError(() => extractUserInfo(conversationText), '');
+      // _returnDefaultOnError ensures that if one extraction fails, the others can still proceed
       final memories = await _returnDefaultOnError(() => extractMemories(conversationText), []);
+      _markCompleted(currentProgress, 'Memory Generation', updateProgress);
       final observation = await _returnDefaultOnError(() => extractObservation(conversationText), '');
+      _markCompleted(currentProgress, 'Observations Generation', updateProgress);
       final summary = await _returnDefaultOnError(() => summarizeConversation(conversationText), '');
+      _markCompleted(currentProgress, 'Summary Generation', updateProgress);
+      final userInfo = await _returnDefaultOnError(() => extractUserInfo(conversationText), '');
+      _markCompleted(currentProgress, 'User Info Extraction', updateProgress);
 
       if (userInfo.isEmpty && memories.isEmpty && observation.isEmpty && summary.isEmpty) {
         throw Exception('All extractions returned empty contents');
@@ -189,6 +204,11 @@ If the conversation doesn't contain enough information for a meaningful observat
         e is Exception ? e : Exception(e.toString()),
       );
     }
+  }
+
+  void _markCompleted(Map<String, bool> currentProgress, String key, void Function(Map<String, bool>)? updateProgress) {
+    currentProgress[key] = true;
+    updateProgress?.call(currentProgress);
   }
 
   T _returnDefaultOnError<T>(T Function() action, defaultValue) {
