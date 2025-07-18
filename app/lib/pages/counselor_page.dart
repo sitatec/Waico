@@ -3,6 +3,7 @@ import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:waico/core/ai_agent/counselor_agent.dart';
 import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
+import 'package:waico/core/widgets/chart_widget.dart' show ChartDataPoint;
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
 
@@ -83,7 +84,11 @@ class _CounselorPageState extends State<CounselorPage> {
           body: _initialized
               ? _isSpeechMode
                     ? VoiceChatView(voiceChatPipeline: _voiceChat!)
-                    : LlmChatView(provider: _agent!.chatModel, enableVoiceNotes: false)
+                    : LlmChatView(
+                        enableVoiceNotes: false,
+                        provider: _agent!.chatModel,
+                        messageSender: _agent!.sendMessage,
+                      )
               : null,
         ),
         if (!_initialized) LoadingWidget(message: "Initializing Chat"),
@@ -91,7 +96,7 @@ class _CounselorPageState extends State<CounselorPage> {
     );
   }
 
-  void _displayHealthData(Map<String, dynamic> healthData) {
+  void _displayHealthData(List<ChartDataPoint> healthData) {
     throw UnimplementedError("Display health data is not implemented yet.");
   }
 }

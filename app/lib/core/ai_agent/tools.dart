@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter/material.dart';
 import 'package:health/health.dart' show HealthDataType, HealthDataPoint, NumericHealthValue;
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:waico/core/ai_models/embedding_model.dart';
@@ -9,6 +10,7 @@ import 'package:waico/core/repositories/conversation_repository.dart';
 import 'package:waico/core/services/calendar_service.dart';
 import 'package:waico/core/services/communication_service.dart';
 import 'package:waico/core/services/health_service.dart' show HealthService;
+import 'package:waico/core/widgets/chart_widget.dart' show ChartDataPoint;
 
 abstract class Tool {
   String get name;
@@ -211,7 +213,7 @@ class GetHealthDataTool extends Tool {
 
 class DisplayUserProgressTool extends Tool {
   final HealthService healthService;
-  final void Function(Map<String, dynamic>) displayHealthData;
+  final void Function(List<ChartDataPoint>) displayHealthData;
   DisplayUserProgressTool({required this.healthService, required this.displayHealthData});
 
   @override
@@ -229,13 +231,131 @@ class DisplayUserProgressTool extends Tool {
         return 'Error: Missing required parameters for displaying user progress.';
       }
 
-      // final String healthDataType = arguments["health_data_type"].toUpperCase();
-      // final String period = arguments["period"].toUpperCase();
-      throw UnimplementedError('DisplayUserProgressTool.call is not implemented yet.');
+      final String healthDataType = arguments["health_data_type"].toUpperCase();
+      final String period = arguments["period"].toUpperCase();
+
+      // Validate health data type
+      if (!GetHealthDataTool.healthDataTypeMap.containsKey(healthDataType)) {
+        return 'Error: Invalid health_data_type. Must be one of: ${GetHealthDataTool.healthDataTypeMap.keys.join(', ')}';
+      }
+
+      // Validate period for progress display (different from get_health_data)
+      if (period != 'LAST_7_DAYS' && period != 'LAST_30_DAYS') {
+        return 'Error: Invalid period. Must be either LAST_7_DAYS or LAST_30_DAYS.';
+      }
+
+      final endTime = DateTime.now();
+      final days = period == 'LAST_7_DAYS' ? 7 : 30;
+      final startTime = endTime.subtract(Duration(days: days));
+
+      final healthDataType_ = GetHealthDataTool.healthDataTypeMap[healthDataType]!;
+
+      // Get health data for the specified range
+      final healthData = await healthService.getHealthDataForRange(
+        startTime: startTime,
+        endTime: endTime,
+        types: [healthDataType_],
+      );
+
+      // Process data into daily aggregates for chart display
+      final chartData = _processHealthDataToChartPoints(healthData, healthDataType_, days, endTime);
+
+      // Calculate total for the period
+      final total = chartData.fold<double>(0, (sum, point) => sum + point.y);
+
+      // Call the display function with the processed data
+      displayHealthData(chartData);
+
+      // Return success message with summary
+      final formattedTotal = _formatTotalValue(total, healthDataType_);
+      return 'Successfully displayed progress chart. $formattedTotal';
     } catch (e, s) {
       log('Error while handling DisplayUserProgressTool.call: $e', error: e, stackTrace: s);
       return 'Error: $e';
     }
+  }
+
+  /// Process health data into daily chart data points
+  List<ChartDataPoint> _processHealthDataToChartPoints(
+    List<HealthDataPoint> healthData,
+    HealthDataType type,
+    int days,
+    DateTime endTime,
+  ) {
+    // Create a map to store daily aggregates
+    final Map<String, double> dailyData = {};
+
+    // Initialize all days with 0 values
+    for (int i = days - 1; i >= 0; i--) {
+      final date = endTime.subtract(Duration(days: i));
+      final dateKey = DateFormat('MM-dd').format(date);
+      dailyData[dateKey] = 0.0;
+    }
+
+    // Aggregate health data by day
+    for (var point in healthData) {
+      final dateKey = DateFormat('MM-dd').format(point.dateFrom);
+
+      if (dailyData.containsKey(dateKey)) {
+        if (point.value is NumericHealthValue) {
+          final value = (point.value as NumericHealthValue).numericValue;
+
+          // Convert sleep from minutes to hours for better display
+          final adjustedValue = type == HealthDataType.SLEEP_ASLEEP ? value / 60 : value;
+
+          if (type == HealthDataType.STEPS) {
+            // For steps, we want the total for the day, so we take the max value
+            // as the health data might contain cumulative values
+            dailyData[dateKey] = dailyData[dateKey]! > adjustedValue ? dailyData[dateKey]! : adjustedValue.toDouble();
+          } else {
+            // For other metrics, sum up the values
+            dailyData[dateKey] = dailyData[dateKey]! + adjustedValue;
+          }
+        }
+      }
+    }
+
+    // Convert to ChartDataPoint list
+    final List<ChartDataPoint> chartPoints = [];
+    int dayIndex = 0;
+
+    for (int i = days - 1; i >= 0; i--) {
+      final date = endTime.subtract(Duration(days: i));
+      final dateKey = DateFormat('MM-dd').format(date);
+      final value = dailyData[dateKey] ?? 0.0;
+
+      chartPoints.add(
+        ChartDataPoint(x: dayIndex.toDouble(), y: value, label: dateKey, color: _getColorForHealthType(type)),
+      );
+
+      dayIndex++;
+    }
+
+    return chartPoints;
+  }
+
+  /// Get appropriate color for different health data types
+  Color _getColorForHealthType(HealthDataType type) {
+    return switch (type) {
+      HealthDataType.STEPS => Colors.green,
+      HealthDataType.SLEEP_ASLEEP => Colors.purple,
+      HealthDataType.WATER => Colors.blue,
+      HealthDataType.ACTIVE_ENERGY_BURNED => Colors.orange,
+      HealthDataType.WEIGHT => Colors.red,
+      _ => Colors.grey,
+    };
+  }
+
+  /// Format total value with appropriate units
+  String _formatTotalValue(double total, HealthDataType type) {
+    return switch (type) {
+      HealthDataType.SLEEP_ASLEEP => 'Total sleep: ${total.toStringAsFixed(1)} hours',
+      HealthDataType.WATER => 'Total water: ${total.toStringAsFixed(1)} L',
+      HealthDataType.STEPS => 'Total steps: ${total.toInt()}',
+      HealthDataType.ACTIVE_ENERGY_BURNED => 'Total calories: ${total.toInt()}',
+      HealthDataType.WEIGHT => 'Average weight: ${(total / (total > 0 ? 1 : 1)).toStringAsFixed(1)} kg',
+      _ => 'Total: ${total.toStringAsFixed(1)}',
+    };
   }
 }
 

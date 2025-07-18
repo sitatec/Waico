@@ -1,11 +1,12 @@
 import 'package:waico/core/ai_agent/ai_agent.dart';
 import 'package:waico/core/ai_agent/tools.dart';
 import 'package:waico/core/services/health_service.dart';
+import 'package:waico/core/widgets/chart_widget.dart' show ChartDataPoint;
 
 class CounselorAgent extends AiAgent {
   CounselorAgent({
     required HealthService healthService,
-    required void Function(Map<String, dynamic>) displayHealthData,
+    required void Function(List<ChartDataPoint>) displayHealthData,
     super.maxToolIterations,
     super.temperature,
     super.topK,
