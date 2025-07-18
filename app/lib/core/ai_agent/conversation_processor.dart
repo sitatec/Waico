@@ -163,6 +163,7 @@ If the conversation doesn't contain enough information for a meaningful observat
     void Function(Map<String, bool>)? updateProgress,
   }) async {
     final currentProgress = {
+      // True == Complete | False == Incomplete
       'Memory Generation': false,
       'User Info Generation': false,
       'Observations Generation': false,
@@ -186,6 +187,12 @@ If the conversation doesn't contain enough information for a meaningful observat
       _markCompleted(currentProgress, 'Summary Generation', updateProgress);
       final userInfo = await _returnDefaultOnError(() => extractUserInfo(conversationText), '');
       _markCompleted(currentProgress, 'User Info Extraction', updateProgress);
+
+      print('ConversationProcessor: Extracted user info: $userInfo');
+      print('ConversationProcessor: Extracted memories: $memories items');
+      print('ConversationProcessor: Extracted observation: $observation');
+      print('ConversationProcessor: Extracted summary: $summary');
+      return;
 
       if (userInfo.isEmpty && memories.isEmpty && observation.isEmpty && summary.isEmpty) {
         throw Exception('All extractions returned empty contents');

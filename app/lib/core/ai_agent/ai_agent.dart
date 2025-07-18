@@ -48,9 +48,9 @@ class AiAgent {
 
     return '$basePrompt\n\n'
         'TOOL CALLING:\n'
-        'You have access to the tools below that you can call to satisfy a user query or when you think it is appropriate.\n'
+        'You have access to the following tools that you can call to satisfy a user query.\n'
         '$toolDefinitions\n\n'
-        "If a tool requires an input that you don't know or the user query is ambiguous, ask for clarification. If you can't perform the action requested and there is no tool to perform it, politely let the user know that you don't have that ability.\n\n";
+        "If a tool requires an input that you don't know or the user query is ambiguous, ask for clarification. If you can't perform the action requested and there is no tool to perform it, politely let the user know that you don't have that ability.";
   }
 
   /// Initializes the AI agent by setting up the chat model
