@@ -1,0 +1,53 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Dev mode",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "cwd": "app",
+      "toolArgs": [
+        "--dart-define",
+        "ENV=dev",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=http://localhost:8011",
+      ]
+    },
+    {
+      "name": "Dev mode - Physical Device",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "cwd": "app",
+      "toolArgs": [
+        "--dart-define",
+        "ENV=test",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=http://192.168.62.170:8011", // Use your own  IP
+      ]
+    },
+    {
+      "name": "Profile mode",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "cwd": "app",
+      "toolArgs": [
+        "--dart-define",
+        "ENV=profile"
+      ]
+    },
+    {
+      "name": "Release mode",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "cwd": "app",
+      "toolArgs": [
+        "--dart-define",
+        "ENV=prod"
+      ]
+    }
+  ]
+}
