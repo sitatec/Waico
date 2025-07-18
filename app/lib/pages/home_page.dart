@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/pages/counselor_page.dart';
 import 'package:waico/core/widgets/health_dashboard.dart';
+import 'package:waico/core/widgets/upcoming_event_card.dart';
 
 class HomePage extends StatelessWidget {
   static const features = <Map<String, dynamic>>[
@@ -49,6 +50,10 @@ class HomePage extends StatelessWidget {
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            sliver: SliverToBoxAdapter(child: UpcomingEventCard()),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
             sliver: SliverGrid.builder(
               itemCount: features.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

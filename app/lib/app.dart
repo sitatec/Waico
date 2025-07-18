@@ -54,6 +54,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),
       ),
       home: Builder(
+        // Using a Builder to ensure we get the correct context from material app for navigation
         builder: (context) {
           return AiModelsInitializationPage(
             onDone: (downloadedModelPaths) {

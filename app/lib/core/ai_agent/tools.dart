@@ -374,6 +374,7 @@ class CreateCalendarSingleEventTool extends Tool {
 
   @override
   FutureOr<String> call(Map<String, dynamic> arguments) async {
+    _calendarService.initialize(); // Ensure the calendar service is initialized
     try {
       // Validate required parameters and return an error message if any are missing
       if (!arguments.containsKey("event_name") ||

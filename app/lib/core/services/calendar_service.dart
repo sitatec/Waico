@@ -22,6 +22,10 @@ class CalendarService {
 
   /// Initialize the calendar service. Must be called before using other methods.
   Future<bool> initialize() async {
+    if (_isInitialized) {
+      log('CalendarService is already initialized');
+      return true;
+    }
     try {
       // Initialize timezone
       await _initializeTimeZone();
@@ -284,7 +288,7 @@ class CalendarService {
     try {
       // Verify the event belongs to our app before deleting
       final event = await _getEventById(eventId);
-      if (event == null || !_isAppEvent(event)) {
+      if (event == null) {
         throw Exception('Event with ID $eventId not found or does not belong to this app');
       }
 
@@ -322,8 +326,8 @@ class CalendarService {
         throw Exception(eventsResult.errors.toString());
       }
 
-      final events = eventsResult.data ?? [];
-      return events.cast<Event>().where(_isAppEvent).toList();
+      final mutableList = <Event>[...(eventsResult.data ?? [])]; // The eventsResult.data is an UnmodifiableListView
+      return mutableList;
     } catch (e, s) {
       log('Error retrieving app events:', error: e, stackTrace: s);
       rethrow;
@@ -343,21 +347,13 @@ class CalendarService {
       }
 
       final events = eventsResult.data ?? [];
-      final foundEvent = events
-          .cast<Event>()
-          .where((event) => event.eventId == eventId && _isAppEvent(event))
-          .firstOrNull;
+      final foundEvent = events.cast<Event>().where((event) => event.eventId == eventId).firstOrNull;
 
       return foundEvent;
     } catch (e, s) {
       log("Failed to get event by id: $eventId :", error: e, stackTrace: s);
       rethrow;
     }
-  }
-
-  /// Check if an event belongs to this app
-  bool _isAppEvent(Event event) {
-    return event.title?.startsWith(_appEventPrefix) == true;
   }
 
   /// Ensure the service is initialized before operations
@@ -367,10 +363,10 @@ class CalendarService {
     }
   }
 
-  /// Get upcoming event (next event in the next 30 days)
+  /// Get the upcoming event (next event in the next 7 days)
   Future<Event?> getUpcomingEvent() async {
     final now = DateTime.now();
-    final endDate = now.add(const Duration(days: 30));
+    final endDate = now.add(const Duration(days: 7));
     final events = await getAppEvents(startDate: now, endDate: endDate);
 
     // Sort events by start time and return the first (earliest) one
