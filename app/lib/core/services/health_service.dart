@@ -92,6 +92,15 @@ class HealthService extends ChangeNotifier {
     HealthDataType.WEIGHT,
   ];
 
+  static const List<HealthDataAccess> _healthDataPermissions = [
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ,
+    HealthDataAccess.READ_WRITE,
+  ];
+
   /// Initialize the health service
   Future<void> initialize() async {
     // Ensure initialization is only done once
@@ -114,12 +123,18 @@ class HealthService extends ChangeNotifier {
         }
 
         // Request activity recognition permission for Android
-        await Permission.activityRecognition.request();
+        PermissionStatus activityRecognitionStatus = await Permission.activityRecognition.status;
+        if (!activityRecognitionStatus.isGranted) {
+          activityRecognitionStatus = await Permission.activityRecognition.request();
+        }
 
         // Request health permissions
-        bool authorized = await _health.requestAuthorization(_healthDataTypes);
+        bool? authorized = await _health.hasPermissions(_healthDataTypes, permissions: _healthDataPermissions);
+        if (authorized != true) {
+          authorized = await _health.requestAuthorization(_healthDataTypes, permissions: _healthDataPermissions);
+        }
 
-        if (authorized) {
+        if (authorized == true && activityRecognitionStatus.isGranted) {
           _status = HealthServiceStatus.ready;
           await refreshData();
         } else {
