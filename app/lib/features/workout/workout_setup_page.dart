@@ -10,14 +10,14 @@ import 'package:waico/features/workout/widgets/goals_step.dart';
 import 'package:waico/features/workout/widgets/preferences_step.dart';
 import 'package:waico/features/workout/widgets/setup_progress_indicator.dart';
 
-class WorkoutSetupScreen extends StatefulWidget {
-  const WorkoutSetupScreen({super.key});
+class WorkoutSetupPage extends StatefulWidget {
+  const WorkoutSetupPage({super.key});
 
   @override
-  State<WorkoutSetupScreen> createState() => _WorkoutSetupScreenState();
+  State<WorkoutSetupPage> createState() => _WorkoutSetupPageState();
 }
 
-class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
+class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
   final PageController _pageController = PageController();
   final HealthService _healthService = HealthService();
   final UserRepository _userRepository = UserRepository();

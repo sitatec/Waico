@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/counselor/counselor_page.dart';
-import 'package:waico/features/workout/workout_setup_screen.dart';
+import 'package:waico/features/workout/workout_setup_page.dart';
 import 'package:waico/core/widgets/health_dashboard.dart';
 import 'package:waico/core/widgets/upcoming_event_card.dart';
 
@@ -72,7 +72,7 @@ class HomePage extends StatelessWidget {
                   imageSize: feature['image']['size'],
                   onTap: () {
                     if (feature['title'] == 'Workout') {
-                      context.navigateTo(const WorkoutSetupScreen());
+                      context.navigateTo(const WorkoutSetupPage());
                     }
                   },
                 );
