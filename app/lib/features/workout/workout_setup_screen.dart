@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 import 'package:waico/core/services/health_service.dart';
+import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/widgets/physical_stats_step.dart';
@@ -19,6 +20,7 @@ class WorkoutSetupScreen extends StatefulWidget {
 class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
   final PageController _pageController = PageController();
   final HealthService _healthService = HealthService();
+  final UserRepository _userRepository = UserRepository();
 
   int _currentStep = 0;
   WorkoutSetupData _setupData = const WorkoutSetupData();
@@ -43,12 +45,19 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
       await _healthService.initialize();
     }
 
+    // Load existing workout setup data
+    final existingWorkoutData = await _userRepository.getWorkoutSetupData();
+
     if (_healthService.isReady) {
       await _healthService.refreshData();
       final metrics = _healthService.metrics;
 
       setState(() {
-        _setupData = _setupData.copyWith(weight: metrics.weight > 0 ? metrics.weight : null);
+        _setupData = existingWorkoutData ?? _setupData.copyWith(weight: metrics.weight > 0 ? metrics.weight : null);
+      });
+    } else if (existingWorkoutData != null) {
+      setState(() {
+        _setupData = existingWorkoutData;
       });
     }
   }
@@ -100,8 +109,8 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
         );
       }
 
-      // Here you would typically save the setup data to your app's storage/database
-      // For now, we'll just show a success message
+      // Save workout setup data to database
+      await _userRepository.saveWorkoutSetupData(_setupData);
 
       if (mounted) {
         _showSuccessDialog();
@@ -132,14 +141,45 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 64),
             const SizedBox(height: 16),
-            const Text('Your workout profile has been created successfully!', textAlign: TextAlign.center),
+            const Text('Your workout profile has been saved successfully!', textAlign: TextAlign.center),
             if (_setupData.bmi != null) ...[
               const SizedBox(height: 16),
-              Text(
-                'Your BMI: ${_setupData.bmi!.toStringAsFixed(1)}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Your BMI: ${_setupData.bmi!.toStringAsFixed(1)}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    if (_setupData.primaryGoal != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Goal: ${_setupData.primaryGoal}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
+            const SizedBox(height: 12),
+            Text(
+              'Your data has been saved locally and synchronized with Health Connect.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
         actions: [

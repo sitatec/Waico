@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class WorkoutSetupData {
   // Physical stats
   final double? weight;
@@ -89,6 +91,56 @@ class WorkoutSetupData {
       return weight! / (heightInMeters * heightInMeters);
     }
     return null;
+  }
+
+  /// Convert from JSON Map
+  factory WorkoutSetupData.fromJson(Map<String, dynamic> json) {
+    return WorkoutSetupData(
+      weight: json['weight']?.toDouble(),
+      height: json['height']?.toDouble(),
+      age: json['age']?.toInt(),
+      gender: json['gender'],
+      currentFitnessLevel: json['currentFitnessLevel'],
+      weeklyWorkoutFrequency: json['weeklyWorkoutFrequency'] ?? 3,
+      preferredWorkoutTypes: List<String>.from(json['preferredWorkoutTypes'] ?? []),
+      primaryGoal: json['primaryGoal'],
+      targetWeight: json['targetWeight'],
+      timeframe: json['timeframe'],
+      specificGoals: List<String>.from(json['specificGoals'] ?? []),
+      availableEquipment: List<String>.from(json['availableEquipment'] ?? []),
+      workoutDurationPreference: json['workoutDurationPreference'] ?? 30,
+      experienceLevel: json['experienceLevel'],
+    );
+  }
+
+  /// Convert to JSON Map
+  Map<String, dynamic> toJson() {
+    return {
+      'weight': weight,
+      'height': height,
+      'age': age,
+      'gender': gender,
+      'currentFitnessLevel': currentFitnessLevel,
+      'weeklyWorkoutFrequency': weeklyWorkoutFrequency,
+      'preferredWorkoutTypes': preferredWorkoutTypes,
+      'primaryGoal': primaryGoal,
+      'targetWeight': targetWeight,
+      'timeframe': timeframe,
+      'specificGoals': specificGoals,
+      'availableEquipment': availableEquipment,
+      'workoutDurationPreference': workoutDurationPreference,
+      'experienceLevel': experienceLevel,
+    };
+  }
+
+  /// Convert from JSON string
+  factory WorkoutSetupData.fromJsonString(String jsonString) {
+    return WorkoutSetupData.fromJson(json.decode(jsonString));
+  }
+
+  /// Convert to JSON string
+  String toJsonString() {
+    return json.encode(toJson());
   }
 
   @override
