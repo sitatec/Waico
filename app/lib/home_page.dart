@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/counselor/counselor_page.dart';
+import 'package:waico/features/workout/workout_setup_screen.dart';
 import 'package:waico/core/widgets/health_dashboard.dart';
 import 'package:waico/core/widgets/upcoming_event_card.dart';
 
@@ -69,6 +70,11 @@ class HomePage extends StatelessWidget {
                   color: feature['color'] as Color,
                   image: feature['image']['url'] as String,
                   imageSize: feature['image']['size'],
+                  onTap: () {
+                    if (feature['title'] == 'Workout') {
+                      context.navigateTo(const WorkoutSetupScreen());
+                    }
+                  },
                 );
               },
             ),
@@ -115,39 +121,50 @@ class FeatureCard extends StatelessWidget {
   final Color color;
   final String image;
   final double imageSize;
+  final VoidCallback? onTap;
 
-  const FeatureCard({super.key, required this.title, required this.color, required this.image, this.imageSize = 90});
+  const FeatureCard({
+    super.key,
+    required this.title,
+    required this.color,
+    required this.image,
+    this.imageSize = 90,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6))],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 16,
-            left: 16,
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, color: Colors.white),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6))],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 16,
+              left: 16,
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, color: Colors.white),
+              ),
             ),
-          ),
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: Image.asset(
-              image,
-              width: imageSize,
-              height: imageSize,
-              fit: BoxFit.contain,
-              alignment: AlignmentDirectional.bottomEnd,
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Image.asset(
+                image,
+                width: imageSize,
+                height: imageSize,
+                fit: BoxFit.contain,
+                alignment: AlignmentDirectional.bottomEnd,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
