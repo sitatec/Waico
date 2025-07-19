@@ -7,8 +7,8 @@ import 'package:waico/core/constants.dart';
 import 'package:waico/core/ai_models/stt_model.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
-import 'package:waico/pages/ai_model_init_page.dart';
-import 'package:waico/pages/home_page.dart';
+import 'package:waico/ai_models_init_page.dart';
+import 'package:waico/home_page.dart';
 import 'package:provider/provider.dart';
 
 class App extends StatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
-import 'package:waico/core/ai_agent/counselor_agent.dart';
+import 'package:waico/features/counselor/counselor_agent.dart';
 import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
