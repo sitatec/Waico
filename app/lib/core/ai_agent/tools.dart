@@ -353,7 +353,7 @@ class DisplayUserProgressTool extends Tool {
       HealthDataType.WATER => 'Total water: ${total.toStringAsFixed(1)} L',
       HealthDataType.STEPS => 'Total steps: ${total.toInt()}',
       HealthDataType.ACTIVE_ENERGY_BURNED => 'Total calories: ${total.toInt()}',
-      HealthDataType.WEIGHT => 'Average weight: ${(total / (total > 0 ? 1 : 1)).toStringAsFixed(1)} kg',
+      HealthDataType.WEIGHT => 'Weight: ${total.toStringAsFixed(1)} kg',
       _ => 'Total: ${total.toStringAsFixed(1)}',
     };
   }

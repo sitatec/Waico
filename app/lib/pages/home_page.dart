@@ -73,7 +73,6 @@ class HomePage extends StatelessWidget {
               },
             ),
           ),
-          SliverToBoxAdapter(child: SizedBox(height: 1400)),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,

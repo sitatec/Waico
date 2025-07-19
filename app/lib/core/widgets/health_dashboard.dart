@@ -17,7 +17,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
     super.initState();
     _healthService = HealthService();
     _healthService.addListener(_onHealthServiceUpdate);
-    _initializeHealthService();
+    _healthService.initialize();
   }
 
   @override
@@ -27,13 +27,9 @@ class _HealthDashboardState extends State<HealthDashboard> {
   }
 
   void _onHealthServiceUpdate() {
-    if (mounted) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {});
-    }
-  }
-
-  Future<void> _initializeHealthService() async {
-    await _healthService.initialize();
+    });
   }
 
   Future<void> _handleActionButton() async {
@@ -196,6 +192,13 @@ class _HealthDashboardState extends State<HealthDashboard> {
                   title: 'Water',
                   value: metrics.waterIntake.toStringAsFixed(1),
                   unit: 'LITERS',
+                ),
+                HealthMetricCard(
+                  icon: Icons.monitor_weight,
+                  title: 'Weight',
+                  value: metrics.weight.toStringAsFixed(1),
+                  unit: 'KG',
+                  // iconSize: 19,
                 ),
               ],
             ),

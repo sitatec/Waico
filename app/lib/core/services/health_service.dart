@@ -12,6 +12,7 @@ class HealthMetrics {
   final double calories;
   final double sleepHours;
   final double waterIntake;
+  final double weight;
   final DateTime lastUpdated;
 
   const HealthMetrics({
@@ -20,6 +21,7 @@ class HealthMetrics {
     required this.calories,
     required this.sleepHours,
     required this.waterIntake,
+    required this.weight,
     required this.lastUpdated,
   });
 
@@ -29,6 +31,7 @@ class HealthMetrics {
     double? calories,
     double? sleepHours,
     double? waterIntake,
+    double? weight,
     DateTime? lastUpdated,
   }) {
     return HealthMetrics(
@@ -37,6 +40,7 @@ class HealthMetrics {
       calories: calories ?? this.calories,
       sleepHours: sleepHours ?? this.sleepHours,
       waterIntake: waterIntake ?? this.waterIntake,
+      weight: weight ?? this.weight,
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
   }
@@ -61,6 +65,7 @@ class HealthService extends ChangeNotifier {
     calories: 0.0,
     sleepHours: 0.0,
     waterIntake: 0.0,
+    weight: 0.0,
     lastUpdated: DateTime.now(),
   );
   String? _errorMessage;
@@ -84,7 +89,7 @@ class HealthService extends ChangeNotifier {
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.SLEEP_ASLEEP,
     HealthDataType.WATER,
-    HealthDataType.WEIGHT, // TODO: show in the dashboard
+    HealthDataType.WEIGHT,
   ];
 
   /// Initialize the health service
@@ -115,14 +120,14 @@ class HealthService extends ChangeNotifier {
         bool authorized = await _health.requestAuthorization(_healthDataTypes);
 
         if (authorized) {
+          _status = HealthServiceStatus.ready;
           await refreshData();
-          _updateStatus(HealthServiceStatus.ready);
         } else {
           _updateStatus(HealthServiceStatus.permissionsRequired);
         }
-      } catch (e) {
+      } catch (e, s) {
         _setError('Failed to initialize health service: $e');
-        debugPrint('Health service initialization error: $e');
+        log('Error refreshing health data: ', error: e, stackTrace: s);
       }
     });
   }
@@ -133,9 +138,9 @@ class HealthService extends ChangeNotifier {
       await _health.installHealthConnect();
       // After installation, re-initialize
       await initialize();
-    } catch (e) {
+    } catch (e, s) {
       _setError('Failed to install Health Connect: $e');
-      debugPrint('Health Connect installation error: $e');
+      log('Health Connect installation error: ', error: e, stackTrace: s);
     }
   }
 
@@ -167,9 +172,9 @@ class HealthService extends ChangeNotifier {
 
       _metrics = processedMetrics.copyWith(lastUpdated: DateTime.now());
       notifyListeners();
-    } catch (e) {
+    } catch (e, s) {
       _setError('Failed to refresh health data: $e');
-      debugPrint('Error refreshing health data: $e');
+      log('Error refreshing health data: ', error: e, stackTrace: s);
     }
   }
 
@@ -185,8 +190,8 @@ class HealthService extends ChangeNotifier {
         startTime: startTime,
         endTime: endTime,
       );
-    } catch (e) {
-      debugPrint('Error fetching health data for range: $e');
+    } catch (e, s) {
+      log('Error fetching health data for range: ', error: e, stackTrace: s);
       return [];
     }
   }
@@ -196,8 +201,8 @@ class HealthService extends ChangeNotifier {
     try {
       final steps = await _health.getTotalStepsInInterval(startTime, endTime);
       return steps ?? 0;
-    } catch (e) {
-      debugPrint('Error fetching steps for range: $e');
+    } catch (e, s) {
+      log('Error fetching steps for range: ', error: e, stackTrace: s);
       return 0;
     }
   }
@@ -223,8 +228,8 @@ class HealthService extends ChangeNotifier {
               )
             : HealthDataUnit.NO_UNIT,
       );
-    } catch (e) {
-      debugPrint('Error writing health data: $e');
+    } catch (e, s) {
+      log('Error writing health data: ', error: e, stackTrace: s);
       return false;
     }
   }
@@ -236,6 +241,7 @@ class HealthService extends ChangeNotifier {
     double caloriesSum = 0;
     double sleepSum = 0;
     double waterSum = 0;
+    HealthDataPoint? latestWeight;
 
     for (var point in healthData) {
       final value = point.value;
@@ -254,6 +260,13 @@ class HealthService extends ChangeNotifier {
           case HealthDataType.WATER:
             waterSum += value.numericValue;
             break;
+          case HealthDataType.WEIGHT:
+            if (latestWeight == null) {
+              latestWeight = point; // Keep the latest weight data
+            } else if (point.dateFrom.isAfter(latestWeight.dateFrom)) {
+              latestWeight = point; // Update if this weight is more recent
+            }
+            break;
           default:
             break;
         }
@@ -266,6 +279,7 @@ class HealthService extends ChangeNotifier {
       calories: caloriesSum,
       sleepHours: sleepSum / 60, // Convert minutes to hours
       waterIntake: waterSum,
+      weight: (latestWeight?.value as NumericHealthValue?)?.numericValue.toDouble() ?? 0.0,
       lastUpdated: DateTime.now(),
     );
   }
