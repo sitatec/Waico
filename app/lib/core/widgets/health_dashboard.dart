@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:waico/core/services/health_service.dart';
+import 'package:waico/core/utils/number_utils.dart';
 
 /// Health dashboard widget that displays wellness metrics
 class HealthDashboard extends StatefulWidget {
@@ -184,19 +185,19 @@ class _HealthDashboardState extends State<HealthDashboard> {
                 HealthMetricCard(
                   icon: Icons.bedtime,
                   title: 'Sleep',
-                  value: metrics.sleepHours.toStringAsFixed(1),
+                  value: metrics.sleepHours.toStringWithoutZeroDecimal(numDecimals: 1),
                   unit: 'HOURS',
                 ),
                 HealthMetricCard(
                   icon: Icons.water_drop,
                   title: 'Water',
-                  value: metrics.waterIntake.toStringAsFixed(1),
+                  value: metrics.waterIntake.toStringWithoutZeroDecimal(numDecimals: 1),
                   unit: 'LITERS',
                 ),
                 HealthMetricCard(
                   icon: Icons.monitor_weight,
                   title: 'Weight',
-                  value: metrics.weight.toStringAsFixed(1),
+                  value: metrics.weight.toStringWithoutZeroDecimal(numDecimals: 1),
                   unit: 'KG',
                   // iconSize: 19,
                 ),

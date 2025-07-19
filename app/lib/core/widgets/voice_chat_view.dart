@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/ai_voice_waveform.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
+import 'package:wakelock_plus/wakelock_plus.dart' show WakelockPlus;
 
 class VoiceChatView extends StatefulWidget {
   final VoiceChatPipeline voiceChatPipeline;
@@ -23,6 +24,8 @@ class _VoiceChatViewState extends State<VoiceChatView> {
         setState(() {
           _chatStarted = true;
         });
+        // Enable wakelock to keep the screen on during the voice chat session
+        WakelockPlus.enable();
       });
     });
   }
@@ -30,6 +33,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   @override
   void dispose() {
     widget.voiceChatPipeline.endChat();
+    WakelockPlus.disable();
     super.dispose();
   }
 
