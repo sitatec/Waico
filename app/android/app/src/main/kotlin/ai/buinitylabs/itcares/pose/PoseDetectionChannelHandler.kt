@@ -48,9 +48,6 @@ class PoseDetectionChannelHandler(
                 "checkCameraPermission" -> {
                     checkCameraPermission(result)
                 }
-                "updatePoseDetectionSettings" -> {
-                    updatePoseDetectionSettings(call, result)
-                }
                 else -> {
                     result.notImplemented()
                 }
@@ -125,28 +122,6 @@ class PoseDetectionChannelHandler(
         } catch (e: Exception) {
             Log.e(TAG, "Error checking camera permission", e)
             result.error("PERMISSION_CHECK_ERROR", "Failed to check permission: ${e.message}", null)
-        }
-    }
-
-    /**
-     * Update pose detection settings
-     */
-    private fun updatePoseDetectionSettings(call: MethodCall, result: MethodChannel.Result) {
-        try {
-            val minDetectionConfidence = call.argument<Double>("minDetectionConfidence")?.toFloat()
-            val minTrackingConfidence = call.argument<Double>("minTrackingConfidence")?.toFloat()
-            val minPresenceConfidence = call.argument<Double>("minPresenceConfidence")?.toFloat()
-            val modelType = call.argument<Int>("modelType")
-            val delegate = call.argument<Int>("delegate")
-
-            // Note: Settings update would require recreating the PoseLandmarkerHelper
-            // This is a placeholder for future implementation
-            Log.d(TAG, "Pose detection settings update requested")
-            result.success("Settings update noted (requires camera restart to apply)")
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating pose detection settings", e)
-            result.error("SETTINGS_UPDATE_ERROR", "Failed to update settings: ${e.message}", null)
         }
     }
 
