@@ -31,6 +31,10 @@ target 'Runner' do
   use_frameworks! :linkage => :static
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
+  # MediaPipe Tasks Vision for pose detection
+  pod 'MediaPipeTasksVision', '~> 0.10.26'
+  
   target 'RunnerTests' do
     inherit! :search_paths
   end
