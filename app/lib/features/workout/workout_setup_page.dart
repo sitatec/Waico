@@ -4,6 +4,7 @@ import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
+import 'package:waico/features/workout/workout_plan_generation_page.dart';
 import 'package:waico/features/workout/widgets/physical_stats_step.dart';
 import 'package:waico/features/workout/widgets/fitness_level_step.dart';
 import 'package:waico/features/workout/widgets/goals_step.dart';
@@ -186,7 +187,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.navBack();
+              context.navigateTo(const WorkoutPlanGenerationPage(), replaceCurrent: true);
             },
             child: const Text('Continue'),
           ),

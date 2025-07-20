@@ -1,5 +1,6 @@
 import 'package:objectbox/objectbox.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
+import 'package:waico/features/workout/models/workout_plan.dart';
 
 @Entity()
 class User {
@@ -47,6 +48,30 @@ class User {
     }
   }
 
+  // The WorkoutPlan type is not supported by ObjectBox.
+  // So ignore this field...
+  @Transient()
+  WorkoutPlan? workoutPlan;
+
+  // ...and define a field with a supported type,
+  // that is backed by the workoutPlan field.
+  String? get dbWorkoutPlan {
+    return workoutPlan?.toJsonString();
+  }
+
+  set dbWorkoutPlan(String? value) {
+    if (value == null || value.isEmpty) {
+      workoutPlan = null;
+    } else {
+      try {
+        workoutPlan = WorkoutPlan.fromJsonString(value);
+      } catch (e) {
+        // Handle parsing errors gracefully
+        workoutPlan = null;
+      }
+    }
+  }
+
   User({
     this.id = 0,
     DateTime? createdAt,
@@ -54,6 +79,7 @@ class User {
     required this.preferredName,
     this.userInfo,
     this.workoutSetupData,
+    this.workoutPlan,
   }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -68,6 +94,8 @@ class User {
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
         'name: $preferredName, '
+        'workoutSetupData: $dbWorkoutPlan, '
+        'workoutPlan: $dbWorkoutPlan, '
         'userInfo: $userInfo)';
   }
 }
