@@ -3,6 +3,7 @@ import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_status.dart';
 import 'package:waico/features/workout/workout_plan_generation_page.dart';
+import 'package:waico/features/workout/workout_plan_page.dart';
 import 'package:waico/features/workout/workout_setup_page.dart';
 
 /// Router page that determines which workout page to show based on user's current state
@@ -47,8 +48,8 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
             context.navigateTo(const WorkoutPlanGenerationPage(), replaceCurrent: true);
             break;
           case WorkoutStatus.planReady:
-            // User has a plan, go to workout view (TODO: implement workout view)
-            _showPlanReadyState();
+            // User has a plan, go to workout view
+            context.navigateTo(const WorkoutPlanPage(), replaceCurrent: true);
             break;
         }
       }
@@ -63,14 +64,27 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
     }
   }
 
-  void _showPlanReadyState() {
-    setState(() {
-      _isLoading = false;
-    });
-    // For now, just show a placeholder. Later this will navigate to the workout plan view
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const _LoadingState();
+    } else if (_hasError) {
+      return _ErrorState(
+        errorMessage: _errorMessage ?? 'An unexpected error occurred',
+        onRetry: _determineWorkoutState,
+      );
+    } else {
+      // This should not happen as we navigate away in all success cases
+      return const _LoadingState();
+    }
   }
+}
 
-  Widget _buildLoadingState() {
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
@@ -105,8 +119,16 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
       ),
     );
   }
+}
 
-  Widget _buildErrorState() {
+class _ErrorState extends StatelessWidget {
+  final String errorMessage;
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.errorMessage, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -124,7 +146,7 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 24),
               Text(
                 'Something went wrong',
@@ -134,7 +156,7 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
               Container(
                 constraints: const BoxConstraints(maxWidth: 300),
                 child: Text(
-                  _errorMessage ?? 'An unexpected error occurred while loading your workout.',
+                  errorMessage,
                   textAlign: TextAlign.center,
                   style: Theme.of(
                     context,
@@ -145,7 +167,7 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _determineWorkoutState,
+                  onPressed: onRetry,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
@@ -160,84 +182,5 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
         ),
       ),
     );
-  }
-
-  Widget _buildPlanReadyState() {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Your Workout Plan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.fitness_center, size: 80, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 24),
-              Text(
-                'Workout Plan Ready!',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                constraints: const BoxConstraints(maxWidth: 300),
-                child: Text(
-                  'Your personalized workout plan is ready to use. The workout view will be implemented soon.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Your workout plan has been generated and saved',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.green.shade700, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return _buildLoadingState();
-    } else if (_hasError) {
-      return _buildErrorState();
-    } else {
-      return _buildPlanReadyState();
-    }
   }
 }

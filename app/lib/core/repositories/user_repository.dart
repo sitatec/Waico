@@ -3,6 +3,7 @@ import 'package:waico/core/services/database/db.dart';
 import 'package:waico/core/services/database/repository.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/features/workout/models/workout_progress.dart';
 import 'package:waico/features/workout/models/workout_status.dart';
 
 class UserRepository extends ObjectBoxBaseRepository<User> {
@@ -106,6 +107,62 @@ class UserRepository extends ObjectBoxBaseRepository<User> {
     final user = await getUser();
     if (user != null) {
       user.workoutPlan = null;
+      user.touch();
+      save(user);
+    }
+  }
+
+  /// Save workout progress for the current user
+  Future<User> saveWorkoutProgress(WorkoutProgress workoutProgress) async {
+    final existingUser = await getUser();
+
+    if (existingUser != null) {
+      existingUser.workoutProgress = workoutProgress;
+      existingUser.touch();
+      save(existingUser);
+      return existingUser;
+    } else {
+      // Create a new user with default name if none exists (less likely scenario)
+      final newUser = User(preferredName: 'User', workoutProgress: workoutProgress);
+      save(newUser);
+      return newUser;
+    }
+  }
+
+  /// Get workout progress for the current user
+  Future<WorkoutProgress> getWorkoutProgress() async {
+    final user = await getUser();
+    return user?.workoutProgress ?? WorkoutProgress.empty();
+  }
+
+  /// Toggle exercise completion and save progress
+  Future<void> toggleExerciseCompletion(int week, int sessionIndex, int exerciseIndex) async {
+    final progress = await getWorkoutProgress();
+    final exerciseKey = WorkoutProgress.getExerciseKey(week, sessionIndex, exerciseIndex);
+    final newProgress = progress.withExerciseToggled(exerciseKey);
+    await saveWorkoutProgress(newProgress);
+  }
+
+  /// Set exercise completion status and save progress
+  Future<void> setExerciseCompletion(int week, int sessionIndex, int exerciseIndex, bool completed) async {
+    final progress = await getWorkoutProgress();
+    final exerciseKey = WorkoutProgress.getExerciseKey(week, sessionIndex, exerciseIndex);
+    final newProgress = progress.withExerciseCompleted(exerciseKey, completed);
+    await saveWorkoutProgress(newProgress);
+  }
+
+  /// Check if exercise is completed
+  Future<bool> isExerciseCompleted(int week, int sessionIndex, int exerciseIndex) async {
+    final progress = await getWorkoutProgress();
+    final exerciseKey = WorkoutProgress.getExerciseKey(week, sessionIndex, exerciseIndex);
+    return progress.isExerciseCompleted(exerciseKey);
+  }
+
+  /// Clear workout progress for the current user
+  Future<void> clearWorkoutProgress() async {
+    final user = await getUser();
+    if (user != null) {
+      user.workoutProgress = null;
       user.touch();
       save(user);
     }

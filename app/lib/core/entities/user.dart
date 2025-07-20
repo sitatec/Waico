@@ -1,6 +1,7 @@
 import 'package:objectbox/objectbox.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/features/workout/models/workout_progress.dart';
 
 @Entity()
 class User {
@@ -72,6 +73,30 @@ class User {
     }
   }
 
+  // The WorkoutProgress type is not supported by ObjectBox.
+  // So ignore this field...
+  @Transient()
+  WorkoutProgress? workoutProgress;
+
+  // ...and define a field with a supported type,
+  // that is backed by the workoutProgress field.
+  String? get dbWorkoutProgress {
+    return workoutProgress?.toJsonString();
+  }
+
+  set dbWorkoutProgress(String? value) {
+    if (value == null || value.isEmpty) {
+      workoutProgress = null;
+    } else {
+      try {
+        workoutProgress = WorkoutProgress.fromJsonString(value);
+      } catch (e) {
+        // Handle parsing errors gracefully
+        workoutProgress = null;
+      }
+    }
+  }
+
   User({
     this.id = 0,
     DateTime? createdAt,
@@ -80,6 +105,7 @@ class User {
     this.userInfo,
     this.workoutSetupData,
     this.workoutPlan,
+    this.workoutProgress,
   }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -94,8 +120,9 @@ class User {
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
         'name: $preferredName, '
-        'workoutSetupData: $dbWorkoutPlan, '
+        'workoutSetupData: $dbWorkoutSetupData, '
         'workoutPlan: $dbWorkoutPlan, '
+        'workoutProgress: $dbWorkoutProgress, '
         'userInfo: $userInfo)';
   }
 }
