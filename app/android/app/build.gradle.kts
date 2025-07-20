@@ -41,7 +41,7 @@ android {
 
 dependencies {
     // MediaPipe Tasks Vision
-    implementation 'com.google.mediapipe:tasks-vision:0.10.9'
+    implementation 'com.google.mediapipe:tasks-vision:0.10.26'
     
     // CameraX dependencies (core only, no UI components)
     implementation 'androidx.camera:camera-core:1.3.1'
