@@ -25,6 +25,7 @@ Safety Considerations:
 - Provide rest periods appropriate for exercise intensity
 - Emphasize proper form over heavy weights for beginners
 
+Make sure to chose exercise variations that are suitable for the user's fitness level and experience. For example, for Push up exercises, prefer "Knee Push-Up" and "Wall Push-Up" for beginners.
 
 **JSON Schema Requirements**:
 ```json
@@ -71,21 +72,18 @@ Safety Considerations:
                       "name": { 
                         "type": "string", 
                         "enum": [
-                          "Standard Push-Up", "Knee Push-Up", "Incline Push-Up", "Decline Push-Up",
-                          "Diamond Push-Up", "Wide-Grip Push-Up", "Close-Grip Push-Up",
-                          "Standard Squat", "Sumo Squat", "Wall Sit", "Jump Squat",
-                          "Split Squat", "Bulgarian Split Squat", "Pulse Squat",
-                          "Standard Crunch", "Reverse Crunch", "Bicycle Crunch",
-                          "Double Crunch", "Vertical Leg Crunch", "Toe-Touch Crunch",
-                          "Superman Raises", "Superman Swimmers", "Superman with Pulse",
-                          "W Superman", "T Superman", "Y Superman", "Superman Hold",
-                          "Plank", "Side Plank", "Jumping Jacks", "High Knees", "Burpees", "Mountain Climbers"
+                          "Push-Up", "Knee Push-Up", "Wall Push-Up", "Incline Push-Up", 
+                          "Decline Push-Up", "Diamond Push-Up", "Wide Push-Up",
+                          "Squat", "Sumo Squat", "Split Squat (Right)", "Split Squat (Left)",
+                          "Crunch", "Reverse Crunch", "Double Crunch",
+                          "Superman", "Superman Pulse", "Y Superman", 
+                          "Wall Sit", "Plank", "Side Plank", "Jumping Jacks", "High Knees", "Burpees", "Mountain Climbers"
                         ],
                       },
                       "category": {
                         "type": "string",
                         "enum": ["push_up", "squat", "crunch", "superman", "endurance", "cardio"],
-                        "description": "Category of the exercise. example: cardio for Jumping Jacks, High Knees, Burpees, Mountain Climbers; endurance for Plank, Side Plank, Glute Bridge Hold; push_up for all push-up variations; squat for all squat variations; crunch for all crunch variations; superman for all superman variations"
+                        "description": "Category of the exercise. example: cardio for Jumping Jacks, High Knees, Burpees, Mountain Climbers; endurance for Plank, Side Plank, Wall Sit; push_up for all push-up variations; squat for all squat variations; crunch for all crunch variations; superman for all superman variations"
                       },
                       "targetMuscles": {
                         "type": "array",
@@ -127,6 +125,7 @@ Safety Considerations:
   },
 }
 ```
+"Split Squat (Right)" and "Split Squat (Left)" must always follow each other they should not be used separately or have another exercise in between them.
 
 Remember: Your response must be ONLY valid JSON that can be parsed directly into a WorkoutPlan object.
 ''';
