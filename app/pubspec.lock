@@ -513,11 +513,12 @@ packages:
   flutter_gemma:
     dependency: "direct main"
     description:
-      name: flutter_gemma
-      sha256: "5ee780583ec946f3aada12197b51ee1a15b211e3e1513dc74c48b2314ded605a"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.9.0"
+      path: "."
+      ref: mediapipe-deps-fix
+      resolved-ref: ba516ed2ab8bd4c91e2b1446445dda5544e5d8a6
+      url: "https://github.com/sitatec/flutter_gemma.git"
+    source: git
+    version: "0.10.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -1495,7 +1496,7 @@ packages:
     source: hosted
     version: "4.5.1"
   vector_math:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: vector_math
       sha256: "80b3257d1492ce4d091729e3a67a60407d227c27241d6927be0130c98e741803"
