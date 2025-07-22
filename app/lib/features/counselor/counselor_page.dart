@@ -58,6 +58,11 @@ class _CounselorPageState extends State<CounselorPage> {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop || chatProcessingModalShown) return;
         _showChatEndConfirmationBottomSheet();
+        if (_initialized) {
+          _showChatEndConfirmationBottomSheet();
+        } else {
+          context.navBack();
+        }
       },
       child: Stack(
         children: [
@@ -240,10 +245,11 @@ class _CounselorPageState extends State<CounselorPage> {
                         ),
                       ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [TextButton(onPressed: _confirmProcessingCancel, child: const Text("Cancel"))],
-                    ),
+                    // TODO: add cancelation logic to ConversationProcessor
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.end,
+                    //   children: [TextButton(onPressed: _confirmProcessingCancel, child: const Text("Cancel"))],
+                    // ),
                   ],
                 ),
               );
@@ -254,6 +260,7 @@ class _CounselorPageState extends State<CounselorPage> {
     );
   }
 
+  // ignore: unused_element
   Future<void> _confirmProcessingCancel() {
     return showDialog(
       context: context,

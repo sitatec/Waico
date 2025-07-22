@@ -39,20 +39,27 @@ android {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("com.google.mediapipe:tasks-vision:0.10.26")
+        force("com.google.mediapipe:tasks-vision-image-generator:0.10.26")
+    }
+}
+
 dependencies {
     // MediaPipe Tasks Vision
-    implementation 'com.google.mediapipe:tasks-vision:0.10.26'
+    implementation("com.google.mediapipe:tasks-vision:0.10.26")
     
     // CameraX dependencies (core only, no UI components)
-    implementation 'androidx.camera:camera-core:1.3.1'
-    implementation 'androidx.camera:camera-camera2:1.3.1'
-    implementation 'androidx.camera:camera-lifecycle:1.3.1'
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
     
     // Lifecycle components
-    implementation 'androidx.lifecycle:lifecycle-common:2.7.0'
+    implementation("androidx.lifecycle:lifecycle-common:2.7.0")
     
     // Core Android libraries
-    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation("androidx.core:core-ktx:1.12.0")
 }
 
 flutter {

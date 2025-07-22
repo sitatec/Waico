@@ -123,10 +123,10 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
     List<ImageFileAttachment>? imageAttachments;
     if (attachments.isNotEmpty) {
-      if (attachments is! List<ImageFileAttachment>) {
+      if (attachments.any((e) => e is! ImageFileAttachment)) {
         throw ArgumentError('Only a list of ImageFileAttachment is supported');
       }
-      imageAttachments = attachments;
+      imageAttachments = attachments.cast<ImageFileAttachment>().toList();
     }
 
     try {
