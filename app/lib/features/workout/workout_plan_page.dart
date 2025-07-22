@@ -721,14 +721,14 @@ class _ExerciseItem extends StatelessWidget {
                     }).toList(),
                   ),
                 ],
-                if (exercise.restPeriod > 0) ...[
+                if (exercise.restDuration > 0) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
                       Text(
-                        'Rest: ${exercise.restPeriod}s',
+                        'Rest: ${exercise.restDuration}s',
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                       ),
                     ],

@@ -112,7 +112,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(3, 8823447173051830056),
     name: 'User',
-    lastPropertyId: const obx_int.IdUid(5, 9089175368154372475),
+    lastPropertyId: const obx_int.IdUid(8, 3233262848891913473),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -142,6 +142,24 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(5, 9089175368154372475),
         name: 'userInfo',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 3860500815886961103),
+        name: 'dbWorkoutSetupData',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 6277389197328313834),
+        name: 'dbWorkoutPlan',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 3233262848891913473),
+        name: 'dbWorkoutProgress',
         type: 9,
         flags: 0,
       ),
@@ -332,12 +350,24 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final userInfoOffset = object.userInfo == null
             ? null
             : fbb.writeString(object.userInfo!);
-        fbb.startTable(6);
+        final dbWorkoutSetupDataOffset = object.dbWorkoutSetupData == null
+            ? null
+            : fbb.writeString(object.dbWorkoutSetupData!);
+        final dbWorkoutPlanOffset = object.dbWorkoutPlan == null
+            ? null
+            : fbb.writeString(object.dbWorkoutPlan!);
+        final dbWorkoutProgressOffset = object.dbWorkoutProgress == null
+            ? null
+            : fbb.writeString(object.dbWorkoutProgress!);
+        fbb.startTable(9);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.createdAt.millisecondsSinceEpoch);
         fbb.addInt64(2, object.updatedAt.millisecondsSinceEpoch);
         fbb.addOffset(3, preferredNameOffset);
         fbb.addOffset(4, userInfoOffset);
+        fbb.addOffset(5, dbWorkoutSetupDataOffset);
+        fbb.addOffset(6, dbWorkoutPlanOffset);
+        fbb.addOffset(7, dbWorkoutProgressOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -362,13 +392,23 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final userInfoParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 12);
-        final object = User(
-          id: idParam,
-          createdAt: createdAtParam,
-          updatedAt: updatedAtParam,
-          preferredName: preferredNameParam,
-          userInfo: userInfoParam,
-        );
+        final object =
+            User(
+                id: idParam,
+                createdAt: createdAtParam,
+                updatedAt: updatedAtParam,
+                preferredName: preferredNameParam,
+                userInfo: userInfoParam,
+              )
+              ..dbWorkoutSetupData = const fb.StringReader(
+                asciiOptimization: true,
+              ).vTableGetNullable(buffer, rootOffset, 14)
+              ..dbWorkoutPlan = const fb.StringReader(
+                asciiOptimization: true,
+              ).vTableGetNullable(buffer, rootOffset, 16)
+              ..dbWorkoutProgress = const fb.StringReader(
+                asciiOptimization: true,
+              ).vTableGetNullable(buffer, rootOffset, 18);
 
         return object;
       },
@@ -459,5 +499,20 @@ class User_ {
   /// See [User.userInfo].
   static final userInfo = obx.QueryStringProperty<User>(
     _entities[2].properties[4],
+  );
+
+  /// See [User.dbWorkoutSetupData].
+  static final dbWorkoutSetupData = obx.QueryStringProperty<User>(
+    _entities[2].properties[5],
+  );
+
+  /// See [User.dbWorkoutPlan].
+  static final dbWorkoutPlan = obx.QueryStringProperty<User>(
+    _entities[2].properties[6],
+  );
+
+  /// See [User.dbWorkoutProgress].
+  static final dbWorkoutProgress = obx.QueryStringProperty<User>(
+    _entities[2].properties[7],
   );
 }

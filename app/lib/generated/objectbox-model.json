@@ -73,7 +73,7 @@
     },
     {
       "id": "3:8823447173051830056",
-      "lastPropertyId": "5:9089175368154372475",
+      "lastPropertyId": "8:3233262848891913473",
       "name": "User",
       "properties": [
         {
@@ -100,6 +100,21 @@
         {
           "id": "5:9089175368154372475",
           "name": "userInfo",
+          "type": 9
+        },
+        {
+          "id": "6:3860500815886961103",
+          "name": "dbWorkoutSetupData",
+          "type": 9
+        },
+        {
+          "id": "7:6277389197328313834",
+          "name": "dbWorkoutPlan",
+          "type": 9
+        },
+        {
+          "id": "8:3233262848891913473",
+          "name": "dbWorkoutProgress",
           "type": 9
         }
       ],

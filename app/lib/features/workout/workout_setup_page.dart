@@ -1,3 +1,5 @@
+import 'dart:developer' show log;
+
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 import 'package:waico/core/services/health_service.dart';
@@ -48,7 +50,6 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
 
     // Load existing workout setup data
     final existingWorkoutData = await _userRepository.getWorkoutSetupData();
-
     if (_healthService.isReady) {
       await _healthService.refreshData();
       final metrics = _healthService.metrics;
@@ -102,21 +103,14 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
         await _healthService.writeHealthData(type: HealthDataType.WEIGHT, value: _setupData.weight!, startTime: now);
       }
 
-      if (_setupData.height != null && _healthService.isReady) {
-        await _healthService.writeHealthData(
-          type: HealthDataType.HEIGHT,
-          value: _setupData.height! / 100, // Convert cm to meters
-          startTime: now,
-        );
-      }
-
       // Save workout setup data to database
       await _userRepository.saveWorkoutSetupData(_setupData);
 
       if (mounted) {
         _showSuccessDialog();
       }
-    } catch (e) {
+    } catch (e, s) {
+      log("Failed to save workout setup", error: e, stackTrace: s);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -186,7 +180,6 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
               context.navigateTo(const WorkoutPlanGenerationPage(), replaceCurrent: true);
             },
             child: const Text('Continue'),

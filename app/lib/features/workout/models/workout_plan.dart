@@ -7,7 +7,6 @@ class WorkoutPlan {
   final int workoutsPerWeek;
   final List<WeeklyPlan> weeklyPlans;
   final String difficulty;
-  final List<String> targetMuscleGroups;
 
   const WorkoutPlan({
     required this.planName,
@@ -16,7 +15,6 @@ class WorkoutPlan {
     required this.workoutsPerWeek,
     required this.weeklyPlans,
     required this.difficulty,
-    required this.targetMuscleGroups,
   });
 
   factory WorkoutPlan.fromJson(Map<String, dynamic> json) {
@@ -29,7 +27,6 @@ class WorkoutPlan {
           .map((e) => WeeklyPlan.fromJson(e as Map<String, dynamic>))
           .toList(),
       difficulty: json['difficulty'] as String,
-      targetMuscleGroups: List<String>.from(json['targetMuscleGroups'] as List),
     );
   }
 
@@ -41,7 +38,6 @@ class WorkoutPlan {
       'workoutsPerWeek': workoutsPerWeek,
       'weeklyPlans': weeklyPlans.map((e) => e.toJson()).toList(),
       'difficulty': difficulty,
-      'targetMuscleGroups': targetMuscleGroups,
     };
   }
 
@@ -63,8 +59,7 @@ class WorkoutPlan {
         other.totalWeeks == totalWeeks &&
         other.workoutsPerWeek == workoutsPerWeek &&
         other.weeklyPlans == weeklyPlans &&
-        other.difficulty == difficulty &&
-        other.targetMuscleGroups == targetMuscleGroups;
+        other.difficulty == difficulty;
   }
 
   @override
@@ -74,8 +69,7 @@ class WorkoutPlan {
         totalWeeks.hashCode ^
         workoutsPerWeek.hashCode ^
         weeklyPlans.hashCode ^
-        difficulty.hashCode ^
-        targetMuscleGroups.hashCode;
+        difficulty.hashCode;
   }
 }
 
@@ -166,37 +160,23 @@ class WorkoutSession {
 
 class Exercise {
   final String name;
-  final String category;
   final List<String> targetMuscles;
   final ExerciseLoad load;
-  final int restPeriod; // in seconds
+  final int restDuration; // in seconds
 
-  const Exercise({
-    required this.name,
-    required this.category,
-    required this.targetMuscles,
-    required this.load,
-    required this.restPeriod,
-  });
+  const Exercise({required this.name, required this.targetMuscles, required this.load, required this.restDuration});
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
     return Exercise(
       name: json['name'] as String,
-      category: json['category'] as String,
       targetMuscles: List<String>.from(json['targetMuscles'] as List),
       load: ExerciseLoad.fromJson(json['load'] as Map<String, dynamic>),
-      restPeriod: json['restPeriod'] as int,
+      restDuration: json['restDuration'] as int,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'category': category,
-      'targetMuscles': targetMuscles,
-      'load': load.toJson(),
-      'restPeriod': restPeriod,
-    };
+    return {'name': name, 'targetMuscles': targetMuscles, 'load': load.toJson(), 'restDuration': restDuration};
   }
 
   @override
@@ -205,15 +185,14 @@ class Exercise {
 
     return other is Exercise &&
         other.name == name &&
-        other.category == category &&
         other.targetMuscles == targetMuscles &&
         other.load == load &&
-        other.restPeriod == restPeriod;
+        other.restDuration == restDuration;
   }
 
   @override
   int get hashCode {
-    return name.hashCode ^ category.hashCode ^ targetMuscles.hashCode ^ load.hashCode ^ restPeriod.hashCode;
+    return name.hashCode ^ targetMuscles.hashCode ^ load.hashCode ^ restDuration.hashCode;
   }
 }
 

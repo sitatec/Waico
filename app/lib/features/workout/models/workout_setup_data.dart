@@ -9,8 +9,8 @@ class WorkoutSetupData {
 
   // Fitness level
   final String? currentFitnessLevel;
-  final int weeklyWorkoutFrequency;
-  final List<String> preferredWorkoutTypes;
+  // final int weeklyWorkoutFrequency;
+  final List<String> selectedWeekDays;
 
   // Goals
   final String? primaryGoal;
@@ -29,8 +29,7 @@ class WorkoutSetupData {
     this.age,
     this.gender,
     this.currentFitnessLevel,
-    this.weeklyWorkoutFrequency = 3,
-    this.preferredWorkoutTypes = const [],
+    this.selectedWeekDays = const ["Monday", "Wednesday", "Friday"],
     this.primaryGoal,
     this.targetWeight,
     this.timeframe,
@@ -47,7 +46,7 @@ class WorkoutSetupData {
     String? gender,
     String? currentFitnessLevel,
     int? weeklyWorkoutFrequency,
-    List<String>? preferredWorkoutTypes,
+    List<String>? selectedWeekDays,
     String? primaryGoal,
     String? targetWeight,
     String? timeframe,
@@ -62,8 +61,7 @@ class WorkoutSetupData {
       age: age ?? this.age,
       gender: gender ?? this.gender,
       currentFitnessLevel: currentFitnessLevel ?? this.currentFitnessLevel,
-      weeklyWorkoutFrequency: weeklyWorkoutFrequency ?? this.weeklyWorkoutFrequency,
-      preferredWorkoutTypes: preferredWorkoutTypes ?? this.preferredWorkoutTypes,
+      selectedWeekDays: selectedWeekDays ?? this.selectedWeekDays,
       primaryGoal: primaryGoal ?? this.primaryGoal,
       targetWeight: targetWeight ?? this.targetWeight,
       timeframe: timeframe ?? this.timeframe,
@@ -101,8 +99,7 @@ class WorkoutSetupData {
       age: json['age']?.toInt(),
       gender: json['gender'],
       currentFitnessLevel: json['currentFitnessLevel'],
-      weeklyWorkoutFrequency: json['weeklyWorkoutFrequency'] ?? 3,
-      preferredWorkoutTypes: List<String>.from(json['preferredWorkoutTypes'] ?? []),
+      selectedWeekDays: List<String>.from(json['selectedWeekDays'] ?? []),
       primaryGoal: json['primaryGoal'],
       targetWeight: json['targetWeight'],
       timeframe: json['timeframe'],
@@ -121,8 +118,7 @@ class WorkoutSetupData {
       'age': age,
       'gender': gender,
       'currentFitnessLevel': currentFitnessLevel,
-      'weeklyWorkoutFrequency': weeklyWorkoutFrequency,
-      'preferredWorkoutTypes': preferredWorkoutTypes,
+      'selectedWeekDays': selectedWeekDays,
       'primaryGoal': primaryGoal,
       'targetWeight': targetWeight,
       'timeframe': timeframe,
@@ -153,8 +149,7 @@ class WorkoutSetupData {
         other.age == age &&
         other.gender == gender &&
         other.currentFitnessLevel == currentFitnessLevel &&
-        other.weeklyWorkoutFrequency == weeklyWorkoutFrequency &&
-        other.preferredWorkoutTypes == preferredWorkoutTypes &&
+        other.selectedWeekDays == selectedWeekDays &&
         other.primaryGoal == primaryGoal &&
         other.targetWeight == targetWeight &&
         other.timeframe == timeframe &&
@@ -171,8 +166,7 @@ class WorkoutSetupData {
         age.hashCode ^
         gender.hashCode ^
         currentFitnessLevel.hashCode ^
-        weeklyWorkoutFrequency.hashCode ^
-        preferredWorkoutTypes.hashCode ^
+        selectedWeekDays.hashCode ^
         primaryGoal.hashCode ^
         targetWeight.hashCode ^
         timeframe.hashCode ^

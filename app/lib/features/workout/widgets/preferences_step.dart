@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/widgets/setup_card.dart';
-import 'package:waico/features/workout/widgets/selection_chips.dart';
 
 class PreferencesStep extends StatefulWidget {
   final WorkoutSetupData data;
@@ -14,26 +13,7 @@ class PreferencesStep extends StatefulWidget {
 }
 
 class _PreferencesStepState extends State<PreferencesStep> {
-  final List<String> _equipmentOptions = [
-    'No equipment (bodyweight)',
-    'Dumbbells',
-    'Resistance bands',
-    'Pull-up bar',
-    'Kettlebells',
-    'Barbell',
-    'Exercise mat',
-    'Gym membership',
-    'Treadmill',
-    'Stationary bike',
-    'Rowing machine',
-    'Cable machine',
-  ];
-
   final Map<int, String> _durationLabels = {15: '15 min', 30: '30 min', 45: '45 min', 60: '1 hour'};
-
-  void _updateEquipment(dynamic equipment) {
-    widget.onDataChanged(widget.data.copyWith(availableEquipment: equipment as List<String>));
-  }
 
   void _updateDuration(int duration) {
     widget.onDataChanged(widget.data.copyWith(workoutDurationPreference: duration));
@@ -64,53 +44,6 @@ class _PreferencesStepState extends State<PreferencesStep> {
           ),
 
           const SizedBox(height: 24),
-
-          // Available Equipment
-          SetupCard(
-            title: 'Available Equipment',
-            icon: Icons.fitness_center,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'What equipment do you have access to?',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 12),
-                SelectionChips(
-                  options: _equipmentOptions,
-                  selectedOption: widget.data.availableEquipment,
-                  onSelectionChanged: _updateEquipment,
-                  multiSelect: true,
-                  scrollable: true,
-                ),
-
-                if (widget.data.availableEquipment.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.inventory, color: theme.colorScheme.primary, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${widget.data.availableEquipment.length} equipment type${widget.data.availableEquipment.length == 1 ? '' : 's'} selected',
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
 
           const SizedBox(height: 16),
 
@@ -190,7 +123,12 @@ class _PreferencesStepState extends State<PreferencesStep> {
                   widget.data.currentFitnessLevel != null,
                   theme,
                 ),
-                _buildSummaryItem('Workout Frequency', '${widget.data.weeklyWorkoutFrequency}x per week', true, theme),
+                _buildSummaryItem(
+                  'Workout Frequency',
+                  '${widget.data.selectedWeekDays.length}x per week: ${widget.data.selectedWeekDays.join(', ')}',
+                  true,
+                  theme,
+                ),
                 _buildSummaryItem(
                   'Primary Goal',
                   widget.data.primaryGoal ?? 'Not specified',
@@ -238,7 +176,7 @@ class _PreferencesStepState extends State<PreferencesStep> {
                 Text(
                   value,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isComplete ? theme.colorScheme.onSurface : theme.colorScheme.outline,
+                    color: isComplete ? Colors.black.withOpacity(0.75) : theme.colorScheme.outline,
                     fontWeight: isComplete ? FontWeight.w500 : FontWeight.normal,
                   ),
                 ),

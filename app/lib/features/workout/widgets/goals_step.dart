@@ -44,8 +44,6 @@ class _GoalsStepState extends State<GoalsStep> {
     'Prepare for competition',
   ];
 
-  final List<String> _timeframeOptions = ['1 month', '3 months', '6 months', '1 year', 'Long-term lifestyle'];
-
   @override
   void initState() {
     super.initState();
@@ -66,10 +64,6 @@ class _GoalsStepState extends State<GoalsStep> {
 
   void _updateTargetWeight(String weight) {
     widget.onDataChanged(widget.data.copyWith(targetWeight: weight));
-  }
-
-  void _updateTimeframe(dynamic timeframe) {
-    widget.onDataChanged(widget.data.copyWith(timeframe: timeframe as String?));
   }
 
   void _updateSpecificGoals(dynamic goals) {
@@ -161,31 +155,6 @@ class _GoalsStepState extends State<GoalsStep> {
                 const SizedBox(height: 16),
               ],
             ),
-
-          // Timeframe
-          SetupCard(
-            title: 'Timeline',
-            icon: Icons.schedule,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'When would you like to achieve your goal?',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 12),
-                SelectionChips(
-                  options: _timeframeOptions,
-                  selectedOption: widget.data.timeframe,
-                  onSelectionChanged: _updateTimeframe,
-                  multiSelect: false,
-                  scrollable: false,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
 
           // Specific Goals
           SetupCard(

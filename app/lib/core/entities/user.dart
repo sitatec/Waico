@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:objectbox/objectbox.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
@@ -42,7 +44,8 @@ class User {
     } else {
       try {
         workoutSetupData = WorkoutSetupData.fromJsonString(value);
-      } catch (e) {
+      } catch (e, s) {
+        log('Error parsing WorkoutSetupData from JSON', error: e, stackTrace: s);
         // Handle parsing errors gracefully
         workoutSetupData = null;
       }
@@ -66,8 +69,8 @@ class User {
     } else {
       try {
         workoutPlan = WorkoutPlan.fromJsonString(value);
-      } catch (e) {
-        // Handle parsing errors gracefully
+      } catch (e, s) {
+        log('Error parsing WorkoutPlan from JSON', error: e, stackTrace: s);
         workoutPlan = null;
       }
     }
@@ -90,7 +93,8 @@ class User {
     } else {
       try {
         workoutProgress = WorkoutProgress.fromJsonString(value);
-      } catch (e) {
+      } catch (e, s) {
+        log('Error parsing WorkoutProgress from JSON', error: e, stackTrace: s);
         // Handle parsing errors gracefully
         workoutProgress = null;
       }
@@ -120,9 +124,9 @@ class User {
         'createdAt: $createdAt, '
         'updatedAt: $updatedAt, '
         'name: $preferredName, '
-        'workoutSetupData: $dbWorkoutSetupData, '
-        'workoutPlan: $dbWorkoutPlan, '
-        'workoutProgress: $dbWorkoutProgress, '
+        'workoutSetupData: $workoutSetupData, '
+        'workoutPlan: $workoutPlan, '
+        'workoutProgress: $workoutProgress, '
         'userInfo: $userInfo)';
   }
 }

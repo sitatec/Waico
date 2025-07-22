@@ -22,6 +22,11 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
   WorkoutSetupData? _setupData;
   WorkoutPlan? _generatedPlan;
 
+  // Progress tracking
+  Map<String, List<WorkoutSession>> _parsedProgress = {};
+  String _rawTextProgress = '';
+  bool _showUIProgress = true; // Toggle between UI and raw text progress
+
   @override
   void initState() {
     super.initState();
@@ -56,11 +61,22 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
       _isGenerating = true;
       _hasError = false;
       _errorMessage = null;
+      _parsedProgress = {};
+      _rawTextProgress = '';
     });
 
     try {
       final generator = WorkoutPlanGenerator();
-      final workoutPlan = await generator.generate(_setupData!);
+
+      // Progress callback to update UI during generation
+      void onProgress(WorkoutGenerationProgress progress) {
+        setState(() {
+          _parsedProgress = progress.parsedProgress;
+          _rawTextProgress = progress.rawText;
+        });
+      }
+
+      final workoutPlan = await generator.generate(_setupData!, progressCallback: onProgress);
 
       // Save the generated plan
       await _userRepository.saveWorkoutPlan(workoutPlan);
@@ -149,38 +165,65 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
 
   Widget _buildLoadingState() {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: 80,
-          height: 80,
-          child: CircularProgressIndicator(
-            strokeWidth: 6,
-            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-          ),
-        ),
-        const SizedBox(height: 32),
+        // Header section
         Text(
-          'Generating Your Workout Plan',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          'Our AI trainer is analyzing your fitness profile and creating a personalized workout plan just for you.',
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
+
         const SizedBox(height: 16),
-        Container(
-          constraints: const BoxConstraints(maxWidth: 300),
-          child: Text(
-            'Our AI trainer is analyzing your fitness profile and creating a personalized workout plan just for you.',
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
+
+        // Toggle Switch for progress view
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'UI Progress',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: _showUIProgress
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: _showUIProgress ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Switch(
+              value: !_showUIProgress,
+              onChanged: (value) {
+                setState(() {
+                  _showUIProgress = !value;
+                });
+              },
+              activeColor: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Raw Text Progress',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: !_showUIProgress
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: !_showUIProgress ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
+
+        const SizedBox(height: 24),
+
+        // Progress content
+        Expanded(child: _showUIProgress ? _buildUIProgress() : _buildTextProgress()),
+
         const SizedBox(height: 32),
+
+        // Tip section
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -188,18 +231,22 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
           ),
           child: Column(
             children: [
-              Icon(Icons.tips_and_updates, color: Theme.of(context).colorScheme.primary, size: 24),
+              Icon(Icons.tips_and_updates, color: Theme.of(context).colorScheme.primary, size: 22),
               const SizedBox(height: 8),
               Text(
-                'This usually takes 30-60 seconds',
+                'This usually takes 30-60 seconds depending on your device capabilities.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w500,
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
+        const SizedBox(height: 24),
+        LinearProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary)),
+        const SizedBox(height: 8),
       ],
     );
   }
@@ -235,7 +282,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,7 +294,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                 const SizedBox(height: 8),
                 if (_setupData!.primaryGoal != null) Text('Goal: ${_setupData!.primaryGoal}'),
                 if (_setupData!.currentFitnessLevel != null) Text('Fitness Level: ${_setupData!.currentFitnessLevel}'),
-                Text('Frequency: ${_setupData!.weeklyWorkoutFrequency}x/week'),
+                Text('Frequency: ${_setupData!.selectedWeekDays.length}x/week'),
                 Text('Duration: ${_setupData!.workoutDurationPreference} minutes'),
               ],
             ),
@@ -261,7 +308,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Row(
@@ -307,7 +354,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text('Try Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -319,6 +366,207 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
           child: const Text('Update Setup'),
         ),
       ],
+    );
+  }
+
+  Widget _buildUIProgress() {
+    if (_parsedProgress.isEmpty) {
+      return Center(
+        child: Text(
+          'Waiting for generation to start...',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Progress Overview',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ..._parsedProgress.entries.map((entry) {
+            final weekName = entry.key;
+            final sessions = entry.value;
+            final isCompleted = sessions.isNotEmpty;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                    : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isCompleted
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                      : Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: isCompleted
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.outline,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        weekName,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isCompleted
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (isCompleted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${sessions.length} session${sessions.length == 1 ? '' : 's'}',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (sessions.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    ...sessions.map(
+                      (session) => Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.fitness_center, size: 16, color: Theme.of(context).colorScheme.primary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    session.sessionName,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                                if (session.estimatedDuration > 0)
+                                  Text(
+                                    '${session.estimatedDuration}min',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (session.exercises.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Exercises: ${session.exercises.map((e) => e.name).join(', ')}',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Generating sessions...',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextProgress() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.text_snippet, color: Theme.of(context).colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Raw Text Generation',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  _rawTextProgress.isEmpty ? 'Waiting for text generation to start...' : _rawTextProgress,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -24,30 +24,9 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
     'Professional athlete',
   ];
 
-  final List<String> _workoutTypes = [
-    'Cardio',
-    'Strength Training',
-    'HIIT',
-    'Yoga',
-    'Pilates',
-    'CrossFit',
-    'Running',
-    'Swimming',
-    'Cycling',
-    'Dancing',
-    'Martial Arts',
-    'Rock Climbing',
-  ];
+  final List<String> _weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  final Map<int, String> _frequencyLabels = {
-    1: '1x per week',
-    2: '2x per week',
-    3: '3x per week',
-    4: '4x per week',
-    5: '5x per week',
-    6: '6x per week',
-    7: 'Daily',
-  };
+  List<String> get _selectedWeekDays => widget.data.selectedWeekDays;
 
   void _updateFitnessLevel(dynamic level) {
     widget.onDataChanged(widget.data.copyWith(currentFitnessLevel: level as String?));
@@ -57,12 +36,25 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
     widget.onDataChanged(widget.data.copyWith(experienceLevel: level as String?));
   }
 
-  void _updateFrequency(int frequency) {
-    widget.onDataChanged(widget.data.copyWith(weeklyWorkoutFrequency: frequency));
+  void _updateSelectedWeekDays(dynamic days) {
+    widget.onDataChanged(widget.data.copyWith(selectedWeekDays: days as List<String>));
   }
 
-  void _updateWorkoutTypes(dynamic types) {
-    widget.onDataChanged(widget.data.copyWith(preferredWorkoutTypes: types as List<String>));
+  String _getWarningMessage() {
+    final selectedDays = _selectedWeekDays.length;
+    final experience = widget.data.experienceLevel;
+
+    if (selectedDays <= 2) return '';
+
+    if ((experience == 'Never exercised regularly' || experience == 'Exercise occasionally') && selectedDays >= 4) {
+      return 'For your selected experience, we recommend starting with 2-3 days per week to avoid overtraining.';
+    } else if (experience == 'Exercise regularly (1-2 years)' && selectedDays >= 5) {
+      return 'Make sure to include enough rest days for recovery.';
+    } else if (experience == 'Exercise regularly (3+ years)' && selectedDays == 7) {
+      return 'Daily workouts require careful planning. Make sure to vary intensity and include recovery activities.';
+    }
+
+    return '';
   }
 
   @override
@@ -141,82 +133,27 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
 
           const SizedBox(height: 16),
 
-          // Workout Frequency
+          // Workout Days
           SetupCard(
-            title: 'Workout Frequency',
+            title: 'Workout Days',
             icon: Icons.calendar_today,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How often would you like to work out?',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 16),
-
-                Slider(
-                  value: widget.data.weeklyWorkoutFrequency.toDouble(),
-                  min: 1,
-                  max: 7,
-                  divisions: 6,
-                  onChanged: (value) => _updateFrequency(value.round()),
-                  activeColor: theme.colorScheme.primary,
-                ),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '1x/week',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _frequencyLabels[widget.data.weeklyWorkoutFrequency]!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'Daily',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Preferred Workout Types
-          SetupCard(
-            title: 'Preferred Workout Types',
-            icon: Icons.sports_gymnastics,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'What types of workouts do you enjoy? (Select multiple)',
+                  'Which days would you like to work out?',
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
                 SelectionChips(
-                  options: _workoutTypes,
-                  selectedOption: widget.data.preferredWorkoutTypes,
-                  onSelectionChanged: _updateWorkoutTypes,
+                  options: _weekDays,
+                  selectedOption: _selectedWeekDays,
+                  onSelectionChanged: _updateSelectedWeekDays,
                   multiSelect: true,
-                  scrollable: true,
+                  scrollable: false,
                 ),
 
-                if (widget.data.preferredWorkoutTypes.isNotEmpty) ...[
+                if (_selectedWeekDays.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -231,8 +168,34 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${widget.data.preferredWorkoutTypes.length} workout type${widget.data.preferredWorkoutTypes.length == 1 ? '' : 's'} selected',
+                            '${_selectedWeekDays.length} day${_selectedWeekDays.length == 1 ? '' : 's'} selected',
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Warning message
+                if (_getWarningMessage().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.orange, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getWarningMessage(),
+                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange.shade700),
                           ),
                         ),
                       ],

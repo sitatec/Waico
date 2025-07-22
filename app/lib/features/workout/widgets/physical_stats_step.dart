@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:waico/core/utils/number_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/widgets/setup_card.dart';
 import 'package:waico/features/workout/widgets/custom_text_field.dart';
@@ -42,8 +43,8 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
   void didUpdateWidget(covariant PhysicalStatsStep oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.data != widget.data) {
-      _weightController.text = widget.data.weight?.toString() ?? '';
-      _heightController.text = widget.data.height?.toString() ?? '';
+      _weightController.text = widget.data.weight?.toStringWithoutZeroDecimal(numDecimals: 1) ?? '';
+      _heightController.text = widget.data.height?.toStringWithoutZeroDecimal(numDecimals: 1) ?? '';
       _ageController.text = widget.data.age?.toString() ?? '';
     }
   }
@@ -107,7 +108,7 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
                         label: 'Weight',
                         suffix: 'kg',
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                        // inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                         onChanged: _updateWeight,
                       ),
                     ),
