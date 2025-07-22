@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/features/workout/session_exercises_page.dart';
 
 /// A beautiful UI page for displaying the user's workout plan with weekly sections
 /// and exercise completion tracking
@@ -545,83 +546,93 @@ class _WorkoutSessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Session Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.fitness_center, color: Theme.of(context).colorScheme.primary, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(session.sessionName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            session.type,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) =>
+                SessionExercisesPage(session: session, sessionIndex: sessionIndex, weekIndex: weekIndex),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Session Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.fitness_center, color: Theme.of(context).colorScheme.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(session.sessionName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              session.type,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${session.estimatedDuration} min',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 16),
+                            Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${session.estimatedDuration} min',
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          // Exercises List
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: session.exercises.asMap().entries.map((entry) {
-                final exerciseIndex = entry.key;
-                final exercise = entry.value;
+            // Exercises List
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: session.exercises.asMap().entries.map((entry) {
+                  final exerciseIndex = entry.key;
+                  final exercise = entry.value;
 
-                return FutureBuilder<bool>(
-                  future: userRepository.isExerciseCompleted(weekIndex, sessionIndex, exerciseIndex),
-                  builder: (context, snapshot) {
-                    final isCompleted = snapshot.data ?? false;
+                  return FutureBuilder<bool>(
+                    future: userRepository.isExerciseCompleted(weekIndex, sessionIndex, exerciseIndex),
+                    builder: (context, snapshot) {
+                      final isCompleted = snapshot.data ?? false;
 
-                    return _ExerciseItem(
-                      exercise: exercise,
-                      isCompleted: isCompleted,
-                      onToggle: () => onExerciseToggle(weekIndex, sessionIndex, exerciseIndex),
-                    );
-                  },
-                );
-              }).toList(),
+                      return _ExerciseItem(
+                        exercise: exercise,
+                        isCompleted: isCompleted,
+                        onToggle: () => onExerciseToggle(weekIndex, sessionIndex, exerciseIndex),
+                      );
+                    },
+                  );
+                }).toList(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
