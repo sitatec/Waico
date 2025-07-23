@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:camera/camera.dart';
 import 'package:waico/features/workout/pose_detection/pose_detection_service.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
@@ -12,15 +11,8 @@ class WorkoutCameraWidget extends StatefulWidget {
   final RepsCounter? repsCounter;
   final bool showRepCounter;
   final VoidCallback? onPermissionDenied;
-  final Function(String)? onError;
 
-  const WorkoutCameraWidget({
-    super.key,
-    this.repsCounter,
-    this.showRepCounter = true,
-    this.onPermissionDenied,
-    this.onError,
-  });
+  const WorkoutCameraWidget({super.key, this.repsCounter, this.showRepCounter = true, this.onPermissionDenied});
 
   @override
   State<WorkoutCameraWidget> createState() => _WorkoutCameraWidgetState();
@@ -36,11 +28,6 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   bool _isInitialized = false;
   String? _errorMessage;
   bool _hasPermission = false;
-
-  // Camera controller
-  CameraController? _cameraController;
-  List<CameraDescription>? _cameras;
-  int _currentCameraIndex = 0;
 
   // Rep counter state
   int _totalReps = 0;
@@ -77,6 +64,7 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   }
 
   void _setupPoseDetection() {
+    // Add a small delay to ensure the platform view is fully created
     // Start pose detection service
     _poseDetectionService.start().then((success) {
       if (success) {
@@ -116,7 +104,6 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
       setState(() {
         _errorMessage = error;
       });
-      widget.onError?.call(error);
     }
   }
 
@@ -135,9 +122,6 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
         _hasPermission = true;
       });
 
-      // Initialize camera
-      await _initializeCamera();
-
       // Setup pose detection and rep counter
       _setupRepCounterStream();
       _setupPoseDetection();
@@ -147,27 +131,8 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Camera initialization failed: $e';
+        _errorMessage = 'Initialization failed: $e';
       });
-      widget.onError?.call(_errorMessage!);
-    }
-  }
-
-  Future<void> _initializeCamera() async {
-    try {
-      _cameras = await availableCameras();
-      if (_cameras!.isEmpty) {
-        throw Exception('No cameras available');
-      }
-
-      _cameraController = CameraController(_cameras![_currentCameraIndex], ResolutionPreset.high, enableAudio: false);
-
-      await _cameraController!.initialize();
-
-      // Start pose detection with the native camera (invisible)
-      // The Flutter camera is just for preview
-    } catch (e) {
-      throw Exception('Failed to initialize camera: $e');
     }
   }
 
@@ -189,17 +154,7 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   }
 
   Future<void> _switchCamera() async {
-    if (_cameras == null || _cameras!.length <= 1) return;
-
-    // Switch the Flutter camera
-    _currentCameraIndex = (_currentCameraIndex + 1) % _cameras!.length;
-    await _cameraController?.dispose();
-
-    _cameraController = CameraController(_cameras![_currentCameraIndex], ResolutionPreset.high, enableAudio: false);
-
-    await _cameraController!.initialize();
-
-    // Also switch the native camera for pose detection
+    // Switch the native camera for pose detection
     final switched = await _poseDetectionService.switchCamera();
     if (!switched) {
       _handleError('Failed to switch camera');
@@ -210,55 +165,26 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? cameraController = _cameraController;
-
     switch (state) {
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
-        // Dispose camera and stop pose detection when app becomes inactive/paused
-        if (cameraController != null && cameraController.value.isInitialized) {
-          cameraController.dispose();
-        }
+        // Stop pose detection when app becomes inactive/paused
         if (_poseDetectionService.isActive) {
           _poseDetectionService.stop();
         }
         break;
 
       case AppLifecycleState.resumed:
-        // Reinitialize camera and restart pose detection when app is resumed
+        // Restart pose detection when app is resumed
         if (_hasPermission && _isInitialized) {
-          _reinitializeCamera();
           _restartPoseDetection();
         }
         break;
 
       case AppLifecycleState.detached:
-        // App is detached, clean up resources
-        break;
-
       case AppLifecycleState.hidden:
-        // App is hidden but still running
+        // App state changes, but no action needed
         break;
-    }
-  }
-
-  /// Reinitialize camera after app lifecycle change
-  Future<void> _reinitializeCamera() async {
-    if (_cameras != null && _cameras!.isNotEmpty) {
-      try {
-        // Dispose existing controller if it exists
-        await _cameraController?.dispose();
-
-        _cameraController = CameraController(_cameras![_currentCameraIndex], ResolutionPreset.high, enableAudio: false);
-
-        await _cameraController!.initialize();
-
-        if (mounted) {
-          setState(() {});
-        }
-      } catch (e) {
-        _handleError('Failed to reinitialize camera: $e');
-      }
     }
   }
 
@@ -284,8 +210,10 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
     _poseSubscription?.cancel();
     _repSubscription?.cancel();
     _errorSubscription?.cancel();
-    _cameraController?.dispose();
-    _poseDetectionService.stop();
+
+    // Properly dispose of the pose detection service
+    _poseDetectionService.dispose();
+
     super.dispose();
   }
 
@@ -295,12 +223,8 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Flutter camera preview for display
-          _FlutterCameraPreview(
-            cameraController: _cameraController,
-            hasPermission: _hasPermission,
-            isInitialized: _isInitialized,
-          ),
+          // Native camera preview platform view
+          _NativeCameraPreview(hasPermission: _hasPermission, isInitialized: _isInitialized),
           if (widget.showRepCounter && widget.repsCounter != null && _isInitialized)
             _RepCounterOverlay(
               totalReps: _totalReps,
@@ -331,39 +255,11 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   }
 }
 
-class _FlutterCameraPreview extends StatelessWidget {
-  final CameraController? cameraController;
+class _NativeCameraPreview extends StatelessWidget {
   final bool hasPermission;
   final bool isInitialized;
 
-  const _FlutterCameraPreview({
-    required this.cameraController,
-    required this.hasPermission,
-    required this.isInitialized,
-  });
-
-  Widget _buildCameraWidget(BuildContext context) {
-    if (cameraController == null || !cameraController!.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator(color: Colors.white));
-    }
-
-    // Get camera aspect ratio
-    final cameraAspectRatio = cameraController!.value.aspectRatio;
-
-    // Fetch screen size
-    final size = MediaQuery.of(context).size;
-
-    // Calculate scale depending on screen and camera ratios
-    var scale = size.aspectRatio * cameraAspectRatio;
-
-    // To prevent scaling down, invert the value
-    if (scale < 1) scale = 1 / scale;
-
-    return Transform.scale(
-      scale: scale,
-      child: Center(child: CameraPreview(cameraController!)),
-    );
-  }
+  const _NativeCameraPreview({required this.hasPermission, required this.isInitialized});
 
   @override
   Widget build(BuildContext context) {
@@ -393,7 +289,11 @@ class _FlutterCameraPreview extends StatelessWidget {
       );
     }
 
-    return _buildCameraWidget(context);
+    // Use the platform view for camera preview
+    return const AndroidView(
+      viewType: 'ai.buinitylabs.waico/camera_preview',
+      creationParamsCodec: StandardMessageCodec(),
+    );
   }
 }
 

@@ -41,17 +41,21 @@ class PoseDetectionService {
   /// Note: This only starts pose detection, camera is handled by native views
   Future<bool> start() async {
     if (_isActive) {
+      log('Pose detection already active');
       return true; // Already active
     }
 
     try {
-      // Set up stream listeners
+      log('Starting pose detection service...');
+
+      // Set up stream listeners first
       _setupStreamListeners();
 
       // Start pose detection service
       await _methodChannel.invokeMethod('startCamera');
       _isActive = true;
 
+      log('Pose detection service started successfully');
       return true;
     } catch (e, s) {
       log('Error starting pose detection', error: e, stackTrace: s);
@@ -64,11 +68,15 @@ class PoseDetectionService {
   /// Stop pose detection
   Future<void> stop() async {
     if (!_isActive) {
+      log('Pose detection already stopped');
       return; // Already stopped
     }
 
+    log('Stopping pose detection service...');
+
     try {
       await _methodChannel.invokeMethod('stopCamera');
+      log('Pose detection service stopped successfully');
     } catch (e, s) {
       log('Error stopping pose detection', error: e, stackTrace: s);
       _errorController.add('Error stopping pose detection: $e');
@@ -101,16 +109,27 @@ class PoseDetectionService {
     _landmarkSubscription = _landmarkStreamChannel.receiveBroadcastStream().listen(
       (dynamic data) {
         try {
-          final result = PoseDetectionResult.fromMap((data as Map<Object?, Object?>).cast<String, dynamic>());
+          final result = PoseDetectionResult.fromMap(_deepCast(data));
           _landmarkController.add(result);
-        } catch (e) {
-          _errorController.add('Error processing pose landmarks: $e');
+        } catch (e, s) {
+          log('Error parsing pose landmarks', error: e, stackTrace: s);
+          _errorController.add('Error processing pose landmarks $e');
         }
       },
       onError: (dynamic error) {
         _errorController.add('Landmark stream error: $error');
       },
     );
+  }
+
+  dynamic _deepCast(dynamic value) {
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), _deepCast(val)));
+    } else if (value is List) {
+      return value.map(_deepCast).toList();
+    } else {
+      return value; // int, double, bool, String, null, etc.
+    }
   }
 
   /// Clean up stream subscriptions
@@ -120,11 +139,23 @@ class PoseDetectionService {
   }
 
   /// Dispose of all resources
-  void dispose() {
-    stop();
-    _landmarkController.close();
-    _errorController.close();
+  Future<void> dispose() async {
+    log('Disposing pose detection service');
+
+    // Call native dispose method to clean up resources
+    try {
+      await _methodChannel.invokeMethod('dispose');
+    } catch (e) {
+      log('Error calling native dispose method', error: e);
+    }
+
+    // Clean up Flutter resources
+    await stop();
+    await _landmarkController.close();
+    await _errorController.close();
     _instance = null;
+
+    log('Pose detection service disposed');
   }
 }
 

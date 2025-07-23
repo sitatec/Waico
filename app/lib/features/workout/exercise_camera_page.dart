@@ -81,11 +81,6 @@ class _ExerciseCameraPageState extends State<ExerciseCameraPage> {
             ),
           );
         },
-        onError: (error) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $error'), backgroundColor: Colors.red));
-        },
       ),
     );
   }

@@ -1,6 +1,7 @@
 package ai.buinitylabs.waico
 
 import ai.buinitylabs.itcares.pose.PoseDetectionChannelHandler
+import ai.buinitylabs.itcares.pose.CameraPreviewViewFactory
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -14,6 +15,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         private const val POSE_DETECTION_CHANNEL = "ai.buinitylabs.waico/pose_detection"
         private const val LANDMARK_STREAM_CHANNEL = "ai.buinitylabs.waico/landmark_stream"
+        private const val CAMERA_PREVIEW_VIEW = "ai.buinitylabs.waico/camera_preview"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +51,13 @@ class MainActivity : FlutterFragmentActivity() {
             }
         })
         
-        android.util.Log.i("MainActivity", "All channels registered successfully")
+        // Register platform view for camera preview
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            CAMERA_PREVIEW_VIEW,
+            CameraPreviewViewFactory(poseDetectionChannelHandler)
+        )
+        
+        android.util.Log.i("MainActivity", "All channels and platform views registered successfully")
     }
 
     override fun onDestroy() {
