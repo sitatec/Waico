@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
-import 'package:waico/features/workout/exercise_camera_page.dart';
+import 'package:waico/features/workout/pages/exercise_page.dart';
 
 /// Page that displays exercises for a specific workout session
 class SessionExercisesPage extends StatefulWidget {

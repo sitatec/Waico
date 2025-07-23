@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_status.dart';
-import 'package:waico/features/workout/workout_plan_generation_page.dart';
-import 'package:waico/features/workout/workout_plan_page.dart';
-import 'package:waico/features/workout/workout_setup_page.dart';
+import 'package:waico/features/workout/pages/workout_plan_generation_page.dart';
+import 'package:waico/features/workout/pages/workout_plan_page.dart';
+import 'package:waico/features/workout/pages/workout_setup/workout_setup_page.dart';
 
 /// Router page that determines which workout page to show based on user's current state
 class WorkoutRouterPage extends StatefulWidget {

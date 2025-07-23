@@ -7,11 +7,11 @@ import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/pages/workout_plan_generation_page.dart';
-import 'package:waico/features/workout/widgets/physical_stats_step.dart';
+import 'package:waico/features/workout/pages/workout_setup/widgets/physical_stats_step.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/fitness_level_step.dart';
-import 'package:waico/features/workout/widgets/goals_step.dart';
-import 'package:waico/features/workout/widgets/preferences_step.dart';
-import 'package:waico/features/workout/widgets/setup_progress_indicator.dart';
+import 'package:waico/features/workout/pages/workout_setup/widgets/goals_step.dart';
+import 'package:waico/features/workout/pages/workout_setup/widgets/preferences_step.dart';
+import 'package:waico/features/workout/pages/workout_setup/widgets/setup_progress_indicator.dart';
 
 class WorkoutSetupPage extends StatefulWidget {
   const WorkoutSetupPage({super.key});

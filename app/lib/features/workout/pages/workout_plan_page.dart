@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
-import 'package:waico/features/workout/session_exercises_page.dart';
+import 'package:waico/features/workout/pages/session_exercises_page.dart';
 
 /// A beautiful UI page for displaying the user's workout plan with weekly sections
 /// and exercise completion tracking

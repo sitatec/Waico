@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
-import 'package:waico/features/workout/widgets/setup_card.dart';
+import 'package:waico/features/workout/pages/workout_setup/widgets/setup_card.dart';
 
 class PreferencesStep extends StatefulWidget {
   final WorkoutSetupData data;

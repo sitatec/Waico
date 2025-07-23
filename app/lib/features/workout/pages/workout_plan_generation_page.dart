@@ -4,7 +4,7 @@ import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
 import 'package:waico/features/workout/workout_plan_generator.dart';
-import 'package:waico/features/workout/workout_setup_page.dart';
+import 'package:waico/features/workout/pages/workout_setup/workout_setup_page.dart';
 
 class WorkoutPlanGenerationPage extends StatefulWidget {
   const WorkoutPlanGenerationPage({super.key});
