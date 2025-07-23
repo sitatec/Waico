@@ -4,10 +4,8 @@ import AVFoundation
 
 class PoseDetectionChannelHandler: NSObject {
     private let poseDetectionChannel: FlutterMethodChannel
-    private let cameraStreamChannel: FlutterEventChannel
     private let landmarkStreamChannel: FlutterEventChannel
     
-    private var cameraEventSink: FlutterEventSink?
     private var landmarkEventSink: FlutterEventSink?
     
     private var cameraManager: CameraManager?
@@ -19,11 +17,6 @@ class PoseDetectionChannelHandler: NSObject {
     init(registrar: FlutterPluginRegistrar) {
         self.poseDetectionChannel = FlutterMethodChannel(
             name: "ai.buinitylabs.waico/pose_detection",
-            binaryMessenger: registrar.messenger()
-        )
-        
-        self.cameraStreamChannel = FlutterEventChannel(
-            name: "ai.buinitylabs.waico/camera_stream",
             binaryMessenger: registrar.messenger()
         )
         
@@ -41,10 +34,6 @@ class PoseDetectionChannelHandler: NSObject {
         poseDetectionChannel.setMethodCallHandler { [weak self] (call, result) in
             self?.handleMethodCall(call: call, result: result)
         }
-        
-        cameraStreamChannel.setStreamHandler(CameraStreamHandler { [weak self] eventSink in
-            self?.cameraEventSink = eventSink
-        })
         
         landmarkStreamChannel.setStreamHandler(LandmarkStreamHandler { [weak self] eventSink in
             self?.landmarkEventSink = eventSink
@@ -144,25 +133,6 @@ class PoseDetectionChannelHandler: NSObject {
         
         return nil
     }
-    
-    private func imageToJPEGData(_ image: UIImage, quality: CGFloat = 0.8) -> Data? {
-        return image.jpegData(compressionQuality: quality)
-    }
-    
-    private func sampleBufferToUIImage(_ sampleBuffer: CMSampleBuffer) -> UIImage? {
-        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-            return nil
-        }
-        
-        let ciImage = CIImage(cvPixelBuffer: imageBuffer)
-        let context = CIContext()
-        
-        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
-            return nil
-        }
-        
-        return UIImage(cgImage: cgImage)
-    }
 }
 
 // MARK: - CameraManagerDelegate
@@ -172,36 +142,20 @@ extension PoseDetectionChannelHandler: CameraManagerDelegate {
         let currentTime = CACurrentMediaTime()
         let timestampMs = Int(currentTime * 1000)
         
-        // Convert sample buffer to UIImage for camera stream
-        if let image = sampleBufferToUIImage(sampleBuffer),
-           let imageData = imageToJPEGData(image) {
-            
-            let cameraFrame: [String: Any] = [
-                "image": FlutterStandardTypedData(bytes: imageData),
-                "width": Int(image.size.width),
-                "height": Int(image.size.height),
-                "timestamp": timestampMs
-            ]
-            
-            DispatchQueue.main.async { [weak self] in
-                self?.cameraEventSink?(cameraFrame)
-            }
-        }
-        
-        // Perform pose detection
+        // Perform pose detection only - no image streaming
         poseLandmarkerService?.detectAsync(
             sampleBuffer: sampleBuffer,
             orientation: orientation,
             timeStamps: timestampMs
         )
         
-        // Calculate FPS
+        // Calculate FPS for performance monitoring
         frameCount += 1
         if frameCount % 30 == 0 {
             if lastFrameTime > 0 {
                 let timeDiff = currentTime - lastFrameTime
                 let fps = 30.0 / timeDiff
-                print("Camera FPS: \(String(format: "%.1f", fps))")
+                print("Pose Detection FPS: \(String(format: "%.1f", fps))")
             }
             lastFrameTime = currentTime
         }
@@ -211,7 +165,6 @@ extension PoseDetectionChannelHandler: CameraManagerDelegate {
         let errorMessage = "Camera error: \(error.localizedDescription)"
         
         DispatchQueue.main.async { [weak self] in
-            self?.cameraEventSink?(FlutterError(code: "CAMERA_ERROR", message: errorMessage, details: nil))
             self?.landmarkEventSink?(FlutterError(code: "CAMERA_ERROR", message: errorMessage, details: nil))
         }
     }
@@ -289,24 +242,6 @@ extension PoseDetectionChannelHandler: PoseLandmarkerServiceLiveStreamDelegate {
 }
 
 // MARK: - Stream Handlers
-class CameraStreamHandler: NSObject, FlutterStreamHandler {
-    private let onListenCallback: (FlutterEventSink?) -> Void
-    
-    init(onListen: @escaping (FlutterEventSink?) -> Void) {
-        self.onListenCallback = onListen
-    }
-    
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        onListenCallback(events)
-        return nil
-    }
-    
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        onListenCallback(nil)
-        return nil
-    }
-}
-
 class LandmarkStreamHandler: NSObject, FlutterStreamHandler {
     private let onListenCallback: (FlutterEventSink?) -> Void
     
