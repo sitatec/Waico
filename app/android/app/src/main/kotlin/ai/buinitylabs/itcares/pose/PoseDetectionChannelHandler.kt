@@ -45,9 +45,6 @@ class PoseDetectionChannelHandler(
                 "switchCamera" -> {
                     switchCamera(result)
                 }
-                "checkCameraPermission" -> {
-                    checkCameraPermission(result)
-                }
                 else -> {
                     result.notImplemented()
                 }
@@ -71,11 +68,6 @@ class PoseDetectionChannelHandler(
                 )
             }
             
-            if (!cameraManager!!.hasCameraPermission()) {
-                result.error("PERMISSION_DENIED", "Camera permission not granted", null)
-                return
-            }
-
             cameraManager!!.startCamera()
             result.success("Camera started successfully")
             
@@ -109,19 +101,6 @@ class PoseDetectionChannelHandler(
         } catch (e: Exception) {
             Log.e(TAG, "Error switching camera", e)
             result.error("CAMERA_SWITCH_ERROR", "Failed to switch camera: ${e.message}", null)
-        }
-    }
-
-    /**
-     * Check camera permission status
-     */
-    private fun checkCameraPermission(result: MethodChannel.Result) {
-        try {
-            val hasPermission = cameraManager?.hasCameraPermission() ?: false
-            result.success(hasPermission)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking camera permission", e)
-            result.error("PERMISSION_CHECK_ERROR", "Failed to check permission: ${e.message}", null)
         }
     }
 

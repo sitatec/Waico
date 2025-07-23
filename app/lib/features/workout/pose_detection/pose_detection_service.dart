@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
@@ -39,42 +40,27 @@ class PoseDetectionService {
   /// Whether pose detection is currently active
   bool get isActive => _isActive;
 
-  /// Check if camera permission is granted
-  Future<bool> hasCameraPermission() async {
-    try {
-      final result = await _methodChannel.invokeMethod<bool>('checkCameraPermission');
-      return result ?? false;
-    } catch (e) {
-      _errorController.add('Failed to check camera permission: $e');
-      return false;
-    }
-  }
-
   /// Start camera and pose detection
   ///
   /// Returns true if started successfully, false otherwise.
   /// Listen to [errorStream] for detailed error information.
+  /// Note: Assumes camera permission has already been granted by the caller
   Future<bool> start() async {
     if (_isActive) {
       return true; // Already active
     }
 
     try {
-      // Check permission first
-      if (!await hasCameraPermission()) {
-        _errorController.add('Camera permission not granted');
-        return false;
-      }
-
       // Set up stream listeners
       _setupStreamListeners();
 
-      // Start camera
+      // Start camera (permission should already be granted by caller)
       await _methodChannel.invokeMethod('startCamera');
       _isActive = true;
 
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      log('Error starting pose detection', error: e, stackTrace: s);
       _errorController.add('Failed to start pose detection: $e');
       _cleanupStreams();
       return false;
@@ -89,7 +75,8 @@ class PoseDetectionService {
 
     try {
       await _methodChannel.invokeMethod('stopCamera');
-    } catch (e) {
+    } catch (e, s) {
+      log('Error stopping pose detection', error: e, stackTrace: s);
       _errorController.add('Error stopping camera: $e');
     } finally {
       _isActive = false;
@@ -107,7 +94,8 @@ class PoseDetectionService {
     try {
       await _methodChannel.invokeMethod('switchCamera');
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      log('Error switching camera', error: e, stackTrace: s);
       _errorController.add('Failed to switch camera: $e');
       return false;
     }
@@ -119,15 +107,15 @@ class PoseDetectionService {
     _cameraSubscription = _cameraStreamChannel.receiveBroadcastStream().listen(
       (dynamic data) {
         try {
-          if (data is Map<String, dynamic>) {
-            final frame = CameraFrame.fromMap(data);
-            _cameraController.add(frame);
-          }
-        } catch (e) {
+          final frame = CameraFrame.fromMap((data as Map<Object?, Object?>).cast<String, dynamic>());
+          _cameraController.add(frame);
+        } catch (e, s) {
+          log('Error processing camera frame', error: e, stackTrace: s);
           _errorController.add('Error processing camera frame: $e');
         }
       },
-      onError: (dynamic error) {
+      onError: (dynamic error, StackTrace? stackTrace) {
+        log('Camera stream error', error: error, stackTrace: stackTrace);
         _errorController.add('Camera stream error: $error');
       },
     );

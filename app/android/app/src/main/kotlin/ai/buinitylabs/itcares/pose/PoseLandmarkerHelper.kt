@@ -2,7 +2,10 @@ package ai.buinitylabs.itcares.pose
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.ImageFormat
 import android.graphics.Matrix
+import android.graphics.Rect
+import android.graphics.YuvImage
 import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -14,6 +17,7 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+import java.io.ByteArrayOutputStream
 
 /**
  * Helper class for MediaPipe Pose Landmarker that manages pose detection functionality.
@@ -34,6 +38,7 @@ class PoseLandmarkerHelper(
     // For this example this needs to be a var so it can be reset on changes.
     // If the Pose Landmarker will not change, a lazy val would be preferable.
     private var poseLandmarker: PoseLandmarker? = null
+    private var isShuttingDown = false
 
     init {
         setupPoseLandmarker()
@@ -43,6 +48,7 @@ class PoseLandmarkerHelper(
      * Clears and closes the current pose landmarker instance
      */
     fun clearPoseLandmarker() {
+        isShuttingDown = true
         poseLandmarker?.close()
         poseLandmarker = null
     }
@@ -63,6 +69,9 @@ class PoseLandmarkerHelper(
      * Landmarker
      */
     fun setupPoseLandmarker() {
+        // Reset shutdown flag when setting up
+        isShuttingDown = false
+        
         // Set general pose landmarker options
         val baseOptionBuilder = BaseOptions.builder()
 
@@ -146,47 +155,62 @@ class PoseLandmarkerHelper(
         imageProxy: ImageProxy,
         isFrontCamera: Boolean
     ) {
+        // Check if we're shutting down
+        if (isShuttingDown || poseLandmarker == null) {
+            imageProxy.close()
+            return
+        }
+        
         if (runningMode != RunningMode.LIVE_STREAM) {
             throw IllegalArgumentException(
                 "Attempting to call detectLiveStream while not using RunningMode.LIVE_STREAM"
             )
         }
-        val frameTime = SystemClock.uptimeMillis()
+        
+        try {
+            val frameTime = SystemClock.uptimeMillis()
 
-        // Copy out RGB bits from the frame to a bitmap buffer
-        val bitmapBuffer =
-            Bitmap.createBitmap(
-                imageProxy.width,
-                imageProxy.height,
-                Bitmap.Config.ARGB_8888
+            // Get image properties before closing the ImageProxy
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+            val imageWidth = imageProxy.width
+            val imageHeight = imageProxy.height
+
+            // Copy out RGB bits from the frame to a bitmap buffer
+            val bitmapBuffer = imageProxyToBitmap(imageProxy)
+            imageProxy.close()
+
+            val matrix = Matrix().apply {
+                // Rotate the frame received from the camera to be in the same direction as it'll be shown
+                postRotate(rotationDegrees.toFloat())
+
+                // flip image if user use front camera
+                if (isFrontCamera) {
+                    postScale(
+                        -1f,
+                        1f,
+                        imageWidth.toFloat(),
+                        imageHeight.toFloat()
+                    )
+                }
+            }
+            val rotatedBitmap = Bitmap.createBitmap(
+                bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
+                matrix, true
             )
 
-        imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
-        imageProxy.close()
+            // Convert the input Bitmap object to an MPImage object to run inference
+            val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
-        val matrix = Matrix().apply {
-            // Rotate the frame received from the camera to be in the same direction as it'll be shown
-            postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
-
-            // flip image if user use front camera
-            if (isFrontCamera) {
-                postScale(
-                    -1f,
-                    1f,
-                    imageProxy.width.toFloat(),
-                    imageProxy.height.toFloat()
-                )
+            detectAsync(mpImage, frameTime)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in detectLiveStream", e)
+            // Ensure ImageProxy is always closed to prevent memory leaks
+            try {
+                imageProxy.close()
+            } catch (closeException: Exception) {
+                Log.e(TAG, "Error closing ImageProxy in detectLiveStream", closeException)
             }
         }
-        val rotatedBitmap = Bitmap.createBitmap(
-            bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
-            matrix, true
-        )
-
-        // Convert the input Bitmap object to an MPImage object to run inference
-        val mpImage = BitmapImageBuilder(rotatedBitmap).build()
-
-        detectAsync(mpImage, frameTime)
     }
 
     /**
@@ -196,9 +220,18 @@ class PoseLandmarkerHelper(
      */
     @VisibleForTesting
     fun detectAsync(mpImage: MPImage, frameTime: Long) {
-        poseLandmarker?.detectAsync(mpImage, frameTime)
-        // As we're using running mode LIVE_STREAM, the landmark result will
-        // be returned in returnLivestreamResult function
+        // Check if we're shutting down before calling MediaPipe
+        if (isShuttingDown || poseLandmarker == null) {
+            return
+        }
+        
+        try {
+            poseLandmarker?.detectAsync(mpImage, frameTime)
+            // As we're using running mode LIVE_STREAM, the landmark result will
+            // be returned in returnLivestreamResult function
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in detectAsync", e)
+        }
     }
 
     /**
@@ -228,6 +261,83 @@ class PoseLandmarkerHelper(
         poseLandmarkerHelperListener?.onError(
             error.message ?: "An unknown error has occurred"
         )
+    }
+
+    /**
+     * Convert ImageProxy to Bitmap - handles both YUV and RGBA formats
+     */
+    private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap {
+        return when (imageProxy.format) {
+            ImageFormat.YUV_420_888 -> {
+                // Handle YUV format (3 planes)
+                val yBuffer = imageProxy.planes[0].buffer // Y
+                val uBuffer = imageProxy.planes[1].buffer // U
+                val vBuffer = imageProxy.planes[2].buffer // V
+
+                val ySize = yBuffer.remaining()
+                val uSize = uBuffer.remaining()
+                val vSize = vBuffer.remaining()
+
+                val nv21 = ByteArray(ySize + uSize + vSize)
+
+                // U and V are swapped
+                yBuffer.get(nv21, 0, ySize)
+                vBuffer.get(nv21, ySize, vSize)
+                uBuffer.get(nv21, ySize + vSize, uSize)
+
+                val yuvImage = YuvImage(nv21, ImageFormat.NV21, imageProxy.width, imageProxy.height, null)
+                val out = ByteArrayOutputStream()
+                yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), 85, out)
+                val imageBytes = out.toByteArray()
+                android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            }
+            else -> {
+                // Handle RGBA_8888 format (1 plane) - this is what we're currently using
+                val buffer = imageProxy.planes[0].buffer
+                val pixelStride = imageProxy.planes[0].pixelStride
+                val rowStride = imageProxy.planes[0].rowStride
+                val width = imageProxy.width
+                val height = imageProxy.height
+
+                // Create a byte array to hold the pixel data
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
+
+                // Create bitmap from the raw pixel data
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                
+                // If there's no row padding, we can copy directly
+                if (rowStride == pixelStride * width) {
+                    val pixelBuffer = java.nio.ByteBuffer.wrap(bytes)
+                    bitmap.copyPixelsFromBuffer(pixelBuffer)
+                } else {
+                    // Handle row padding by copying row by row
+                    val pixelArray = IntArray(width * height)
+                    var srcIndex = 0
+                    var dstIndex = 0
+                    
+                    for (row in 0 until height) {
+                        for (col in 0 until width) {
+                            val r = bytes[srcIndex].toInt() and 0xFF
+                            val g = bytes[srcIndex + 1].toInt() and 0xFF
+                            val b = bytes[srcIndex + 2].toInt() and 0xFF
+                            val a = bytes[srcIndex + 3].toInt() and 0xFF
+                            
+                            pixelArray[dstIndex] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                            
+                            srcIndex += pixelStride
+                            dstIndex++
+                        }
+                        // Skip padding at the end of each row
+                        srcIndex += rowStride - (pixelStride * width)
+                    }
+                    
+                    bitmap.setPixels(pixelArray, 0, width, 0, 0, width, height)
+                }
+                
+                bitmap
+            }
+        }
     }
 
     companion object {

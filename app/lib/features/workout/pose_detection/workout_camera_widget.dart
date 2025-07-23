@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:waico/features/workout/pose_detection/pose_detection_service.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
@@ -73,7 +74,7 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget> with TickerPr
   Future<void> _initializeCamera() async {
     try {
       // Check permissions
-      final hasPermission = await _poseService.hasCameraPermission();
+      final hasPermission = await Permission.camera.request().isGranted;
       if (!hasPermission) {
         widget.onPermissionDenied?.call();
         setState(() {
@@ -169,13 +170,13 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget> with TickerPr
 
   @override
   void dispose() {
+    _poseService.stop();
     _repAnimationController.dispose();
     _pulseController.dispose();
     _cameraSubscription?.cancel();
     _poseSubscription?.cancel();
     _repSubscription?.cancel();
     _errorSubscription?.cancel();
-    _poseService.stop();
     super.dispose();
   }
 

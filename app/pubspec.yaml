@@ -36,7 +36,7 @@ dependencies:
   flutter_gemma:
     git:
       url: https://github.com/sitatec/flutter_gemma.git
-      ref: mediapipe-deps-fix
+      ref: mine
   vector_math: ^2.1.4
 
 dev_dependencies:

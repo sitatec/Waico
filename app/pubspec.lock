@@ -514,11 +514,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: mediapipe-deps-fix
-      resolved-ref: ba516ed2ab8bd4c91e2b1446445dda5544e5d8a6
+      ref: mine
+      resolved-ref: "6e15422a0051aff706004f76c6264f01aa38ae4b"
       url: "https://github.com/sitatec/flutter_gemma.git"
     source: git
-    version: "0.10.0"
+    version: "0.9.0"
   flutter_lints:
     dependency: "direct dev"
     description:
