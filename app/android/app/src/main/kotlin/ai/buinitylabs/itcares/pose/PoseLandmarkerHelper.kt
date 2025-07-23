@@ -32,7 +32,7 @@ class PoseLandmarkerHelper(
     var runningMode: RunningMode = RunningMode.LIVE_STREAM,
     val context: Context,
     // This listener is only used when running in RunningMode.LIVE_STREAM
-    val poseLandmarkerHelperListener: LandmarkerListener? = null
+    var poseLandmarkerHelperListener: LandmarkerListener? = null
 ) {
 
     // For this example this needs to be a var so it can be reset on changes.
@@ -338,6 +338,13 @@ class PoseLandmarkerHelper(
                 bitmap
             }
         }
+    }
+
+    /**
+     * Sets the landmarker listener for pose detection callbacks
+     */
+    fun setLandmarkerListener(listener: LandmarkerListener?) {
+        poseLandmarkerHelperListener = listener
     }
 
     companion object {

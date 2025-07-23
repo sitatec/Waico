@@ -1,6 +1,6 @@
 package ai.buinitylabs.itcares.pose
 
-import android.graphics.Bitmap
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -9,26 +9,58 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import java.io.ByteArrayOutputStream
 
 /**
  * Platform channel handler for pose detection that manages communication
- * between Flutter and native Android pose detection functionality
+ * between Flutter and native Android pose detection functionality.
+ * This handler coordinates pose detection and sends results to Dart.
+ * Camera display is now handled by Flutter camera package.
  */
 class PoseDetectionChannelHandler(
-    private val lifecycleOwner: LifecycleOwner
-) : MethodChannel.MethodCallHandler, CameraManager.CameraStreamListener {
+    private val context: Context
+) : MethodChannel.MethodCallHandler, PoseLandmarkerHelper.LandmarkerListener {
 
-    private var cameraManager: CameraManager? = null
-    private var cameraStreamSink: EventChannel.EventSink? = null
+    private var poseLandmarkerHelper: PoseLandmarkerHelper? = null
     private var landmarkStreamSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var isInitialized = false
 
     // Performance tracking
-    private var lastCameraFrameTime = 0L
     private var lastLandmarkTime = 0L
-    private var cameraFrameCount = 0
     private var landmarkFrameCount = 0
+
+    init {
+        initializePoseDetection()
+    }
+
+    /**
+     * Initialize pose detection - handles errors gracefully
+     */
+    private fun initializePoseDetection() {
+        try {
+            poseLandmarkerHelper = PoseLandmarkerHelper(
+                context = context,
+                runningMode = com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM,
+                poseLandmarkerHelperListener = this
+            )
+            isInitialized = true
+            Log.i(TAG, "Pose detection initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize pose detection", e)
+            poseLandmarkerHelper = null
+            isInitialized = false
+        }
+    }
+
+    /**
+     * Get the pose landmarker helper (may be null if initialization failed)
+     */
+    fun getPoseLandmarkerHelper(): PoseLandmarkerHelper? = poseLandmarkerHelper
+
+    /**
+     * Check if pose detection is available
+     */
+    fun isPoseDetectionAvailable(): Boolean = isInitialized && poseLandmarkerHelper != null
 
     /**
      * Handle method calls from Flutter
@@ -37,10 +69,10 @@ class PoseDetectionChannelHandler(
         try {
             when (call.method) {
                 "startCamera" -> {
-                    startCamera(result)
+                    startPoseDetection(result)
                 }
                 "stopCamera" -> {
-                    stopCamera(result)
+                    stopPoseDetection(result)
                 }
                 "switchCamera" -> {
                     switchCamera(result)
@@ -56,59 +88,49 @@ class PoseDetectionChannelHandler(
     }
 
     /**
-     * Start camera and pose detection
+     * Start pose detection
      */
-    private fun startCamera(result: MethodChannel.Result) {
+    private fun startPoseDetection(result: MethodChannel.Result) {
         try {
-            if (cameraManager == null) {
-                cameraManager = CameraManager(
-                    context = lifecycleOwner as android.content.Context,
-                    lifecycleOwner = lifecycleOwner,
-                    cameraStreamListener = this
-                )
+            if (!isPoseDetectionAvailable()) {
+                result.error("POSE_DETECTION_UNAVAILABLE", "Pose detection is not available", null)
+                return
             }
-            
-            cameraManager!!.startCamera()
-            result.success("Camera started successfully")
+            // Pose detection is started when camera view connects to it
+            // This just confirms the service is ready
+            result.success("Pose detection service ready")
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting camera", e)
-            result.error("CAMERA_START_ERROR", "Failed to start camera: ${e.message}", null)
+            Log.e(TAG, "Error starting pose detection", e)
+            result.error("POSE_DETECTION_START_ERROR", "Failed to start pose detection: ${e.message}", null)
         }
     }
 
     /**
-     * Stop camera and cleanup resources
+     * Stop pose detection
      */
-    private fun stopCamera(result: MethodChannel.Result) {
+    private fun stopPoseDetection(result: MethodChannel.Result) {
         try {
-            cameraManager?.stopCamera()
-            cameraManager = null
-            result.success("Camera stopped successfully")
+            // Stop any active pose detection
+            poseLandmarkerHelper?.clearPoseLandmarker()
+            result.success("Pose detection stopped")
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping camera", e)
-            result.error("CAMERA_STOP_ERROR", "Failed to stop camera: ${e.message}", null)
+            Log.e(TAG, "Error stopping pose detection", e)
+            result.error("POSE_DETECTION_STOP_ERROR", "Failed to stop pose detection: ${e.message}", null)
         }
     }
 
     /**
-     * Switch between front and back camera
+     * Switch between front and back camera - now handled by Flutter camera
      */
     private fun switchCamera(result: MethodChannel.Result) {
         try {
-            cameraManager?.switchCamera()
-            result.success("Camera switched successfully")
+            // Camera switching is now handled on Flutter side
+            result.success("Camera switching is handled by Flutter camera package")
         } catch (e: Exception) {
-            Log.e(TAG, "Error switching camera", e)
-            result.error("CAMERA_SWITCH_ERROR", "Failed to switch camera: ${e.message}", null)
+            Log.e(TAG, "Error in switch camera method", e)
+            result.error("CAMERA_SWITCH_ERROR", "Switch camera method error: ${e.message}", null)
         }
-    }
-
-    /**
-     * Set camera stream event sink
-     */
-    fun setCameraStreamSink(sink: EventChannel.EventSink?) {
-        cameraStreamSink = sink
     }
 
     /**
@@ -118,34 +140,8 @@ class PoseDetectionChannelHandler(
         landmarkStreamSink = sink
     }
 
-    // CameraManager.CameraStreamListener implementation
-    override fun onCameraFrame(bitmap: Bitmap) {
-        try {
-            // Convert bitmap to byte array for streaming to Flutter
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-            val imageBytes = outputStream.toByteArray()
-
-            // Calculate FPS for camera frames
-            calculateCameraFPS()
-
-            // Send to Flutter on main thread
-            mainHandler.post {
-                cameraStreamSink?.success(
-                    mapOf(
-                        "image" to imageBytes,
-                        "width" to bitmap.width,
-                        "height" to bitmap.height,
-                        "timestamp" to System.currentTimeMillis()
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error processing camera frame", e)
-        }
-    }
-
-    override fun onPoseLandmarks(resultBundle: PoseLandmarkerHelper.ResultBundle) {
+    // PoseLandmarkerHelper.LandmarkerListener implementation
+    override fun onResults(resultBundle: PoseLandmarkerHelper.ResultBundle) {
         try {
             // Calculate FPS for landmarks
             calculateLandmarkFPS()
@@ -192,9 +188,8 @@ class PoseDetectionChannelHandler(
         }
     }
 
-    override fun onError(error: String) {
+    override fun onError(error: String, errorCode: Int) {
         mainHandler.post {
-            cameraStreamSink?.error("POSE_DETECTION_ERROR", error, null)
             landmarkStreamSink?.error("POSE_DETECTION_ERROR", error, null)
         }
     }
@@ -222,22 +217,6 @@ class PoseDetectionChannelHandler(
     }
 
     /**
-     * Calculate FPS for camera frames
-     */
-    private fun calculateCameraFPS() {
-        cameraFrameCount++
-        if (cameraFrameCount % 30 == 0) {
-            val currentTime = System.currentTimeMillis()
-            if (lastCameraFrameTime > 0) {
-                val timeDiff = currentTime - lastCameraFrameTime
-                val fps = (30 * 1000f) / timeDiff
-                Log.d(TAG, "Camera Stream FPS: ${"%.1f".format(fps)}")
-            }
-            lastCameraFrameTime = currentTime
-        }
-    }
-
-    /**
      * Calculate FPS for landmark detection
      */
     private fun calculateLandmarkFPS() {
@@ -257,10 +236,9 @@ class PoseDetectionChannelHandler(
      * Cleanup resources
      */
     fun cleanup() {
-        cameraManager?.stopCamera()
-        cameraManager = null
-        cameraStreamSink = null
         landmarkStreamSink = null
+        poseLandmarkerHelper = null
+        isInitialized = false
     }
 
     companion object {

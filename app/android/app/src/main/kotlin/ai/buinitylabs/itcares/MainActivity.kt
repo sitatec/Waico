@@ -13,15 +13,17 @@ class MainActivity : FlutterFragmentActivity() {
     
     companion object {
         private const val POSE_DETECTION_CHANNEL = "ai.buinitylabs.waico/pose_detection"
-        private const val CAMERA_STREAM_CHANNEL = "ai.buinitylabs.waico/camera_stream"
         private const val LANDMARK_STREAM_CHANNEL = "ai.buinitylabs.waico/landmark_stream"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize pose detection channel handler
+        // Always initialize pose detection channel handler
+        // It will handle any initialization issues internally
         poseDetectionChannelHandler = PoseDetectionChannelHandler(this)
+        
+        android.util.Log.i("MainActivity", "Pose detection channel handler initialized")
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -32,20 +34,6 @@ class MainActivity : FlutterFragmentActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             POSE_DETECTION_CHANNEL
         ).setMethodCallHandler(poseDetectionChannelHandler)
-        
-        // Register event channel for camera stream
-        EventChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            CAMERA_STREAM_CHANNEL
-        ).setStreamHandler(object : EventChannel.StreamHandler {
-            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                poseDetectionChannelHandler.setCameraStreamSink(events)
-            }
-            
-            override fun onCancel(arguments: Any?) {
-                poseDetectionChannelHandler.setCameraStreamSink(null)
-            }
-        })
         
         // Register event channel for landmark stream
         EventChannel(
@@ -60,6 +48,8 @@ class MainActivity : FlutterFragmentActivity() {
                 poseDetectionChannelHandler.setLandmarkStreamSink(null)
             }
         })
+        
+        android.util.Log.i("MainActivity", "All channels registered successfully")
     }
 
     override fun onDestroy() {

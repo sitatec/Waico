@@ -5,13 +5,12 @@ import 'package:flutter/services.dart';
 
 import 'pose_models.dart';
 
-/// Main service for pose detection using MediaPipe
+/// Service for pose detection using MediaPipe through platform channels
 ///
-/// Provides a simple interface to start camera, stream images and landmarks,
-/// and control pose detection functionality.
+/// This service only handles pose detection data, not camera streaming.
+/// Camera rendering is handled by native platform views.
 class PoseDetectionService {
   static const MethodChannel _methodChannel = MethodChannel('ai.buinitylabs.waico/pose_detection');
-  static const EventChannel _cameraStreamChannel = EventChannel('ai.buinitylabs.waico/camera_stream');
   static const EventChannel _landmarkStreamChannel = EventChannel('ai.buinitylabs.waico/landmark_stream');
 
   static PoseDetectionService? _instance;
@@ -19,17 +18,12 @@ class PoseDetectionService {
 
   PoseDetectionService._();
 
-  StreamSubscription<dynamic>? _cameraSubscription;
   StreamSubscription<dynamic>? _landmarkSubscription;
 
-  final StreamController<CameraFrame> _cameraController = StreamController<CameraFrame>.broadcast();
   final StreamController<PoseDetectionResult> _landmarkController = StreamController<PoseDetectionResult>.broadcast();
   final StreamController<String> _errorController = StreamController<String>.broadcast();
 
   bool _isActive = false;
-
-  /// Stream of camera frames (JPEG images)
-  Stream<CameraFrame> get cameraStream => _cameraController.stream;
 
   /// Stream of pose detection results
   Stream<PoseDetectionResult> get landmarkStream => _landmarkController.stream;
@@ -40,11 +34,11 @@ class PoseDetectionService {
   /// Whether pose detection is currently active
   bool get isActive => _isActive;
 
-  /// Start camera and pose detection
+  /// Start pose detection
   ///
   /// Returns true if started successfully, false otherwise.
   /// Listen to [errorStream] for detailed error information.
-  /// Note: Assumes camera permission has already been granted by the caller
+  /// Note: This only starts pose detection, camera is handled by native views
   Future<bool> start() async {
     if (_isActive) {
       return true; // Already active
@@ -54,7 +48,7 @@ class PoseDetectionService {
       // Set up stream listeners
       _setupStreamListeners();
 
-      // Start camera (permission should already be granted by caller)
+      // Start pose detection service
       await _methodChannel.invokeMethod('startCamera');
       _isActive = true;
 
@@ -67,7 +61,7 @@ class PoseDetectionService {
     }
   }
 
-  /// Stop camera and pose detection
+  /// Stop pose detection
   Future<void> stop() async {
     if (!_isActive) {
       return; // Already stopped
@@ -77,7 +71,7 @@ class PoseDetectionService {
       await _methodChannel.invokeMethod('stopCamera');
     } catch (e, s) {
       log('Error stopping pose detection', error: e, stackTrace: s);
-      _errorController.add('Error stopping camera: $e');
+      _errorController.add('Error stopping pose detection: $e');
     } finally {
       _isActive = false;
       _cleanupStreams();
@@ -101,33 +95,14 @@ class PoseDetectionService {
     }
   }
 
-  /// Set up stream listeners for camera and landmark data
+  /// Set up stream listeners for pose detection data
   void _setupStreamListeners() {
-    // Listen to camera stream
-    _cameraSubscription = _cameraStreamChannel.receiveBroadcastStream().listen(
-      (dynamic data) {
-        try {
-          final frame = CameraFrame.fromMap((data as Map<Object?, Object?>).cast<String, dynamic>());
-          _cameraController.add(frame);
-        } catch (e, s) {
-          log('Error processing camera frame', error: e, stackTrace: s);
-          _errorController.add('Error processing camera frame: $e');
-        }
-      },
-      onError: (dynamic error, StackTrace? stackTrace) {
-        log('Camera stream error', error: error, stackTrace: stackTrace);
-        _errorController.add('Camera stream error: $error');
-      },
-    );
-
-    // Listen to landmark stream
+    // Listen to landmark stream only (camera handled by native view)
     _landmarkSubscription = _landmarkStreamChannel.receiveBroadcastStream().listen(
       (dynamic data) {
         try {
-          if (data is Map<String, dynamic>) {
-            final result = PoseDetectionResult.fromMap(data);
-            _landmarkController.add(result);
-          }
+          final result = PoseDetectionResult.fromMap((data as Map<Object?, Object?>).cast<String, dynamic>());
+          _landmarkController.add(result);
         } catch (e) {
           _errorController.add('Error processing pose landmarks: $e');
         }
@@ -140,16 +115,13 @@ class PoseDetectionService {
 
   /// Clean up stream subscriptions
   void _cleanupStreams() {
-    _cameraSubscription?.cancel();
     _landmarkSubscription?.cancel();
-    _cameraSubscription = null;
     _landmarkSubscription = null;
   }
 
   /// Dispose of all resources
   void dispose() {
     stop();
-    _cameraController.close();
     _landmarkController.close();
     _errorController.close();
     _instance = null;
