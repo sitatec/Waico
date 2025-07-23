@@ -88,6 +88,17 @@ abstract class PoseClassifier {
     required List<PoseLandmark> imageLandmarks,
   });
 
+  /// Calculate exercise-specific form metrics
+  /// Returns a map of metric names to scores (0.0 - 1.0)
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    // Default implementation returns overall visibility
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    return {'overall_visibility': visibilityScore};
+  }
+
   Map<String, double> _getSmoothedProbabilities() {
     if (_history.isEmpty) return {'up': 0.5, 'down': 0.5};
     double upSum = 0.0;
@@ -180,6 +191,64 @@ class PushUpClassifier extends PoseClassifier {
     final upProbability = (angleProb * 0.9 + heightProb * 0.1);
     return {'up': upProbability, 'down': 1.0 - upProbability};
   }
+
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+      final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
+      final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
+
+      // Body alignment (straight line from shoulders to ankles)
+      final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+      final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+      final ankleMid = PoseUtilities.getMidpoint(leftAnkle, rightAnkle);
+
+      // Calculate body straightness (closer to 180 degrees is better)
+      final bodyAngle = PoseUtilities.getAngle(shoulderMid, hipMid, ankleMid);
+      final alignmentScore = 1.0 - (180.0 - bodyAngle).abs() / 45.0; // Normalize to 0-1
+      metrics['body_alignment'] = alignmentScore.clamp(0.0, 1.0);
+
+      // Wrist positioning (should be roughly under shoulders)
+      final leftWrist = imageLandmarks[PoseLandmarkType.leftWrist];
+      final rightWrist = imageLandmarks[PoseLandmarkType.rightWrist];
+      final leftShoulderImg = imageLandmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulderImg = imageLandmarks[PoseLandmarkType.rightShoulder];
+
+      final wristShoulderDistance = sqrt(
+        pow(leftWrist.x - leftShoulderImg.x, 2) + pow(rightWrist.x - rightShoulderImg.x, 2),
+      );
+      final wristScore = 1.0 - (wristShoulderDistance * 2).clamp(0.0, 1.0);
+      metrics['wrist_positioning'] = wristScore;
+
+      // Hand width (proper push-up width)
+      final handWidth = (leftWrist.x - rightWrist.x).abs();
+      final shoulderWidth = (leftShoulderImg.x - rightShoulderImg.x).abs();
+      final widthRatio = shoulderWidth > 0 ? handWidth / shoulderWidth : 0.0;
+      // Ideal ratio is around 1.0-1.5 (hands slightly wider than shoulders)
+      final widthScore = 1.0 - (widthRatio - 1.25).abs().clamp(0.0, 1.0);
+      metrics['hand_width'] = widthScore;
+    } catch (e) {
+      // Fallback values on error
+      metrics['body_alignment'] = 0.5;
+      metrics['wrist_positioning'] = 0.5;
+      metrics['hand_width'] = 0.5;
+    }
+
+    // Add overall visibility
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
+  }
 }
 
 // -------------------- SQUAT FAMILY --------------------
@@ -228,11 +297,62 @@ class SquatClassifier extends PoseClassifier {
     final upProbability = (angleProb * 0.6 + heightProb * 0.4);
     return {'up': upProbability, 'down': 1.0 - upProbability};
   }
+
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+      final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
+      final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
+      final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+
+      // Knee tracking (knees should track over toes)
+      final kneeAnkleDistance = sqrt(pow(leftKnee.x - leftAnkle.x, 2) + pow(rightKnee.x - rightAnkle.x, 2));
+      final kneeTrackingScore = 1.0 - (kneeAnkleDistance * 10).clamp(0.0, 1.0);
+      metrics['knee_tracking'] = kneeTrackingScore;
+
+      // Hip symmetry (both hips should be at similar height)
+      final hipHeightDiff = (leftHip.y - rightHip.y).abs();
+      final hipSymmetryScore = 1.0 - (hipHeightDiff * 20).clamp(0.0, 1.0);
+      metrics['hip_symmetry'] = hipSymmetryScore;
+
+      // Depth (hip should go below knee level in a proper squat)
+      final hipKneeDiff = (leftHip.y + rightHip.y) / 2 - (leftKnee.y + rightKnee.y) / 2;
+      final depthScore = hipKneeDiff > 0 ? 1.0 : 0.5;
+      metrics['squat_depth'] = depthScore;
+
+      // Stance width (feet should be shoulder-width apart)
+      final footWidth = (leftAnkle.x - rightAnkle.x).abs();
+      final shoulderWidth =
+          (worldLandmarks[PoseLandmarkType.leftShoulder].x - worldLandmarks[PoseLandmarkType.rightShoulder].x).abs();
+      final stanceRatio = shoulderWidth > 0 ? footWidth / shoulderWidth : 0.0;
+      final stanceScore = 1.0 - (stanceRatio - 1.1).abs().clamp(0.0, 1.0);
+      metrics['stance_width'] = stanceScore;
+    } catch (e) {
+      // Fallback values on error
+      metrics['knee_tracking'] = 0.5;
+      metrics['hip_symmetry'] = 0.5;
+      metrics['squat_depth'] = 0.5;
+      metrics['stance_width'] = 0.5;
+    }
+
+    // Add overall visibility
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
+  }
 }
 
 class SumoSquatClassifier extends PoseClassifier {
   // Sumo Squat logic is similar to a regular squat but averages both legs.
-  // The enhanced logic from SquatClassifier is directly applicable and beneficial here.
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
@@ -248,34 +368,83 @@ class SumoSquatClassifier extends PoseClassifier {
 
     if (lKnee.visibility < 0.7 || rKnee.visibility < 0.7) return _neutralResult();
 
-    // Signal 1: Average Knee Angle
+    // Calculate angles for both legs
     final lKneeAngle = PoseUtilities.getAngle(lHip, lKnee, lAnkle);
     final rKneeAngle = PoseUtilities.getAngle(rHip, rKnee, rAnkle);
-    final avgKneeAngle = (lKneeAngle + rKneeAngle) / 2.0;
-    final angleProb = PoseUtilities.normalize(avgKneeAngle, 95.0, 170.0);
+    final avgKneeAngle = (lKneeAngle + rKneeAngle) / 2;
 
-    // Signal 2: Average Hip Height
+    final angleProb = PoseUtilities.normalize(avgKneeAngle, 90.0, 175.0);
+
+    // Hip height relative to knees
     final lHip2D = imageLandmarks[PoseLandmarkType.leftHip];
-    final lKnee2D = imageLandmarks[PoseLandmarkType.leftKnee];
-    final lAnkle2D = imageLandmarks[PoseLandmarkType.leftAnkle];
     final rHip2D = imageLandmarks[PoseLandmarkType.rightHip];
+    final lKnee2D = imageLandmarks[PoseLandmarkType.leftKnee];
     final rKnee2D = imageLandmarks[PoseLandmarkType.rightKnee];
-    final rAnkle2D = imageLandmarks[PoseLandmarkType.rightAnkle];
 
-    final lHipKneeDiff = lKnee2D.y - lHip2D.y;
-    final rHipKneeDiff = rKnee2D.y - rHip2D.y;
-    final avgHipKneeDiff = (lHipKneeDiff + rHipKneeDiff) / 2.0;
+    final avgHipHeight = (lHip2D.y + rHip2D.y) / 2;
+    final avgKneeHeight = (lKnee2D.y + rKnee2D.y) / 2;
+    final hipKneeHeightDiff = avgKneeHeight - avgHipHeight;
 
-    final lShinHeight = PoseUtilities.getVerticalDistance(lKnee2D, lAnkle2D);
-    final rShinHeight = PoseUtilities.getVerticalDistance(rKnee2D, rAnkle2D);
-    final avgShinHeight = (lShinHeight + rShinHeight) / 2.0;
-    if (avgShinHeight < 0.01) return _neutralResult();
+    final shinHeight = PoseUtilities.getVerticalDistance(lKnee2D, imageLandmarks[PoseLandmarkType.leftAnkle]);
+    if (shinHeight < 0.01) return _neutralResult();
 
-    final normalizedHipHeight = avgHipKneeDiff / avgShinHeight;
-    final heightProb = PoseUtilities.normalize(normalizedHipHeight, 0.0, 1.0);
+    final normalizedHipHeight = hipKneeHeightDiff / shinHeight;
+    final heightProb = PoseUtilities.normalize(normalizedHipHeight, 0.0, 1.2);
 
-    final upProbability = (angleProb * 0.5 + heightProb * 0.5);
+    final upProbability = (angleProb * 0.6 + heightProb * 0.4);
     return {'up': upProbability, 'down': 1.0 - upProbability};
+  }
+
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+      final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
+      final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
+      final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+
+      // Knee tracking (both knees should track over toes)
+      final leftKneeAnkleDistance = sqrt(pow(leftKnee.x - leftAnkle.x, 2));
+      final rightKneeAnkleDistance = sqrt(pow(rightKnee.x - rightAnkle.x, 2));
+      final avgKneeTrackingScore = 1.0 - ((leftKneeAnkleDistance + rightKneeAnkleDistance) / 2 * 10).clamp(0.0, 1.0);
+      metrics['knee_tracking'] = avgKneeTrackingScore;
+
+      // Hip symmetry
+      final hipHeightDiff = (leftHip.y - rightHip.y).abs();
+      final hipSymmetryScore = 1.0 - (hipHeightDiff * 20).clamp(0.0, 1.0);
+      metrics['hip_symmetry'] = hipSymmetryScore;
+
+      // Stance width (should be wider than regular squat)
+      final footWidth = (leftAnkle.x - rightAnkle.x).abs();
+      final shoulderWidth =
+          (worldLandmarks[PoseLandmarkType.leftShoulder].x - worldLandmarks[PoseLandmarkType.rightShoulder].x).abs();
+      final stanceRatio = shoulderWidth > 0 ? footWidth / shoulderWidth : 0.0;
+      // Sumo squats should have wider stance (1.3-1.8)
+      final stanceScore = 1.0 - (stanceRatio - 1.55).abs().clamp(0.0, 1.0);
+      metrics['sumo_stance_width'] = stanceScore;
+
+      // Depth
+      final hipKneeDiff = (leftHip.y + rightHip.y) / 2 - (leftKnee.y + rightKnee.y) / 2;
+      final depthScore = hipKneeDiff > 0 ? 1.0 : 0.5;
+      metrics['squat_depth'] = depthScore;
+    } catch (e) {
+      metrics['knee_tracking'] = 0.5;
+      metrics['hip_symmetry'] = 0.5;
+      metrics['sumo_stance_width'] = 0.5;
+      metrics['squat_depth'] = 0.5;
+    }
+
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
   }
 }
 
@@ -284,63 +453,93 @@ enum SplitSquatSide { left, right }
 class SplitSquatClassifier extends PoseClassifier {
   final SplitSquatSide frontLeg;
 
-  SplitSquatClassifier({required this.frontLeg, int smoothingWindow = 5}) : super(smoothingWindow: smoothingWindow);
+  SplitSquatClassifier({required this.frontLeg});
 
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
-    // Determine the landmark indices for the designated front leg.
-    final hipIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftHip : PoseLandmarkType.rightHip;
-    final kneeIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftKnee : PoseLandmarkType.rightKnee;
-    final ankleIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftAnkle : PoseLandmarkType.rightAnkle;
+    // Focus on front leg for split squat analysis
+    final frontHipIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftHip : PoseLandmarkType.rightHip;
+    final frontKneeIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftKnee : PoseLandmarkType.rightKnee;
+    final frontAnkleIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftAnkle : PoseLandmarkType.rightAnkle;
 
-    // Get the required landmarks using both world and image coordinates.
-    final hip3D = worldLandmarks[hipIdx];
-    final knee3D = worldLandmarks[kneeIdx];
-    final ankle3D = worldLandmarks[ankleIdx];
+    final frontHip = worldLandmarks[frontHipIdx];
+    final frontKnee = worldLandmarks[frontKneeIdx];
+    final frontAnkle = worldLandmarks[frontAnkleIdx];
 
-    final hip2D = imageLandmarks[hipIdx];
-    final knee2D = imageLandmarks[kneeIdx];
-    final ankle2D = imageLandmarks[ankleIdx];
-
-    // Ensure the key landmarks for the front leg are clearly visible.
-    if (hip3D.visibility < 0.8 || knee3D.visibility < 0.8 || ankle3D.visibility < 0.8) {
+    if (frontHip.visibility < 0.8 || frontKnee.visibility < 0.8 || frontAnkle.visibility < 0.8) {
       return _neutralResult();
     }
 
-    // --- Granular Algorithm ---
-    // The logic mirrors the standard SquatClassifier but is applied only to the front leg.
-    // 1. Front Knee Angle (Primary): The angle of the front leg's knee joint.
-    // 2. Front Hip Height (Secondary): The vertical position of the front hip relative to the front knee.
+    // Front leg knee angle
+    final kneeAngle = PoseUtilities.getAngle(frontHip, frontKnee, frontAnkle);
+    final angleProb = PoseUtilities.normalize(kneeAngle, 90.0, 175.0);
 
-    // Signal 1: Knee Angle
-    // Measures the bend in the primary working leg.
-    final kneeAngle = PoseUtilities.getAngle(hip3D, knee3D, ankle3D);
-    // In a deep split squat, the knee angle is around 90°. When up, it's nearly straight.
-    final angleProb = PoseUtilities.normalize(kneeAngle, 90.0, 170.0);
+    // Hip height relative to front knee
+    final frontHip2D = imageLandmarks[frontHipIdx];
+    final frontKnee2D = imageLandmarks[frontKneeIdx];
+    final hipKneeHeightDiff = frontKnee2D.y - frontHip2D.y;
+    final shinHeight = PoseUtilities.getVerticalDistance(frontKnee2D, imageLandmarks[frontAnkleIdx]);
 
-    // Signal 2: Hip Height over Knee
-    // Measures how far the user has lowered their body.
-    final hipKneeHeightDiff = knee2D.y - hip2D.y; // Positive when hip is above knee
-
-    // Normalize by the front leg's shin height for scale-invariance.
-    final shinHeight = PoseUtilities.getVerticalDistance(knee2D, ankle2D);
-    if (shinHeight < 0.01) return _neutralResult(); // Avoid division by zero
+    if (shinHeight < 0.01) return _neutralResult();
 
     final normalizedHipHeight = hipKneeHeightDiff / shinHeight;
-    // Down: hip is near the knee (ratio ~0.0-0.2). Up: hip is high above knee (ratio ~1.0-1.1).
-    final heightProb = PoseUtilities.normalize(normalizedHipHeight, 0.1, 1.1);
+    final heightProb = PoseUtilities.normalize(normalizedHipHeight, 0.0, 1.2);
 
-    // Combine probabilities with a weighted average for a robust result.
-    final upProbability = (angleProb * 0.6 + heightProb * 0.4);
-
+    final upProbability = (angleProb * 0.7 + heightProb * 0.3);
     return {'up': upProbability, 'down': 1.0 - upProbability};
   }
-}
 
-// -------------------- CRUNCH FAMILY --------------------
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final frontHipIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftHip : PoseLandmarkType.rightHip;
+      final frontKneeIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftKnee : PoseLandmarkType.rightKnee;
+      final frontAnkleIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftAnkle : PoseLandmarkType.rightAnkle;
+      final backHipIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.rightHip : PoseLandmarkType.leftHip;
+
+      // Front leg knee tracking
+      final frontKnee = worldLandmarks[frontKneeIdx];
+      final frontAnkle = worldLandmarks[frontAnkleIdx];
+      final frontKneeTrackingDistance = (frontKnee.x - frontAnkle.x).abs();
+      final frontKneeTrackingScore = 1.0 - (frontKneeTrackingDistance * 15).clamp(0.0, 1.0);
+      metrics['front_knee_tracking'] = frontKneeTrackingScore;
+
+      // Hip level (both hips should stay level)
+      final frontHip = worldLandmarks[frontHipIdx];
+      final backHip = worldLandmarks[backHipIdx];
+      final hipLevelDiff = (frontHip.y - backHip.y).abs();
+      final hipLevelScore = 1.0 - (hipLevelDiff * 25).clamp(0.0, 1.0);
+      metrics['hip_level'] = hipLevelScore;
+
+      // Stance length (appropriate distance between feet)
+      final backAnkleIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.rightAnkle : PoseLandmarkType.leftAnkle;
+      final backAnkle = worldLandmarks[backAnkleIdx];
+      final stanceLength = sqrt(pow(frontAnkle.x - backAnkle.x, 2) + pow(frontAnkle.y - backAnkle.y, 2));
+      // Normalize stance length relative to leg length
+      final legLength = sqrt(pow(frontHip.x - frontAnkle.x, 2) + pow(frontHip.y - frontAnkle.y, 2));
+      final stanceRatio = legLength > 0 ? stanceLength / legLength : 0.0;
+      final stanceScore = 1.0 - (stanceRatio - 0.8).abs().clamp(0.0, 1.0);
+      metrics['stance_length'] = stanceScore;
+    } catch (e) {
+      metrics['front_knee_tracking'] = 0.5;
+      metrics['hip_level'] = 0.5;
+      metrics['stance_length'] = 0.5;
+    }
+
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
+  }
+}
 
 class CrunchClassifier extends PoseClassifier {
   @override
@@ -348,56 +547,74 @@ class CrunchClassifier extends PoseClassifier {
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
-    final shoulderCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftShoulder],
-      worldLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final hipCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftHip],
-      worldLandmarks[PoseLandmarkType.rightHip],
-    );
-    final kneeCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftKnee],
-      worldLandmarks[PoseLandmarkType.rightKnee],
-    );
+    final nose = worldLandmarks[PoseLandmarkType.nose];
+    final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+    final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+    final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
 
-    final shoulderCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftShoulder],
-      imageLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final hipCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftHip],
-      imageLandmarks[PoseLandmarkType.rightHip],
-    );
-
-    if (shoulderCenter3D.visibility < 0.7 || hipCenter3D.visibility < 0.7) {
+    if (nose.visibility < 0.7 || leftShoulder.visibility < 0.7 || rightShoulder.visibility < 0.7) {
       return _neutralResult();
     }
 
-    // --- Data-driven Algorithm based on actual measurements ---
-    // UP state: torso_angle median=117.9°, shoulder_elev median=0.639
-    // DOWN state: torso_angle median=130.7°, shoulder_elev median=0.117
+    // Calculate torso flexion angle
+    final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+    final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
 
-    // Signal 1: Torso Angle (Primary)
-    final torsoAngle = PoseUtilities.getAngle(shoulderCenter3D, hipCenter3D, kneeCenter3D);
-    // UP: ~117.9°, DOWN: ~130.7° - smaller angle means more crunched (up)
-    final angleProb = 1.0 - PoseUtilities.normalize(torsoAngle, 110.0, 140.0);
+    // Use nose-to-shoulder vector vs shoulder-to-hip vector
+    final torsoAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
 
-    // Signal 2: Shoulder Elevation (Secondary)
-    final shoulderElevation = PoseUtilities.getVerticalDistance(hipCenter2D, shoulderCenter2D);
-    final torsoLength = Vector2(
-      shoulderCenter2D.x,
-      shoulderCenter2D.y,
-    ).distanceTo(Vector2(hipCenter2D.x, hipCenter2D.y));
-    if (torsoLength < 0.01) return _neutralResult();
+    // In a crunch, the torso flexes forward, reducing this angle
+    // UP (extended): ~160-180°, DOWN (crunched): ~120-140°
+    final angleProb = 1.0 - PoseUtilities.normalize(torsoAngle, 120.0, 180.0);
 
-    final normalizedElevation = shoulderElevation / torsoLength;
-    // DOWN: ~0.117, UP: ~0.639 - higher elevation means more crunched (up)
-    final elevationProb = PoseUtilities.normalize(normalizedElevation, 0.05, 0.8);
+    return {'up': 1.0 - angleProb, 'down': angleProb};
+  }
 
-    // Combine with emphasis on both signals
-    final upProbability = (angleProb * 0.6 + elevationProb * 0.4);
-    return {'up': upProbability, 'down': 1.0 - upProbability};
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final nose = worldLandmarks[PoseLandmarkType.nose];
+      final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+      final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+      final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
+
+      // Neck alignment (head should move with torso, not independently)
+      final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+      final neckAngle = PoseUtilities.getAngle(nose, shoulderMid, PoseUtilities.getMidpoint(leftHip, rightHip));
+      final neckAlignmentScore = PoseUtilities.normalize(neckAngle, 140.0, 180.0);
+      metrics['neck_alignment'] = neckAlignmentScore;
+
+      // Knee stability (knees should stay bent and stable)
+      final leftKneeAngle = PoseUtilities.getAngle(leftHip, leftKnee, worldLandmarks[PoseLandmarkType.leftAnkle]);
+      final rightKneeAngle = PoseUtilities.getAngle(rightHip, rightKnee, worldLandmarks[PoseLandmarkType.rightAnkle]);
+      final avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+      // Knees should be bent (~90-120 degrees)
+      final kneeStabilityScore = 1.0 - (avgKneeAngle - 105.0).abs() / 45.0;
+      metrics['knee_stability'] = kneeStabilityScore.clamp(0.0, 1.0);
+
+      // Hip stability (hips should remain relatively level)
+      final hipLevelDiff = (leftHip.y - rightHip.y).abs();
+      final hipStabilityScore = 1.0 - (hipLevelDiff * 20).clamp(0.0, 1.0);
+      metrics['hip_stability'] = hipStabilityScore;
+    } catch (e) {
+      metrics['neck_alignment'] = 0.5;
+      metrics['knee_stability'] = 0.5;
+      metrics['hip_stability'] = 0.5;
+    }
+
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
   }
 }
 
@@ -407,48 +624,78 @@ class ReverseCrunchClassifier extends PoseClassifier {
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
-    final shoulderCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftShoulder],
-      worldLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final hipCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftHip],
-      worldLandmarks[PoseLandmarkType.rightHip],
-    );
-    final kneeCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftKnee],
-      worldLandmarks[PoseLandmarkType.rightKnee],
-    );
+    final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+    final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+    final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+    final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
+    final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
 
-    final hipCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftHip],
-      imageLandmarks[PoseLandmarkType.rightHip],
-    );
-    final kneeCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftKnee],
-      imageLandmarks[PoseLandmarkType.rightKnee],
-    );
+    if (leftHip.visibility < 0.7 ||
+        rightHip.visibility < 0.7 ||
+        leftKnee.visibility < 0.7 ||
+        rightKnee.visibility < 0.7) {
+      return _neutralResult();
+    }
 
-    if (hipCenter3D.visibility < 0.7 || kneeCenter3D.visibility < 0.7) return _neutralResult();
+    // Focus on hip-knee movement relative to torso
+    final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+    final kneeMid = PoseUtilities.getMidpoint(leftKnee, rightKnee);
+    final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
 
-    // --- Data-driven Algorithm based on comprehensive crunch analysis ---
-    // UP (reverse_crunch_up): hip-knee angle median=61.7°, knee elevation median=0.218
-    // DOWN (crunch_down): hip-knee angle median=130.7°, knee elevation median=0.343
-    // UP has SMALLER angles (more flexed) and SMALLER knee elevation
+    // Hip flexion angle
+    final hipFlexionAngle = PoseUtilities.getAngle(shoulderMid, hipMid, kneeMid);
 
-    // Signal 1: Hip Flexion Angle (Primary)
-    final hipFlexionAngle = PoseUtilities.getAngle(shoulderCenter3D, hipCenter3D, kneeCenter3D);
-    // DOWN: ~130.7°, UP: ~61.7° - smaller angle means more flexed (up)
-    final angleProb = 1.0 - PoseUtilities.normalize(hipFlexionAngle, 30.0, 170.0);
+    // In reverse crunch, knees move toward chest
+    // UP (extended): ~160-180°, DOWN (knees to chest): ~60-90°
+    final angleProb = 1.0 - PoseUtilities.normalize(hipFlexionAngle, 60.0, 180.0);
 
-    // Signal 2: Knee Elevation (Secondary)
-    final kneeElevation = PoseUtilities.getVerticalDistance(hipCenter2D, kneeCenter2D);
-    // DOWN: ~0.343, UP: ~0.218 - surprisingly, UP has lower knee elevation
-    // This makes sense as in reverse crunch, knees come toward chest (lower relative position)
-    final elevationProb = 1.0 - PoseUtilities.normalize(kneeElevation, 0.05, 0.52);
+    return {'up': 1.0 - angleProb, 'down': angleProb};
+  }
 
-    final upProbability = (angleProb * 0.7 + elevationProb * 0.3);
-    return {'up': upProbability, 'down': 1.0 - upProbability};
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+      final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+      final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
+      final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+
+      // Controlled movement (both knees should move together)
+      final leftHipKneeAngle = PoseUtilities.getAngle(leftShoulder, leftHip, leftKnee);
+      final rightHipKneeAngle = PoseUtilities.getAngle(rightShoulder, rightHip, rightKnee);
+      final kneeSymmetryScore = 1.0 - (leftHipKneeAngle - rightHipKneeAngle).abs() / 180.0;
+      metrics['knee_symmetry'] = kneeSymmetryScore.clamp(0.0, 1.0);
+
+      // Shoulder stability (shoulders should remain stable)
+      final shoulderLevelDiff = (leftShoulder.y - rightShoulder.y).abs();
+      final shoulderStabilityScore = 1.0 - (shoulderLevelDiff * 25).clamp(0.0, 1.0);
+      metrics['shoulder_stability'] = shoulderStabilityScore;
+
+      // Range of motion (knees should reach toward chest)
+      final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+      final kneeMid = PoseUtilities.getMidpoint(leftKnee, rightKnee);
+      final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+      final romAngle = PoseUtilities.getAngle(shoulderMid, hipMid, kneeMid);
+      final romScore = 1.0 - PoseUtilities.normalize(romAngle, 60.0, 180.0);
+      metrics['range_of_motion'] = romScore;
+    } catch (e) {
+      metrics['knee_symmetry'] = 0.5;
+      metrics['shoulder_stability'] = 0.5;
+      metrics['range_of_motion'] = 0.5;
+    }
+
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
   }
 }
 
@@ -458,110 +705,170 @@ class DoubleCrunchClassifier extends PoseClassifier {
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
-    final shoulderCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftShoulder],
-      worldLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final hipCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftHip],
-      worldLandmarks[PoseLandmarkType.rightHip],
-    );
-    final kneeCenter3D = PoseUtilities.getMidpoint(
-      worldLandmarks[PoseLandmarkType.leftKnee],
-      worldLandmarks[PoseLandmarkType.rightKnee],
-    );
+    // Combines both regular crunch (torso flexion) and reverse crunch (hip flexion)
+    final nose = worldLandmarks[PoseLandmarkType.nose];
+    final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+    final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+    final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+    final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+    final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
 
-    final shoulderCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftShoulder],
-      imageLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final kneeCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftKnee],
-      imageLandmarks[PoseLandmarkType.rightKnee],
-    );
+    if (nose.visibility < 0.6 || leftShoulder.visibility < 0.7 || rightShoulder.visibility < 0.7) {
+      return _neutralResult();
+    }
 
-    if (shoulderCenter3D.visibility < 0.7 || kneeCenter3D.visibility < 0.7) return _neutralResult();
+    final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+    final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+    final kneeMid = PoseUtilities.getMidpoint(leftKnee, rightKnee);
 
-    // --- Data-driven Algorithm based on comprehensive crunch analysis ---
-    // UP (double_crunch_up): shoulder-knee distance median=0.246, torso angle median=71.4°
-    // DOWN (crunch_down): shoulder-knee distance median=0.560, torso angle median=130.7°
-    // UP has SMALLER distances and SMALLER angles (more crunched)
+    // Torso flexion (like regular crunch)
+    final torsoAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
+    final torsoFlexion = 1.0 - PoseUtilities.normalize(torsoAngle, 120.0, 180.0);
 
-    // Signal 1: Shoulder-Knee Distance (Primary)
-    final shoulderKneeDistance = Vector2(
-      shoulderCenter2D.x,
-      shoulderCenter2D.y,
-    ).distanceTo(Vector2(kneeCenter2D.x, kneeCenter2D.y));
+    // Hip flexion (like reverse crunch)
+    final hipAngle = PoseUtilities.getAngle(shoulderMid, hipMid, kneeMid);
+    final hipFlexion = 1.0 - PoseUtilities.normalize(hipAngle, 60.0, 180.0);
 
-    // Signal 2: Torso Angle (Secondary)
-    final torsoAngle = PoseUtilities.getAngle(shoulderCenter3D, hipCenter3D, kneeCenter3D);
+    // Both should happen together for double crunch
+    final combinedFlexion = (torsoFlexion + hipFlexion) / 2;
 
-    // DOWN: larger distance (~0.56), UP: smaller distance (~0.25)
-    // Invert normalization since UP has smaller values
-    final distanceProb = 1.0 - PoseUtilities.normalize(shoulderKneeDistance, 0.15, 0.67);
+    return {'up': 1.0 - combinedFlexion, 'down': combinedFlexion};
+  }
 
-    // DOWN: larger angle (~130.7°), UP: smaller angle (~71.4°)
-    // Invert normalization since UP has smaller values
-    final angleProb = 1.0 - PoseUtilities.normalize(torsoAngle, 30.0, 170.0);
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
 
-    // Combine with emphasis on distance as it shows better separation
-    final upProbability = (distanceProb * 0.7 + angleProb * 0.3);
-    return {'up': upProbability, 'down': 1.0 - upProbability};
+    try {
+      final nose = worldLandmarks[PoseLandmarkType.nose];
+      final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+      final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
+      final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
+
+      final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+      final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+      final kneeMid = PoseUtilities.getMidpoint(leftKnee, rightKnee);
+
+      // Coordination (both movements should happen together)
+      final torsoAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
+      final hipAngle = PoseUtilities.getAngle(shoulderMid, hipMid, kneeMid);
+      final torsoFlexion = 1.0 - PoseUtilities.normalize(torsoAngle, 120.0, 180.0);
+      final hipFlexion = 1.0 - PoseUtilities.normalize(hipAngle, 60.0, 180.0);
+      final coordinationScore = 1.0 - (torsoFlexion - hipFlexion).abs();
+      metrics['movement_coordination'] = coordinationScore.clamp(0.0, 1.0);
+
+      // Bilateral symmetry (both sides moving together)
+      final leftSideAngle = PoseUtilities.getAngle(nose, leftShoulder, leftKnee);
+      final rightSideAngle = PoseUtilities.getAngle(nose, rightShoulder, rightKnee);
+      final symmetryScore = 1.0 - (leftSideAngle - rightSideAngle).abs() / 180.0;
+      metrics['bilateral_symmetry'] = symmetryScore.clamp(0.0, 1.0);
+
+      // Full range activation
+      final combinedFlexion = (torsoFlexion + hipFlexion) / 2;
+      metrics['full_range_activation'] = combinedFlexion;
+    } catch (e) {
+      metrics['movement_coordination'] = 0.5;
+      metrics['bilateral_symmetry'] = 0.5;
+      metrics['full_range_activation'] = 0.5;
+    }
+
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
   }
 }
 
-// -------------------- SUPERMAN FAMILY --------------------
-
 class SupermanClassifier extends PoseClassifier {
-  // Covers Superman, Y Superman, and Superman Pulse up/down states.
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
-    final shoulderCenter = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftShoulder],
-      imageLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final hipCenter = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftHip],
-      imageLandmarks[PoseLandmarkType.rightHip],
-    );
-    final ankleCenter = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftAnkle],
-      imageLandmarks[PoseLandmarkType.rightAnkle],
-    );
+    final nose = worldLandmarks[PoseLandmarkType.nose];
+    final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+    final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+    final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
 
-    if (shoulderCenter.visibility < 0.6 || hipCenter.visibility < 0.6) {
+    if (nose.visibility < 0.6 || leftShoulder.visibility < 0.7 || rightShoulder.visibility < 0.7) {
       return _neutralResult();
     }
 
-    // --- Improved data-driven Algorithm ---
-    // UP state: chest_elev median=0.339, leg_elev median=0.586
-    // DOWN state: chest_elev median=0.176, leg_elev median=0.001
-    // Leg elevation shows better separation, so weight it more heavily
+    final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+    final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
 
-    final bodyLengthProxy = (Vector2(hipCenter.x, hipCenter.y).distanceTo(Vector2(ankleCenter.x, ankleCenter.y))).abs();
-    if (bodyLengthProxy < 0.01) return _neutralResult();
+    // Back extension angle (opposite of crunch)
+    final backAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
 
-    // Signal 1: Chest Elevation (less reliable due to noise)
-    final chestElevation = hipCenter.y - shoulderCenter.y; // Positive when chest is up
-    final normalizedChestElevation = chestElevation / bodyLengthProxy;
-    // Use robust range that handles outliers better
-    final chestUpProb = PoseUtilities.normalize(normalizedChestElevation, -0.2, 0.8);
+    // In superman, back extends, increasing this angle
+    // DOWN (lying flat): ~160-180°, UP (extended): ~180-200° (but clamped)
+    // We look for extension beyond neutral
+    final extensionProb = backAngle > 170.0 ? PoseUtilities.normalize(backAngle, 170.0, 200.0) : 0.0;
 
-    // Signal 2: Leg Elevation (more reliable, weight heavily)
-    double legUpProb = 0.5; // Neutral if ankles aren't visible
-    if (ankleCenter.visibility > 0.6) {
-      final legElevation = hipCenter.y - ankleCenter.y; // Positive when legs are up
-      final normalizedLegElevation = legElevation / bodyLengthProxy;
-      // Use tighter range based on actual data for better discrimination
-      // DOWN: median=0.001, UP: median=0.586
-      legUpProb = PoseUtilities.normalize(normalizedLegElevation, -0.3, 0.9);
+    return {'up': extensionProb, 'down': 1.0 - extensionProb};
+  }
+
+  @override
+  Map<String, double> calculateFormMetrics({
+    required List<PoseLandmark> worldLandmarks,
+    required List<PoseLandmark> imageLandmarks,
+  }) {
+    final metrics = <String, double>{};
+
+    try {
+      final nose = worldLandmarks[PoseLandmarkType.nose];
+      final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
+      final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
+      final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+      final leftWrist = worldLandmarks[PoseLandmarkType.leftWrist];
+      final rightWrist = worldLandmarks[PoseLandmarkType.rightWrist];
+      final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
+      final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
+
+      // Spinal alignment (head, shoulders, hips should form smooth curve)
+      final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+      final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+      final spinalAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
+      final spinalAlignmentScore = PoseUtilities.normalize(spinalAngle, 170.0, 200.0);
+      metrics['spinal_alignment'] = spinalAlignmentScore;
+
+      // Arm extension (arms should be extended forward)
+      final wristMid = PoseUtilities.getMidpoint(leftWrist, rightWrist);
+      final armExtensionDistance = sqrt(pow(shoulderMid.x - wristMid.x, 2) + pow(shoulderMid.y - wristMid.y, 2));
+      // Normalize based on typical arm span
+      final armExtensionScore = PoseUtilities.normalize(armExtensionDistance, 0.3, 0.8);
+      metrics['arm_extension'] = armExtensionScore;
+
+      // Leg extension (legs should be extended backward and lifted)
+      final ankleMid = PoseUtilities.getMidpoint(leftAnkle, rightAnkle);
+      final legExtensionDistance = sqrt(pow(hipMid.x - ankleMid.x, 2) + pow(hipMid.y - ankleMid.y, 2));
+      final legExtensionScore = PoseUtilities.normalize(legExtensionDistance, 0.4, 1.0);
+      metrics['leg_extension'] = legExtensionScore;
+
+      // Bilateral symmetry (both sides should lift evenly)
+      final leftArmAngle = PoseUtilities.getAngle(leftShoulder, leftShoulder, leftWrist);
+      final rightArmAngle = PoseUtilities.getAngle(rightShoulder, rightShoulder, rightWrist);
+      final armSymmetryScore = 1.0 - (leftArmAngle - rightArmAngle).abs() / 180.0;
+      metrics['bilateral_symmetry'] = armSymmetryScore.clamp(0.0, 1.0);
+    } catch (e) {
+      metrics['spinal_alignment'] = 0.5;
+      metrics['arm_extension'] = 0.5;
+      metrics['leg_extension'] = 0.5;
+      metrics['bilateral_symmetry'] = 0.5;
     }
 
-    // Weight leg elevation much more heavily since it's more reliable
-    final upProbability = (chestUpProb * 0.2 + legUpProb * 0.8);
-    return {'up': upProbability, 'down': 1.0 - upProbability};
+    final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
+    metrics['overall_visibility'] = visibilityScore;
+
+    return metrics;
   }
 }

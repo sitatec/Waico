@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' show log;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -21,8 +22,9 @@ class WorkoutCameraWidget extends StatefulWidget {
 class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   StreamSubscription<PoseDetectionResult>? _poseSubscription;
-  StreamSubscription<RepetitionRecord>? _repSubscription;
   StreamSubscription<String>? _errorSubscription;
+  StreamSubscription<RepCountingState>? _repCountingStateSubscription;
+  StreamSubscription<RepetitionData>? _repDataSubscription;
   final PoseDetectionService _poseDetectionService = PoseDetectionService.instance;
 
   bool _isInitialized = false;
@@ -30,9 +32,7 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   bool _hasPermission = false;
 
   // Rep counter state
-  int _totalReps = 0;
-  double _lastQuality = 0.0;
-  bool _isUp = false;
+  RepCountingState? _repCountingState;
 
   // Animations
   late AnimationController _repAnimationController;
@@ -85,16 +85,10 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   void _handlePoseResults(PoseDetectionResult result) {
     try {
       if (result.hasPose && widget.repsCounter != null) {
-        widget.repsCounter!.processPoseData(worldLandmarks: result.worldLandmarks, imageLandmarks: result.landmarks);
-
-        final stats = widget.repsCounter!.getSessionStats();
-        if (mounted) {
-          setState(() {
-            _isUp = stats['isUp'] as bool;
-          });
-        }
+        widget.repsCounter!.processFrame(result);
       }
-    } catch (e) {
+    } catch (e, s) {
+      log('Error processing pose results', error: e, stackTrace: s);
       _handleError('Error processing pose results: $e');
     }
   }
@@ -138,13 +132,17 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
 
   void _setupRepCounterStream() {
     if (widget.repsCounter != null) {
-      _repSubscription = widget.repsCounter!.repStream.listen((rep) {
+      _repCountingStateSubscription = widget.repsCounter!.stateStream.listen((state) {
         if (mounted) {
           setState(() {
-            _totalReps = rep.repNumber;
-            _lastQuality = rep.qualityScore;
+            _repCountingState = state;
           });
+        }
+      });
 
+      _repDataSubscription = widget.repsCounter!.repStream.listen((repData) {
+        if (mounted) {
+          // Trigger animation when a new rep is completed
           _repAnimationController.forward().then((_) {
             _repAnimationController.reverse();
           });
@@ -159,8 +157,6 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
     if (!switched) {
       _handleError('Failed to switch camera');
     }
-
-    setState(() {});
   }
 
   @override
@@ -208,7 +204,8 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
     _repAnimationController.dispose();
     _pulseController.dispose();
     _poseSubscription?.cancel();
-    _repSubscription?.cancel();
+    _repCountingStateSubscription?.cancel();
+    _repDataSubscription?.cancel();
     _errorSubscription?.cancel();
 
     // Properly dispose of the pose detection service
@@ -225,11 +222,9 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
         children: [
           // Native camera preview platform view
           _NativeCameraPreview(hasPermission: _hasPermission, isInitialized: _isInitialized),
-          if (widget.showRepCounter && widget.repsCounter != null && _isInitialized)
+          if (widget.showRepCounter && widget.repsCounter != null && _isInitialized && _repCountingState != null)
             _RepCounterOverlay(
-              totalReps: _totalReps,
-              lastQuality: _lastQuality,
-              isUp: _isUp,
+              repCountingState: _repCountingState!,
               repScaleAnimation: _repScaleAnimation,
               pulseAnimation: _pulseAnimation,
             ),
@@ -243,10 +238,7 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
               },
               onResetReps: () {
                 widget.repsCounter?.reset();
-                setState(() {
-                  _totalReps = 0;
-                  _lastQuality = 0.0;
-                });
+                // State will be updated automatically via the state stream
               },
             ),
         ],
@@ -298,22 +290,21 @@ class _NativeCameraPreview extends StatelessWidget {
 }
 
 class _RepCounterOverlay extends StatelessWidget {
-  final int totalReps;
-  final double lastQuality;
-  final bool isUp;
+  final RepCountingState repCountingState;
   final Animation<double> repScaleAnimation;
   final Animation<double> pulseAnimation;
 
   const _RepCounterOverlay({
-    required this.totalReps,
-    required this.lastQuality,
-    required this.isUp,
+    required this.repCountingState,
     required this.repScaleAnimation,
     required this.pulseAnimation,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isUp = repCountingState.currentState == ExerciseState.up;
+    final lastQuality = repCountingState.lastRep?.formScore ?? 0.0;
+
     return Positioned(
       top: 60,
       right: 20,
@@ -339,7 +330,7 @@ class _RepCounterOverlay extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _RepCountDisplay(totalReps: totalReps, repScaleAnimation: repScaleAnimation),
+                  _RepCountDisplay(totalReps: repCountingState.totalReps, repScaleAnimation: repScaleAnimation),
                   const SizedBox(height: 4),
                   Text(
                     'REPS',
@@ -354,6 +345,10 @@ class _RepCounterOverlay extends StatelessWidget {
                   _QualityIndicator(quality: lastQuality),
                   const SizedBox(height: 8),
                   _PositionIndicator(isUp: isUp),
+                  if (repCountingState.lastRep != null) ...[
+                    const SizedBox(height: 8),
+                    _LastRepQualityIndicator(repData: repCountingState.lastRep!),
+                  ],
                 ],
               ),
             ),
@@ -469,6 +464,57 @@ class _PositionIndicator extends StatelessWidget {
           color: isUp ? Colors.green : Colors.orange,
           letterSpacing: 1,
         ),
+      ),
+    );
+  }
+}
+
+class _LastRepQualityIndicator extends StatelessWidget {
+  final RepetitionData repData;
+
+  const _LastRepQualityIndicator({required this.repData});
+
+  Color _getQualityColor(RepQuality quality) {
+    switch (quality) {
+      case RepQuality.excellent:
+        return Colors.green;
+      case RepQuality.good:
+        return Colors.blue;
+      case RepQuality.fair:
+        return Colors.orange;
+      case RepQuality.poor:
+        return Colors.red;
+    }
+  }
+
+  String _getQualityLabel(RepQuality quality) {
+    switch (quality) {
+      case RepQuality.excellent:
+        return 'EXCELLENT';
+      case RepQuality.good:
+        return 'GOOD';
+      case RepQuality.fair:
+        return 'FAIR';
+      case RepQuality.poor:
+        return 'POOR';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final qualityColor = _getQualityColor(repData.quality);
+    final qualityLabel = _getQualityLabel(repData.quality);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: qualityColor.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: qualityColor, width: 1),
+      ),
+      child: Text(
+        qualityLabel,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: qualityColor, letterSpacing: 0.8),
       ),
     );
   }
