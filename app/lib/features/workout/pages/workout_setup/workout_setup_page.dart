@@ -55,7 +55,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
       final metrics = _healthService.metrics;
 
       setState(() {
-        _setupData = existingWorkoutData ?? _setupData.copyWith(weight: metrics.weight > 0 ? metrics.weight : null);
+        _setupData = existingWorkoutData ?? _setupData.copyWith(weight: metrics.weight);
       });
     } else if (existingWorkoutData != null) {
       setState(() {

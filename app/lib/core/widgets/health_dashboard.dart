@@ -116,7 +116,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
           children: [
             Text(
               LocaleKeys.health_dashboard_title.tr(),
-              style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
             ),
             IconButton(
               icon: const Icon(Icons.refresh, color: Colors.white),
@@ -125,7 +125,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        // const SizedBox(height: 24),
         Expanded(
           child: Center(
             child: GridView.count(
@@ -134,46 +134,49 @@ class _HealthDashboardState extends State<HealthDashboard> {
               mainAxisSpacing: 12,
               childAspectRatio: 1.2,
               shrinkWrap: true,
+              padding: const EdgeInsets.all(8),
               children: [
                 HealthMetricCard(
                   icon: Icons.directions_walk,
                   title: LocaleKeys.health_steps.tr(),
                   value: metrics.steps.toString(),
                   unit: '',
-                  iconSize: 19,
+                  iconSize: 15,
                 ),
                 HealthMetricCard(
                   icon: Icons.favorite,
                   title: LocaleKeys.health_heart_rate.tr(),
                   value: metrics.heartRate.toInt().toString(),
                   unit: LocaleKeys.health_bpm.tr(),
-                  iconSize: 17,
+                  iconSize: 14,
                 ),
                 HealthMetricCard(
                   icon: Icons.local_fire_department,
                   title: LocaleKeys.health_active_energy.tr(),
                   value: metrics.calories.toInt().toString(),
                   unit: LocaleKeys.health_kcal.tr(),
-                  iconSize: 19,
+                  iconSize: 16,
                 ),
                 HealthMetricCard(
                   icon: Icons.bedtime,
                   title: LocaleKeys.health_sleep.tr(),
                   value: metrics.sleepHours.toStringWithoutZeroDecimal(numDecimals: 1),
                   unit: LocaleKeys.health_hours.tr(),
+                  iconSize: 15,
                 ),
                 HealthMetricCard(
                   icon: Icons.water_drop,
                   title: LocaleKeys.health_water.tr(),
                   value: metrics.waterIntake.toStringWithoutZeroDecimal(numDecimals: 1),
                   unit: LocaleKeys.health_liters.tr(),
+                  iconSize: 15,
                 ),
                 HealthMetricCard(
                   icon: Icons.monitor_weight,
                   title: LocaleKeys.health_weight.tr(),
-                  value: metrics.weight.toStringWithoutZeroDecimal(numDecimals: 1),
+                  value: metrics.weight?.toStringWithoutZeroDecimal(numDecimals: 1) ?? '-',
                   unit: LocaleKeys.health_kg.tr(),
-                  // iconSize: 19,
+                  iconSize: 15.5,
                 ),
               ],
             ),
@@ -246,8 +249,8 @@ class HealthMetricCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 8),
-              Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontSize: 13)),
-              const SizedBox(height: 5),
+              Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontSize: 12)),
+              const SizedBox(height: 4),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -256,7 +259,7 @@ class HealthMetricCard extends StatelessWidget {
                     style: theme.textTheme.headlineMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 22,
+                      fontSize: 20,
                     ),
                   ),
                   Text(

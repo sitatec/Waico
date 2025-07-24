@@ -136,14 +136,14 @@
     "steps": "Steps",
     "sleep": "Sleep",
     "heart_rate": "Heart Rate",
-    "active_energy": "Active Energy",
+    "active_energy": "Energy Burned",
     "bpm": "bpm",
     "kcal": "kcal",
-    "hours": "HOURS",
+    "hours": "hours",
     "water": "Water",
-    "liters": "LITERS",
+    "liters": "liters",
     "weight": "Weight",
-    "kg": "KG"
+    "kg": "kg"
   },
   "calendar": {
     "no_upcoming_events": "No upcoming events in the next 7 days",

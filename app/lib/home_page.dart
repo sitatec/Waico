@@ -88,7 +88,7 @@ class HomePage extends StatelessWidget {
         data: theme.copyWith(
           floatingActionButtonTheme: theme.floatingActionButtonTheme.copyWith(
             backgroundColor: theme.colorScheme.primary,
-            sizeConstraints: BoxConstraints(minWidth: 160, minHeight: 52),
+            sizeConstraints: BoxConstraints(minWidth: 160, minHeight: 56),
           ),
         ),
         child: FloatingActionButton(
@@ -99,8 +99,7 @@ class HomePage extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              //Icons.support_agent_rounded
-              Icon(Icons.voice_chat, color: theme.colorScheme.onPrimary),
+              Icon(Icons.voice_chat, color: theme.colorScheme.onPrimary, size: 23),
               const SizedBox(width: 10),
               Text(
                 LocaleKeys.home_counselor_button.tr(),

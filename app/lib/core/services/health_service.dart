@@ -12,7 +12,7 @@ class HealthMetrics {
   final double calories;
   final double sleepHours;
   final double waterIntake;
-  final double weight;
+  final double? weight;
   final DateTime lastUpdated;
 
   const HealthMetrics({
@@ -177,7 +177,8 @@ class HealthService extends ChangeNotifier {
 
       // Fetch other health data for today
       List<HealthDataPoint> healthData = await _health.getHealthDataFromTypes(
-        types: _healthDataTypes,
+        // Remove steps from the types since we handle it separately
+        types: _healthDataTypes.where((type) => type != HealthDataType.STEPS).toList(),
         startTime: startOfDay,
         endTime: now,
       );
@@ -291,10 +292,10 @@ class HealthService extends ChangeNotifier {
     return HealthMetrics(
       steps: steps,
       heartRate: heartRateCount > 0 ? heartRateSum / heartRateCount : 0,
-      calories: caloriesSum,
+      calories: caloriesSum / 1000, // Convert to kcal
       sleepHours: sleepSum / 60, // Convert minutes to hours
       waterIntake: waterSum,
-      weight: (latestWeight?.value as NumericHealthValue?)?.numericValue.toDouble() ?? 0.0,
+      weight: (latestWeight?.value as NumericHealthValue?)?.numericValue.toDouble(),
       lastUpdated: DateTime.now(),
     );
   }

@@ -204,7 +204,7 @@ class GetHealthDataTool extends Tool {
       HealthDataType.SLEEP_ASLEEP => 'Sleep hours: ${total / 60}', // Convert minutes to hours
       HealthDataType.WATER => 'Water intake: $total L',
       HealthDataType.STEPS => 'Steps count: $total',
-      HealthDataType.ACTIVE_ENERGY_BURNED => 'Active energy burned: $total calories',
+      HealthDataType.ACTIVE_ENERGY_BURNED => 'Active energy burned: ${total / 1000} kcal', // Convert to kcal
       HealthDataType.WEIGHT => 'Weight: $total kg',
       _ => 'Total: $total', // Fallback for any other type, though currently not expected
     };
