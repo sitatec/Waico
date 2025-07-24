@@ -1,7 +1,9 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
 import 'package:waico/features/workout/pages/exercise_page.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Page that displays exercises for a specific workout session
 class SessionExercisesPage extends StatefulWidget {
@@ -55,7 +57,7 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
       _navigateToExercise(nextIncompleteIndex);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All exercises completed! Great job!'), backgroundColor: Colors.green),
+        SnackBar(content: Text(LocaleKeys.workout_plan_all_exercises_completed.tr()), backgroundColor: Colors.green),
       );
     }
   }
@@ -86,7 +88,12 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Chip(
-              label: Text('${widget.session.estimatedDuration} min', style: const TextStyle(fontSize: 12)),
+              label: Text(
+                LocaleKeys.workout_setup_estimated_duration.tr(
+                  namedArgs: {'duration': widget.session.estimatedDuration.toString()},
+                ),
+                style: const TextStyle(fontSize: 12),
+              ),
               backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             ),
           ),
@@ -128,7 +135,9 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${widget.session.exercises.length} Exercises',
+                          LocaleKeys.workout_session_exercise_count.tr(
+                            namedArgs: {'count': widget.session.exercises.length.toString()},
+                          ),
                           style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 12),
@@ -141,7 +150,7 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
 
                   // Exercises list
                   Text(
-                    'Exercises',
+                    LocaleKeys.workout_session_exercises_title.tr(),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
                   ),
                   const SizedBox(height: 16),
@@ -174,9 +183,9 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
               onPressed: _startNextIncompleteExercise,
               backgroundColor: Theme.of(context).colorScheme.primary,
               icon: const Icon(Icons.play_arrow, color: Colors.white),
-              label: const Text(
-                'START NEXT',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              label: Text(
+                LocaleKeys.workout_session_start_next_button.tr(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             )
           : null,
@@ -199,7 +208,7 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Progress',
+              LocaleKeys.workout_session_progress_label.tr(),
               style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w500),
             ),
             Text(
@@ -235,14 +244,22 @@ class _ExerciseCard extends StatelessWidget {
     required this.onToggleCompletion,
   });
 
-  String _getLoadDescription() {
+  String _getLoadDescription(BuildContext context) {
     if (exercise.load.type == ExerciseLoadType.reps) {
-      return '${exercise.load.sets} sets × ${exercise.load.reps} reps';
+      return LocaleKeys.workout_exercise_sets_x_reps.tr(
+        namedArgs: {'sets': exercise.load.sets.toString(), 'reps': exercise.load.reps.toString()},
+      );
     } else {
       final minutes = (exercise.load.duration! / 60).floor();
       final seconds = exercise.load.duration! % 60;
-      final durationStr = minutes > 0 ? '${minutes}m ${seconds}s' : '${seconds}s';
-      return '${exercise.load.sets} sets × $durationStr';
+      final durationStr = minutes > 0
+          ? LocaleKeys.workout_exercise_duration_m_s.tr(
+              namedArgs: {'minutes': minutes.toString(), 'seconds': seconds.toString()},
+            )
+          : LocaleKeys.workout_exercise_duration_s.tr(namedArgs: {'seconds': seconds.toString()});
+      return LocaleKeys.workout_exercise_sets_x_duration.tr(
+        namedArgs: {'sets': exercise.load.sets.toString(), 'duration': durationStr},
+      );
     }
   }
 
@@ -304,7 +321,7 @@ class _ExerciseCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _getLoadDescription(),
+                        _getLoadDescription(context),
                         style: TextStyle(
                           color: isCompleted ? Colors.grey.shade500 : Theme.of(context).colorScheme.primary,
                           fontSize: 14,

@@ -5,6 +5,8 @@ import 'package:waico/features/workout/models/workout_status.dart';
 import 'package:waico/features/workout/pages/workout_plan_generation_page.dart';
 import 'package:waico/features/workout/pages/workout_plan_page.dart';
 import 'package:waico/features/workout/pages/workout_setup/workout_setup_page.dart';
+import 'package:waico/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Router page that determines which workout page to show based on user's current state
 class WorkoutRouterPage extends StatefulWidget {
@@ -70,7 +72,7 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
       return const _LoadingState();
     } else if (_hasError) {
       return _ErrorState(
-        errorMessage: _errorMessage ?? 'An unexpected error occurred',
+        errorMessage: _errorMessage ?? LocaleKeys.workout_errors_unexpected_error.tr(),
         onRetry: _determineWorkoutState,
       );
     } else {
@@ -101,7 +103,7 @@ class _LoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Loading Workout',
+              LocaleKeys.workout_loading_title.tr(),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.primary,
@@ -109,7 +111,7 @@ class _LoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Checking your workout status...',
+              LocaleKeys.workout_loading_checking_status.tr(),
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -132,9 +134,9 @@ class _ErrorState extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Workout',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        title: Text(
+          LocaleKeys.home_features_workout.tr(),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
@@ -149,7 +151,7 @@ class _ErrorState extends StatelessWidget {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 24),
               Text(
-                'Something went wrong',
+                LocaleKeys.workout_plan_error_title.tr(),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600, color: Colors.red),
               ),
               const SizedBox(height: 16),
@@ -174,7 +176,10 @@ class _ErrorState extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Try Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    LocaleKeys.workout_buttons_retry.tr(),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],

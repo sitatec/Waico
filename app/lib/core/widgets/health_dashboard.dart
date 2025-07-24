@@ -1,6 +1,8 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/utils/number_utils.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Health dashboard widget that displays wellness metrics
 class HealthDashboard extends StatefulWidget {
@@ -76,32 +78,109 @@ class _HealthDashboardState extends State<HealthDashboard> {
         return _buildActionRequired(
           theme,
           icon: Icons.health_and_safety,
-          title: 'Google Health Connect App required',
-          description: 'Install the Health Connect App to see your wellness insights',
-          buttonText: 'Install Health Connect',
+          title: LocaleKeys.health_health_connect_title.tr(),
+          description: LocaleKeys.health_health_connect_required.tr(),
+          buttonText: LocaleKeys.health_install_health_connect.tr(),
         );
 
       case HealthServiceStatus.permissionsRequired:
         return _buildActionRequired(
           theme,
           icon: Icons.health_and_safety,
-          title: 'Health permissions required',
-          description: 'Enable health data access to see your wellness insights',
-          buttonText: 'Grant Permissions',
+          title: LocaleKeys.health_permissions_title.tr(),
+          description: LocaleKeys.health_permissions_required.tr(),
+          buttonText: LocaleKeys.health_grant_permissions.tr(),
         );
 
       case HealthServiceStatus.error:
         return _buildActionRequired(
           theme,
           icon: Icons.error_outline,
-          title: 'Health service error',
-          description: _healthService.errorMessage ?? 'An unknown error occurred',
-          buttonText: 'Retry',
+          title: LocaleKeys.health_service_error.tr(),
+          description: _healthService.errorMessage ?? LocaleKeys.common_unknown_error.tr(),
+          buttonText: LocaleKeys.common_retry.tr(),
         );
 
       case HealthServiceStatus.ready:
-        return _buildHealthMetrics(theme);
+        return _buildDashboard(theme);
     }
+  }
+
+  Widget _buildDashboard(ThemeData theme) {
+    final metrics = _healthService.metrics;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              LocaleKeys.health_dashboard_title.tr(),
+              style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              tooltip: LocaleKeys.health_refresh_tooltip.tr(),
+              onPressed: _handleActionButton,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Expanded(
+          child: Center(
+            child: GridView.count(
+              crossAxisCount: 3,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.2,
+              shrinkWrap: true,
+              children: [
+                HealthMetricCard(
+                  icon: Icons.directions_walk,
+                  title: LocaleKeys.health_steps.tr(),
+                  value: metrics.steps.toString(),
+                  unit: '',
+                  iconSize: 19,
+                ),
+                HealthMetricCard(
+                  icon: Icons.favorite,
+                  title: LocaleKeys.health_heart_rate.tr(),
+                  value: metrics.heartRate.toInt().toString(),
+                  unit: LocaleKeys.health_bpm.tr(),
+                  iconSize: 17,
+                ),
+                HealthMetricCard(
+                  icon: Icons.local_fire_department,
+                  title: LocaleKeys.health_active_energy.tr(),
+                  value: metrics.calories.toInt().toString(),
+                  unit: LocaleKeys.health_kcal.tr(),
+                  iconSize: 19,
+                ),
+                HealthMetricCard(
+                  icon: Icons.bedtime,
+                  title: LocaleKeys.health_sleep.tr(),
+                  value: metrics.sleepHours.toStringWithoutZeroDecimal(numDecimals: 1),
+                  unit: LocaleKeys.health_hours.tr(),
+                ),
+                HealthMetricCard(
+                  icon: Icons.water_drop,
+                  title: LocaleKeys.health_water.tr(),
+                  value: metrics.waterIntake.toStringWithoutZeroDecimal(numDecimals: 1),
+                  unit: LocaleKeys.health_liters.tr(),
+                ),
+                HealthMetricCard(
+                  icon: Icons.monitor_weight,
+                  title: LocaleKeys.health_weight.tr(),
+                  value: metrics.weight.toStringWithoutZeroDecimal(numDecimals: 1),
+                  unit: LocaleKeys.health_kg.tr(),
+                  // iconSize: 19,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildActionRequired(
@@ -128,83 +207,6 @@ class _HealthDashboardState extends State<HealthDashboard> {
         ),
         const SizedBox(height: 16),
         ElevatedButton(onPressed: _handleActionButton, child: Text(buttonText)),
-      ],
-    );
-  }
-
-  Widget _buildHealthMetrics(ThemeData theme) {
-    final metrics = _healthService.metrics;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Today\'s Health Overview',
-              style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
-            ),
-            IconButton(
-              onPressed: _handleActionButton,
-              icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
-              tooltip: 'Refresh data',
-            ),
-          ],
-        ),
-        Expanded(
-          child: Center(
-            child: GridView.count(
-              crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.2,
-              shrinkWrap: true,
-              children: [
-                HealthMetricCard(
-                  icon: Icons.directions_walk,
-                  title: 'Steps',
-                  value: metrics.steps.toString(),
-                  unit: '',
-                  iconSize: 19,
-                ),
-                HealthMetricCard(
-                  icon: Icons.favorite,
-                  title: 'Heart Rate',
-                  value: metrics.heartRate.toInt().toString(),
-                  unit: 'BPM',
-                  iconSize: 17,
-                ),
-                HealthMetricCard(
-                  icon: Icons.local_fire_department,
-                  title: 'Calories',
-                  value: metrics.calories.toInt().toString(),
-                  unit: 'CAL',
-                  iconSize: 19,
-                ),
-                HealthMetricCard(
-                  icon: Icons.bedtime,
-                  title: 'Sleep',
-                  value: metrics.sleepHours.toStringWithoutZeroDecimal(numDecimals: 1),
-                  unit: 'HOURS',
-                ),
-                HealthMetricCard(
-                  icon: Icons.water_drop,
-                  title: 'Water',
-                  value: metrics.waterIntake.toStringWithoutZeroDecimal(numDecimals: 1),
-                  unit: 'LITERS',
-                ),
-                HealthMetricCard(
-                  icon: Icons.monitor_weight,
-                  title: 'Weight',
-                  value: metrics.weight.toStringWithoutZeroDecimal(numDecimals: 1),
-                  unit: 'KG',
-                  // iconSize: 19,
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }

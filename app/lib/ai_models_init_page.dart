@@ -3,13 +3,14 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/ai_models/embedding_model.dart';
 import 'package:waico/core/ai_models/stt_model.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
-import 'package:waico/core/utils/navigation_utils.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class DownloadItem {
   static String get baseUrl {
@@ -152,13 +153,13 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                   break;
                 case TaskStatus.failed:
                   item.isError = true;
-                  item.errorMessage = update.exception?.description ?? 'Download failed';
+                  item.errorMessage = update.exception?.description ?? LocaleKeys.ai_models_download_failed.tr();
 
                   _continueWithNextDownload();
                   break;
                 case TaskStatus.canceled:
                   item.isError = true;
-                  item.errorMessage = 'Download canceled';
+                  item.errorMessage = LocaleKeys.ai_models_download_canceled.tr();
                   _continueWithNextDownload();
                   break;
                 case TaskStatus.paused:
@@ -179,11 +180,11 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     // Setup notifications
     _downloader.configureNotification(
       progressBar: true,
-      running: TaskNotification("Downloading", "{displayName}"),
-      complete: TaskNotification("Download Complete", "{displayName}"),
-      error: TaskNotification("Download Failed", "{displayName}"),
-      canceled: TaskNotification("Download Canceled", "{displayName}"),
-      paused: TaskNotification("Download Paused", "{displayName}"),
+      running: TaskNotification(LocaleKeys.ai_models_downloading.tr(), "{displayName}"),
+      complete: TaskNotification(LocaleKeys.ai_models_download_complete.tr(), "{displayName}"),
+      error: TaskNotification(LocaleKeys.ai_models_download_failed.tr(), "{displayName}"),
+      canceled: TaskNotification(LocaleKeys.ai_models_download_canceled.tr(), "{displayName}"),
+      paused: TaskNotification(LocaleKeys.ai_models_download_paused.tr(), "{displayName}"),
     );
   }
 
@@ -251,23 +252,22 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("We need permission to show download progress notification"),
-              const SizedBox(height: 16),
+              Text(
+                LocaleKeys.ai_models_permission_notification_message.tr(),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 20),
               Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () {
-                      context.navBack(false);
-                    },
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: Text("Deny"),
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(LocaleKeys.ai_models_deny.tr()),
                   ),
                   const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.navBack(true);
-                    },
-                    child: Text("Grant"),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(LocaleKeys.ai_models_grant.tr()),
                   ),
                 ],
               ),
@@ -310,7 +310,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       if (!success) {
         setState(() {
           item.isError = true;
-          item.errorMessage = 'Failed to enqueue download';
+          item.errorMessage = LocaleKeys.ai_models_failed_enqueue.tr();
         });
         _continueWithNextDownload();
       }
@@ -328,7 +328,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     if (isDownloading) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Wait until the ongoing download complete before retrying this one.")));
+      ).showSnackBar(SnackBar(content: Text(LocaleKeys.ai_models_wait_download_complete.tr())));
       return;
     }
 
@@ -400,7 +400,9 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         modelLoadingProgress = 0.0;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Model initialization failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LocaleKeys.ai_models_initialization_failed.tr(namedArgs: {'error': e.toString()}))),
+        );
       }
     }
   }
@@ -447,7 +449,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Models Initialization')),
+      appBar: AppBar(title: Text(LocaleKeys.ai_models_title.tr())),
       body: Center(
         child: ListView(
           shrinkWrap: true,
@@ -460,116 +462,24 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
           children: [
             Row(
               children: [
-                Text("Downloading", style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
+                Text(LocaleKeys.ai_models_downloading.tr(), style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
                 if (_modelsToDownload.every((item) => item.isCompleted)) ...[
                   const SizedBox(width: 8),
                   Icon(Icons.check, color: Colors.green, size: 22),
                 ],
               ],
             ),
-            Text("Models are downloaded only the first time you open the app", style: theme.textTheme.bodySmall),
+            Text(LocaleKeys.ai_models_download_description.tr(), style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             for (final item in _modelsToDownload)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 380),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          _buildStatusIcon(item),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      item.displayName ?? item.fileName,
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: item.isCompleted ? null : Colors.black54, // null = default color
-                                      ),
-                                    ),
-                                    if (item.fileSize?.isNotEmpty == true)
-                                      Text(
-                                        " (${item.fileSize})",
-                                        style: const TextStyle(color: Colors.black87, fontSize: 12),
-                                      ),
-                                    if (item.isError) ...[
-                                      const SizedBox(width: 16),
-                                      Flexible(
-                                        child: Text(
-                                          item.errorMessage ?? 'Unknown error',
-                                          style: const TextStyle(color: Colors.red, fontSize: 12),
-                                        ),
-                                      ),
-                                    ] else if (item.progress > 0) ...[
-                                      const Spacer(),
-                                      Text(
-                                        '${(item.progress * 100).toStringAsFixed(0)}%',
-                                        style: TextStyle(fontSize: 12, color: Colors.black87),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                LinearProgressIndicator(
-                                  value: item.progress,
-                                  backgroundColor: Colors.grey.shade300,
-                                  valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          if (item.progress > 0 && !item.isCompleted && item.task != null && !item.isPaused) ...[
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.pause, size: 18),
-                              onPressed: () => _downloader.pause(item.task!),
-                              tooltip: 'Pause',
-                              padding: EdgeInsets.zero,
-                              style: IconButton.styleFrom(
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
-                          if (item.isPaused) ...[
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(Icons.play_arrow, size: 18),
-                              onPressed: () => _downloader.resume(item.task!),
-                              tooltip: 'Resume',
-                              padding: EdgeInsets.zero,
-                              style: IconButton.styleFrom(
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
-                          if (item.isError) ...[
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(Icons.refresh, size: 18),
-                              onPressed: () => _retryDownload(item),
-                              tooltip: 'Retry',
-                              padding: EdgeInsets.zero,
-                              style: IconButton.styleFrom(
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+              _DownloadItemWidget(
+                item: item,
+                onRetry: () => _retryDownload(item),
+                onPause: item.task != null ? () => _downloader.pause(item.task!) : null,
+                onResume: item.task != null ? () => _downloader.resume(item.task!) : null,
               ),
             const SizedBox(height: 42),
-            Text("Initializing", style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
+            Text(LocaleKeys.ai_models_initializing.tr(), style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
             const SizedBox(height: 20),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 380),
@@ -585,7 +495,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                             Row(
                               children: [
                                 Text(
-                                  'Loading Model Weights',
+                                  LocaleKeys.ai_models_loading_model_weights.tr(),
                                   style: theme.textTheme.labelLarge?.copyWith(
                                     color: isInitializationComplete ? null : Colors.black54,
                                   ),
@@ -620,20 +530,6 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     );
   }
 
-  Widget _buildStatusIcon(DownloadItem item) {
-    if (item.isCompleted) {
-      return const Icon(Icons.check, color: Colors.green, size: 18);
-    } else if (item.isError) {
-      return const Icon(Icons.error_outline, color: Colors.red, size: 18);
-    } else {
-      return CircularProgressIndicator.adaptive(
-        constraints: const BoxConstraints.tightFor(width: 18, height: 18),
-        strokeWidth: 3,
-        valueColor: item.progress > 0 ? null : AlwaysStoppedAnimation<Color>(Colors.grey.shade300),
-      );
-    }
-  }
-
   Widget _buildInitializationIcon() {
     if (isInitializationComplete) {
       return const Icon(Icons.check, color: Colors.green, size: 18);
@@ -644,6 +540,113 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         valueColor: isInitializing ? null : AlwaysStoppedAnimation<Color>(Colors.grey.shade300),
       );
     }
+  }
+}
+
+class _DownloadItemWidget extends StatelessWidget {
+  final DownloadItem item;
+  final VoidCallback onRetry;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
+
+  const _DownloadItemWidget({required this.item, required this.onRetry, this.onPause, this.onResume});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 380),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                _buildStatusIcon(item),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            item.displayName ?? item.fileName,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: item.isCompleted ? null : Colors.black54, // null = default color
+                            ),
+                          ),
+                          if (item.fileSize?.isNotEmpty == true)
+                            Text(" (${item.fileSize})", style: const TextStyle(color: Colors.black87, fontSize: 12)),
+                          if (item.isError) ...[
+                            const SizedBox(width: 16),
+                            Flexible(
+                              child: Text(
+                                item.errorMessage ?? LocaleKeys.common_unknown_error.tr(),
+                                style: const TextStyle(color: Colors.red, fontSize: 12),
+                              ),
+                            ),
+                          ] else if (item.progress > 0) ...[
+                            const Spacer(),
+                            Text(
+                              '${(item.progress * 100).toStringAsFixed(0)}%',
+                              style: TextStyle(fontSize: 12, color: Colors.black87),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      LinearProgressIndicator(
+                        value: item.progress,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (item.progress > 0 && !item.isCompleted && item.task != null && !item.isPaused) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.pause, size: 18),
+                    onPressed: onPause,
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+                if (item.isPaused) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.play_arrow, size: 18),
+                    onPressed: onResume,
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+                if (item.isError) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 18),
+                    onPressed: onRetry,
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -660,4 +663,18 @@ String _formatBytes(int bytes, [int decimals = 1]) {
   } while (size >= 1024 && i < suffixes.length - 1);
 
   return '${size.toStringAsFixed(decimals)} ${suffixes[i]}';
+}
+
+Widget _buildStatusIcon(DownloadItem item) {
+  if (item.isCompleted) {
+    return const Icon(Icons.check, color: Colors.green, size: 18);
+  } else if (item.isError) {
+    return const Icon(Icons.error_outline, color: Colors.red, size: 18);
+  } else {
+    return CircularProgressIndicator.adaptive(
+      constraints: const BoxConstraints.tightFor(width: 18, height: 18),
+      strokeWidth: 3,
+      valueColor: item.progress > 0 ? null : AlwaysStoppedAnimation<Color>(Colors.grey.shade300),
+    );
+  }
 }

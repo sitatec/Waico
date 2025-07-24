@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/constants.dart';
@@ -9,6 +10,7 @@ import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/ai_models_init_page.dart';
 import 'package:waico/home_page.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 import 'package:provider/provider.dart';
 
 class App extends StatefulWidget {
@@ -48,7 +50,10 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     final defaultTheme = Theme.of(context);
 
     return MaterialApp(
-      title: 'Waico',
+      title: LocaleKeys.app_title.tr(),
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       theme: defaultTheme.copyWith(
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
         appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),

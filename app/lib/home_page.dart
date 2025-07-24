@@ -1,29 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/counselor/counselor_page.dart';
 import 'package:waico/features/workout/pages/workout_router_page.dart';
 import 'package:waico/core/widgets/health_dashboard.dart';
 import 'package:waico/core/widgets/upcoming_event_card.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class HomePage extends StatelessWidget {
   static const features = <Map<String, dynamic>>[
     {
-      'title': 'Meditation',
+      'title': LocaleKeys.home_features_meditation,
       'color': const Color.fromARGB(98, 201, 94, 0),
       'image': {'url': 'assets/images/meditation.png', 'size': 80.0},
     },
     {
-      'title': 'Sleep',
+      'title': LocaleKeys.home_features_sleep,
       'color': const Color.fromARGB(97, 0, 58, 192),
       'image': {'url': 'assets/images/sleep.png', 'size': 90.0},
     },
     {
-      'title': 'Nutrition',
+      'title': LocaleKeys.home_features_nutrition,
       'color': const Color.fromARGB(106, 0, 113, 73),
       'image': {'url': 'assets/images/nutrition.png', 'size': 70.0},
     },
     {
-      'title': 'Workout',
+      'title': LocaleKeys.home_features_workout,
       'color': const Color.fromARGB(92, 210, 154, 1),
       'image': {'url': 'assets/images/workout.png', 'size': 90.0},
     },
@@ -66,12 +68,12 @@ class HomePage extends StatelessWidget {
               itemBuilder: (context, index) {
                 final feature = features[index];
                 return FeatureCard(
-                  title: feature['title'] as String,
+                  title: (feature['title'] as String).tr(),
                   color: feature['color'] as Color,
                   image: feature['image']['url'] as String,
                   imageSize: feature['image']['size'],
                   onTap: () {
-                    if (feature['title'] == 'Workout') {
+                    if (feature['title'] == LocaleKeys.home_features_workout) {
                       context.navigateTo(const WorkoutRouterPage());
                     }
                   },
@@ -97,10 +99,11 @@ class HomePage extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              //Icons.support_agent_rounded
               Icon(Icons.voice_chat, color: theme.colorScheme.onPrimary),
               const SizedBox(width: 10),
               Text(
-                "Counselor",
+                LocaleKeys.home_counselor_button.tr(),
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,

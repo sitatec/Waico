@@ -1,10 +1,10 @@
 import 'dart:developer';
 
 import 'package:device_calendar/device_calendar.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:waico/core/constants.dart';
 import 'package:waico/core/services/calendar_service.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class UpcomingEventCard extends StatefulWidget {
   const UpcomingEventCard({super.key});
@@ -88,7 +88,7 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
               Icon(Icons.error_outline, color: theme.colorScheme.error, size: 32),
               const SizedBox(height: 8),
               Text(
-                'Failed to load events',
+                LocaleKeys.calendar_failed_load_events.tr(),
                 style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
               ),
             ],
@@ -112,7 +112,7 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
               Icon(Icons.event_available, color: theme.colorScheme.primary, size: 28),
               const SizedBox(height: 8),
               Text(
-                'No upcoming events in the next 7 days',
+                LocaleKeys.calendar_no_upcoming_events.tr(),
                 style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
@@ -125,9 +125,10 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
   }
 
   Widget _buildEventCard(ThemeData theme, Event event) {
-    final eventTitle = event.title?.replaceFirst('[Waico] ', '') ?? 'Untitled Event';
+    final eventTitle = event.title?.replaceFirst('[Waico] ', '') ?? LocaleKeys.calendar_no_title.tr();
     final eventDateTime = event.start;
     final eventLocation = event.location;
+    final primaryColor = theme.colorScheme.primary;
 
     // Format the date and time
     String dateTimeText = '';
@@ -145,25 +146,33 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
       final dateFormatter = DateFormat('MMM d'); // e.g., "Jul 18"
 
       if (isToday) {
-        dateTimeText = 'Today at ${timeFormatter.format(eventDate)}';
+        dateTimeText = LocaleKeys.calendar_at.tr(
+          namedArgs: {'day': LocaleKeys.common_today.tr(), 'time': timeFormatter.format(eventDate)},
+        );
       } else if (isTomorrow) {
-        dateTimeText = 'Tomorrow at ${timeFormatter.format(eventDate)}';
+        dateTimeText = LocaleKeys.calendar_at.tr(
+          namedArgs: {'day': LocaleKeys.common_tomorrow.tr(), 'time': timeFormatter.format(eventDate)},
+        );
       } else {
-        dateTimeText = '${dateFormatter.format(eventDate)} at ${timeFormatter.format(eventDate)}';
+        dateTimeText = LocaleKeys.calendar_at.tr(
+          namedArgs: {'day': dateFormatter.format(eventDate), 'time': timeFormatter.format(eventDate)},
+        );
       }
 
       // Check if event is less than 10 hours away
       if (duration.inHours < 10 && duration.inMinutes > 0) {
         // Show "in x time" format with original format below
         if (duration.inMinutes < 60) {
-          relativeTime = 'In ${duration.inMinutes} minutes';
+          relativeTime = LocaleKeys.calendar_in_minutes.tr(namedArgs: {'count': duration.inMinutes.toString()});
         } else {
           final hours = duration.inHours;
           final minutes = duration.inMinutes % 60;
           if (minutes == 0) {
-            relativeTime = 'In $hours hour${hours > 1 ? 's' : ''}';
+            relativeTime = LocaleKeys.calendar_in_hours.tr(namedArgs: {'count': hours.toString()});
           } else {
-            relativeTime = 'In ${hours}h ${minutes}m';
+            relativeTime = LocaleKeys.calendar_in_hours_minutes.tr(
+              namedArgs: {'hours': hours.toString(), 'minutes': minutes.toString()},
+            );
           }
         }
       }
@@ -216,7 +225,7 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'Upcoming',
+                          LocaleKeys.calendar_upcoming.tr(),
                           style: theme.textTheme.labelSmall?.copyWith(color: primaryColor, fontWeight: FontWeight.w600),
                         ),
                       ),

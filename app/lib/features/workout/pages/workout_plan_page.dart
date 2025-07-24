@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
 import 'package:waico/features/workout/pages/session_exercises_page.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// A beautiful UI page for displaying the user's workout plan with weekly sections
 /// and exercise completion tracking
@@ -62,7 +64,7 @@ class _WorkoutPlanPageState extends State<WorkoutPlanPage> {
         });
       } else {
         setState(() {
-          _errorMessage = 'No workout plan found';
+          _errorMessage = LocaleKeys.workout_plan_no_plan_found.tr();
           _isLoading = false;
         });
       }
@@ -126,23 +128,23 @@ class _LoadingState extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Workout Plan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        title: Text(
+          LocaleKeys.workout_plan_title.tr(),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: const Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(width: 60, height: 60, child: CircularProgressIndicator(strokeWidth: 4)),
             SizedBox(height: 24),
-            Text('Loading Your Workout Plan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(LocaleKeys.workout_loading_title.tr(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             SizedBox(height: 8),
-            Text('Getting everything ready...', style: TextStyle(color: Colors.grey)),
+            Text(LocaleKeys.workout_loading_checking_status.tr(), style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
@@ -161,9 +163,9 @@ class _ErrorState extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Workout Plan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        title: Text(
+          LocaleKeys.workout_plan_title.tr(),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
@@ -177,8 +179,8 @@ class _ErrorState extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 24),
-              const Text(
-                'Something went wrong',
+              Text(
+                LocaleKeys.workout_plan_error_title.tr(),
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.red),
               ),
               const SizedBox(height: 16),
@@ -201,7 +203,10 @@ class _ErrorState extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Try Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    LocaleKeys.workout_buttons_retry.tr(),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
@@ -220,15 +225,15 @@ class _NoPlanState extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Workout Plan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        title: Text(
+          LocaleKeys.workout_plan_title.tr(),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: const Center(
+      body: Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Column(
@@ -236,10 +241,13 @@ class _NoPlanState extends StatelessWidget {
             children: [
               Icon(Icons.fitness_center_outlined, size: 80, color: Colors.grey),
               SizedBox(height: 24),
-              Text('No Workout Plan Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+              Text(
+                LocaleKeys.workout_plan_no_plan_found.tr(),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              ),
               SizedBox(height: 16),
               Text(
-                'It looks like you don\'t have a workout plan yet. Please generate one first.',
+                LocaleKeys.workout_plan_generate_first.tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey),
               ),
@@ -318,9 +326,19 @@ class _WorkoutPlanContent extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _InfoChip(icon: Icons.calendar_today, label: '${workoutPlan.totalWeeks} weeks'),
+                      _InfoChip(
+                        icon: Icons.calendar_today,
+                        label: LocaleKeys.workout_plan_weeks_count.tr(
+                          namedArgs: {'count': workoutPlan.totalWeeks.toString()},
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      _InfoChip(icon: Icons.fitness_center, label: '${workoutPlan.workoutsPerWeek}x/week'),
+                      _InfoChip(
+                        icon: Icons.fitness_center,
+                        label: LocaleKeys.workout_plan_workouts_per_week_count.tr(
+                          namedArgs: {'count': workoutPlan.workoutsPerWeek.toString()},
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       _InfoChip(icon: Icons.trending_up, label: workoutPlan.difficulty),
                     ],
@@ -339,12 +357,10 @@ class _WorkoutPlanContent extends StatelessWidget {
               itemCount: workoutPlan.weeklyPlans.length,
               itemBuilder: (context, index) {
                 final isSelected = index == currentWeek;
-
                 return FutureBuilder<double>(
                   future: _getWeekProgress(index),
                   builder: (context, snapshot) {
                     final progress = snapshot.data ?? 0.0;
-
                     return GestureDetector(
                       onTap: () {
                         onWeekChanged(index);
@@ -377,7 +393,7 @@ class _WorkoutPlanContent extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Week',
+                              LocaleKeys.workout_plan_week_nav_title.tr(),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: isSelected ? Colors.white : Colors.grey.shade600,
@@ -498,7 +514,10 @@ class _WeeklyPlanView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Week ${week.week} Focus', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(
+                  LocaleKeys.workout_plan_week_focus.tr(namedArgs: {'week': week.week.toString()}),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
                 Text(week.focus, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
               ],
@@ -645,14 +664,22 @@ class _ExerciseItem extends StatelessWidget {
 
   const _ExerciseItem({required this.exercise, required this.isCompleted, required this.onToggle});
 
-  String _getLoadDescription() {
+  String _getLoadDescription(BuildContext context) {
     if (exercise.load.type == ExerciseLoadType.reps) {
-      return '${exercise.load.sets} sets × ${exercise.load.reps} reps';
+      return LocaleKeys.workout_exercise_sets_x_reps.tr(
+        namedArgs: {'sets': exercise.load.sets.toString(), 'reps': exercise.load.reps.toString()},
+      );
     } else {
       final minutes = (exercise.load.duration! / 60).floor();
       final seconds = exercise.load.duration! % 60;
-      final durationStr = minutes > 0 ? '${minutes}m ${seconds}s' : '${seconds}s';
-      return '${exercise.load.sets} sets × $durationStr';
+      final durationStr = minutes > 0
+          ? LocaleKeys.workout_exercise_duration_m_s.tr(
+              namedArgs: {'minutes': minutes.toString(), 'seconds': seconds.toString()},
+            )
+          : LocaleKeys.workout_exercise_duration_s.tr(namedArgs: {'seconds': seconds.toString()});
+      return LocaleKeys.workout_exercise_sets_x_duration.tr(
+        namedArgs: {'sets': exercise.load.sets.toString(), 'duration': durationStr},
+      );
     }
   }
 
@@ -701,7 +728,7 @@ class _ExerciseItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _getLoadDescription(),
+                  _getLoadDescription(context),
                   style: TextStyle(
                     color: isCompleted ? Colors.grey.shade500 : Theme.of(context).colorScheme.primary,
                     fontSize: 14,
@@ -728,7 +755,7 @@ class _ExerciseItem extends StatelessWidget {
                       Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
                       Text(
-                        'Rest: ${exercise.restDuration}s',
+                        LocaleKeys.workout_plan_rest.tr(namedArgs: {'rest': exercise.restDuration.toString()}),
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                       ),
                     ],

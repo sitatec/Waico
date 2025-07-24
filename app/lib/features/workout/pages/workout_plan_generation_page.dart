@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
@@ -5,6 +6,7 @@ import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
 import 'package:waico/features/workout/workout_plan_generator.dart';
 import 'package:waico/features/workout/pages/workout_setup/workout_setup_page.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class WorkoutPlanGenerationPage extends StatefulWidget {
   const WorkoutPlanGenerationPage({super.key});
@@ -49,7 +51,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
     } catch (e) {
       setState(() {
         _hasError = true;
-        _errorMessage = 'Failed to load workout setup data: $e';
+        _errorMessage = LocaleKeys.workout_errors_failed_load_setup_data.tr(namedArgs: {'error': e.toString()});
       });
     }
   }
@@ -94,7 +96,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
       setState(() {
         _isGenerating = false;
         _hasError = true;
-        _errorMessage = 'Failed to generate workout plan: $e';
+        _errorMessage = LocaleKeys.workout_errors_failed_generate_plan.tr(namedArgs: {'error': e.toString()});
       });
     }
   }
@@ -104,14 +106,14 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Workout Plan Generated!'),
+        title: Text(LocaleKeys.workout_plan_generated_title.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.fitness_center, color: Colors.green, size: 64),
             const SizedBox(height: 16),
             Text(
-              'Your personalized workout plan "${_generatedPlan?.planName}" has been created successfully!',
+              LocaleKeys.workout_plan_generated_message.tr(namedArgs: {'planName': _generatedPlan?.planName ?? ''}),
               textAlign: TextAlign.center,
             ),
             if (_generatedPlan != null) ...[
@@ -125,7 +127,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                 child: Column(
                   children: [
                     Text(
-                      'Plan Details',
+                      LocaleKeys.workout_plan_details.tr(),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.primary,
@@ -133,13 +135,18 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${_generatedPlan!.totalWeeks} weeks • ${_generatedPlan!.workoutsPerWeek} workouts/week',
+                      LocaleKeys.workout_plan_summary.tr(
+                        namedArgs: {
+                          'totalWeeks': _generatedPlan!.totalWeeks.toString(),
+                          'workoutsPerWeek': _generatedPlan!.workoutsPerWeek.toString(),
+                        },
+                      ),
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     Text(
-                      'Difficulty: ${_generatedPlan!.difficulty}',
+                      LocaleKeys.workout_plan_difficulty.tr(namedArgs: {'difficulty': _generatedPlan!.difficulty}),
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -156,7 +163,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               Navigator.of(context).pop();
               context.navBack();
             },
-            child: const Text('Start Training'),
+            child: Text(LocaleKeys.workout_setup_start_training.tr()),
           ),
         ],
       ),
@@ -169,7 +176,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
       children: [
         // Header section
         Text(
-          'Our AI trainer is analyzing your fitness profile and creating a personalized workout plan just for you.',
+          LocaleKeys.workout_generation_analyzing_profile.tr(),
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
@@ -183,7 +190,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'UI Progress',
+              LocaleKeys.workout_generation_ui_progress.tr(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: _showUIProgress
                     ? Theme.of(context).colorScheme.primary
@@ -203,7 +210,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Raw Text Progress',
+              LocaleKeys.workout_generation_raw_text_progress.tr(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: !_showUIProgress
                     ? Theme.of(context).colorScheme.primary
@@ -234,7 +241,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               Icon(Icons.tips_and_updates, color: Theme.of(context).colorScheme.primary, size: 22),
               const SizedBox(height: 8),
               Text(
-                'This usually takes 30-60 seconds depending on your device capabilities.',
+                LocaleKeys.workout_generation_tip.tr(),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w500,
@@ -258,7 +265,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         Icon(Icons.fitness_center, size: 80, color: Theme.of(context).colorScheme.primary),
         const SizedBox(height: 32),
         Text(
-          'Ready to Generate Your Plan',
+          LocaleKeys.workout_generation_ready_title.tr(),
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.primary,
@@ -268,7 +275,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         Container(
           constraints: const BoxConstraints(maxWidth: 300),
           child: Text(
-            'Your workout setup is complete! Tap the button below to generate your personalized workout plan.',
+            LocaleKeys.workout_generation_ready_description.tr(),
             textAlign: TextAlign.center,
             style: Theme.of(
               context,
@@ -288,14 +295,28 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your Profile',
+                  LocaleKeys.workout_generation_your_profile.tr(),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                if (_setupData!.primaryGoal != null) Text('Goal: ${_setupData!.primaryGoal}'),
-                if (_setupData!.currentFitnessLevel != null) Text('Fitness Level: ${_setupData!.currentFitnessLevel}'),
-                Text('Frequency: ${_setupData!.selectedWeekDays.length}x/week'),
-                Text('Duration: ${_setupData!.workoutDurationPreference} minutes'),
+                if (_setupData!.primaryGoal != null)
+                  Text(LocaleKeys.workout_setup_goal_label.tr(namedArgs: {'goal': _setupData!.primaryGoal!})),
+                if (_setupData!.currentFitnessLevel != null)
+                  Text(
+                    LocaleKeys.workout_setup_fitness_level_label.tr(
+                      namedArgs: {'level': _setupData!.currentFitnessLevel!},
+                    ),
+                  ),
+                Text(
+                  LocaleKeys.workout_setup_frequency_label.tr(
+                    namedArgs: {'frequency': _setupData!.selectedWeekDays.length.toString()},
+                  ),
+                ),
+                Text(
+                  LocaleKeys.workout_setup_duration_label.tr(
+                    namedArgs: {'duration': _setupData!.workoutDurationPreference.toString()},
+                  ),
+                ),
               ],
             ),
           ),
@@ -316,7 +337,10 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               children: [
                 const Icon(Icons.auto_awesome, size: 20),
                 const SizedBox(width: 8),
-                Text('Generate My Workout Plan', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(
+                  LocaleKeys.workout_setup_generate_plan.tr(),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),
@@ -332,14 +356,14 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         Icon(Icons.error_outline, size: 80, color: Colors.red),
         const SizedBox(height: 32),
         Text(
-          'Generation Failed',
+          LocaleKeys.workout_generation_failed_title.tr(),
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600, color: Colors.red),
         ),
         const SizedBox(height: 16),
         Container(
           constraints: const BoxConstraints(maxWidth: 300),
           child: Text(
-            _errorMessage ?? 'An unexpected error occurred while generating your workout plan.',
+            _errorMessage ?? LocaleKeys.workout_generation_default_error.tr(),
             textAlign: TextAlign.center,
             style: Theme.of(
               context,
@@ -357,13 +381,16 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Try Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            child: Text(
+              LocaleKeys.workout_buttons_retry.tr(),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
         const SizedBox(height: 16),
         TextButton(
           onPressed: () => context.navigateTo(const WorkoutSetupPage(), replaceCurrent: true),
-          child: const Text('Update Setup'),
+          child: Text(LocaleKeys.workout_setup_update_setup.tr()),
         ),
       ],
     );
@@ -373,7 +400,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
     if (_parsedProgress.isEmpty) {
       return Center(
         child: Text(
-          'Waiting for generation to start...',
+          LocaleKeys.workout_generation_waiting_for_start.tr(),
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -386,7 +413,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Progress Overview',
+            LocaleKeys.workout_generation_progress_overview.tr(),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.primary,
@@ -443,7 +470,10 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '${sessions.length} session${sessions.length == 1 ? '' : 's'}',
+                            LocaleKeys.workout_generation_session_count.plural(
+                              sessions.length,
+                              namedArgs: {'count': sessions.length.toString()},
+                            ),
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
@@ -479,7 +509,9 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                                 ),
                                 if (session.estimatedDuration > 0)
                                   Text(
-                                    '${session.estimatedDuration}min',
+                                    LocaleKeys.workout_setup_estimated_duration.tr(
+                                      namedArgs: {'duration': session.estimatedDuration.toString()},
+                                    ),
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     ),
@@ -504,7 +536,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                   ] else ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Generating sessions...',
+                      LocaleKeys.workout_generation_generating_sessions.tr(),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontStyle: FontStyle.italic,
@@ -536,7 +568,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               Icon(Icons.text_snippet, color: Theme.of(context).colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Raw Text Generation',
+                LocaleKeys.workout_generation_raw_text_title.tr(),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.primary,
@@ -556,7 +588,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
-                  _rawTextProgress.isEmpty ? 'Waiting for text generation to start...' : _rawTextProgress,
+                  _rawTextProgress.isEmpty ? LocaleKeys.workout_generation_waiting_for_start.tr() : _rawTextProgress,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontFamily: 'monospace',
                     color: Theme.of(context).colorScheme.onSurface,
@@ -575,9 +607,9 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Workout Plan Generation',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        title: Text(
+          LocaleKeys.workout_generation_title.tr(),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,

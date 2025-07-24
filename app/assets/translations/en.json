@@ -1,0 +1,175 @@
+{
+  "app": {
+    "title": "Waico"
+  },
+  "home": {
+    "features": {
+      "meditation": "Meditation",
+      "sleep": "Sleep",
+      "nutrition": "Nutrition",
+      "workout": "Workout"
+    },
+    "counselor_button": "Counselor"
+  },
+  "workout": {
+    "loading": {
+      "title": "Loading Your Workout Plan",
+      "checking_status": "Getting everything ready..."
+    },
+    "errors": {
+      "unexpected_error": "An unexpected error occurred",
+      "camera_permission_required": "Camera permission is required for exercise tracking",
+      "initializing_camera": "Initializing camera...",
+      "failed_load_setup_data": "Failed to load workout setup data: {error}",
+      "failed_generate_plan": "Failed to generate workout plan: {error}"
+    },
+    "buttons": {
+      "retry": "Try Again"
+    },
+    "plan": {
+      "generated_title": "Workout Plan Generated!",
+      "generated_message": "Your personalized workout plan \"{planName}\" has been created successfully!",
+      "details": "Plan Details",
+      "summary": "{totalWeeks} weeks • {workoutsPerWeek} workouts/week",
+      "difficulty": "Difficulty: {difficulty}",
+      "no_plan_found": "No workout plan found",
+      "title": "Workout Plan",
+      "error_title": "Something went wrong",
+      "generate_first": "It looks like you don't have a workout plan yet. Please generate one first.",
+      "week_focus": "Week {week} Focus",
+      "rest": "Rest: {rest}s",
+      "all_exercises_completed": "All exercises completed! Great job!",
+      "week_nav_title": "Week",
+      "weeks_count": "{count} weeks",
+      "workouts_per_week_count": "{count}x/week"
+    },
+    "setup": {
+      "complete_title": "Setup Complete!",
+      "complete_message": "Your workout profile has been saved successfully!",
+      "failed_save": "Failed to save workout setup: {error}",
+      "continue": "Continue",
+      "previous": "Previous",
+      "generate_plan": "Generate My Workout Plan",
+      "start_training": "Start Training",
+      "update_setup": "Update Setup",
+      "goal_label": "Goal: {goal}",
+      "fitness_level_label": "Fitness Level: {level}",
+      "frequency_label": "Frequency: {frequency}x/week",
+      "duration_label": "Duration: {duration} minutes",
+      "estimated_duration": "{duration} min"
+    },
+    "session": {
+      "exercise_count": "{count} Exercises",
+      "exercises_title": "Exercises",
+      "start_next_button": "START NEXT",
+      "progress_label": "Progress"
+    },
+    "generation": {
+      "title": "Workout Plan Generation",
+      "analyzing_profile": "Our AI trainer is analyzing your fitness profile and creating a personalized workout plan just for you.",
+      "ui_progress": "UI Progress",
+      "raw_text_progress": "Raw Text Progress",
+      "tip": "This usually takes 30-60 seconds depending on your device capabilities.",
+      "ready_title": "Ready to Generate Your Plan",
+      "ready_description": "Your workout setup is complete! Tap the button below to generate your personalized workout plan.",
+      "your_profile": "Your Profile",
+      "failed_title": "Generation Failed",
+      "default_error": "An unexpected error occurred while generating your workout plan.",
+      "waiting_for_start": "Waiting for generation to start...",
+      "progress_overview": "Progress Overview",
+      "session_count": "{count,plural, =1{{count} session} other{{count} sessions}}",
+      "generating_sessions": "Generating sessions...",
+      "raw_text_title": "Raw Text Generation"
+    },
+    "exercise": {
+      "sets_x_reps": "{sets} sets × {reps} reps",
+      "sets_x_duration": "{sets} sets × {duration}",
+      "duration_m_s": "{minutes}m {seconds}s",
+      "duration_s": "{seconds}s"
+    }
+  },
+  "counselor": {
+    "title": "Counselor",
+    "mode_label": "Mode:",
+    "speech_mode": "Speech",
+    "text_mode": "Text",
+    "end_chat_question": "Are you sure you want to end the chat?",
+    "end_chat_button": "End Chat",
+    "continue_chatting": "Continue Chatting",
+    "processing_conversation": "Processing conversation",
+    "processing_description": "This process helps improve your experience by extracting useful information from the conversation for future reference. All extracted information stays on your device.",
+    "please_wait": "please wait...",
+    "cancel_processing": "Cancel Processing",
+    "cancel_processing_question": "Are you sure you want to cancel the processing? This will discard any progress made.",
+    "cancel_button": "Cancel",
+    "continue_processing": "Continue Processing",
+    "initializing_chat": "Initializing Chat"
+  },
+  "ai_models": {
+    "title": "AI Models Initialization",
+    "downloading": "Downloading",
+    "download_description": "Models are downloaded only the first time you open the app",
+    "initializing": "Initializing",
+    "loading_model_weights": "Loading Model Weights",
+    "permission_notification_message": "We need permission to show download progress notification",
+    "deny": "Deny",
+    "grant": "Grant",
+    "wait_download_complete": "Wait until the ongoing download complete before retrying this one.",
+    "initialization_failed": "Model initialization failed: {error}",
+    "download_complete": "Download Complete",
+    "download_failed": "Download Failed",
+    "download_canceled": "Download Canceled",
+    "download_paused": "Download Paused",
+    "failed_enqueue": "Failed to enqueue download"
+  },
+  "health": {
+    "dashboard_title": "Today's Health Overview",
+    "refresh_tooltip": "Refresh data",
+    "install_health_connect": "Install Health Connect",
+    "grant_permissions": "Grant Permissions",
+    "health_connect_required": "Install the Health Connect App to see your wellness insights",
+    "permissions_required": "Enable health data access to see your wellness insights",
+    "service_error": "Health service error",
+    "no_data": "No data available",
+    "health_connect_title": "Google Health Connect App required",
+    "permissions_title": "Health permissions required",
+    "steps": "Steps",
+    "sleep": "Sleep",
+    "heart_rate": "Heart Rate",
+    "active_energy": "Active Energy",
+    "bpm": "bpm",
+    "kcal": "kcal",
+    "hours": "HOURS",
+    "water": "Water",
+    "liters": "LITERS",
+    "weight": "Weight",
+    "kg": "KG"
+  },
+  "calendar": {
+    "no_upcoming_events": "No upcoming events in the next 7 days",
+    "upcoming": "Upcoming",
+    "failed_load_events": "Failed to load events",
+    "no_title": "(No title)",
+    "at": "{day} at {time}",
+    "in_minutes": "{count, plural, =1{{count} minute} other{{count} minutes}}",
+    "in_hours": "{count, plural, =1{{count} hour} other{{count} hours}}",
+    "in_hours_minutes": "In {hours}h {minutes}m"
+  },
+  "common": {
+    "loading": "Loading",
+    "error": "Error",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "done": "Done",
+    "next": "Next",
+    "previous": "Previous",
+    "back": "Back",
+    "retry": "Retry",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "unknown_error": "Something went wrong"
+  }
+}

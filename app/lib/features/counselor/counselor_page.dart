@@ -7,6 +7,8 @@ import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/chart_widget.dart' show ChartDataPoint;
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
+import 'package:waico/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CounselorPage extends StatefulWidget {
   const CounselorPage({super.key});
@@ -79,9 +81,10 @@ class _CounselorPageState extends State<CounselorPage> {
                   }
                 },
               ),
-              title: Text("Counselor", style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white, fontSize: 20)),
+              title: Text(LocaleKeys.counselor_title.tr(),
+                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white, fontSize: 20)),
               actions: [
-                Text("Mode:"),
+                Text("${LocaleKeys.counselor_mode_label.tr()}:"),
                 const SizedBox(width: 8),
                 DropdownButton(
                   isDense: true,
@@ -90,8 +93,8 @@ class _CounselorPageState extends State<CounselorPage> {
                   dropdownColor: theme.colorScheme.primary,
                   style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
                   items: [
-                    DropdownMenuItem(value: "speech", child: Text("Speech")),
-                    DropdownMenuItem(value: "text", child: Text("Text")),
+                    DropdownMenuItem(value: "speech", child: Text(LocaleKeys.counselor_speech_mode.tr())),
+                    DropdownMenuItem(value: "text", child: Text(LocaleKeys.counselor_text_mode.tr())),
                   ],
                   value: _conversationMode,
                   onChanged: (value) {
@@ -112,7 +115,7 @@ class _CounselorPageState extends State<CounselorPage> {
                         )
                 : null,
           ),
-          if (!_initialized) LoadingWidget(message: "Initializing Chat"),
+          if (!_initialized) LoadingWidget(message: LocaleKeys.counselor_initializing_chat.tr()),
         ],
       ),
     );
@@ -135,7 +138,7 @@ class _CounselorPageState extends State<CounselorPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Are you sure you want to end the chat?", style: Theme.of(context).textTheme.titleMedium),
+                Text(LocaleKeys.counselor_end_chat_question.tr(), style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -146,10 +149,11 @@ class _CounselorPageState extends State<CounselorPage> {
                         _showChatProcessingProgressModal();
                         chatProcessingModalShown = true;
                       },
-                      child: const Text("End Chat"),
+                      child: Text(LocaleKeys.counselor_end_chat_button.tr()),
                     ),
                     const SizedBox(width: 16),
-                    TextButton(onPressed: context.navBack, child: const Text("Continue Chatting")),
+                    TextButton(
+                        onPressed: context.navBack, child: Text(LocaleKeys.counselor_continue_chatting.tr())),
                   ],
                 ),
               ],
@@ -204,14 +208,15 @@ class _CounselorPageState extends State<CounselorPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Processing conversation", style: Theme.of(context).textTheme.titleLarge),
+                    Text(LocaleKeys.counselor_processing_conversation.tr(),
+                        style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 10),
                     Text(
-                      "This process helps improve your experience by extracting useful information from the conversation for future reference. All extracted information stays on your device.",
+                      LocaleKeys.counselor_processing_description.tr(),
                     ),
                     const SizedBox(height: 20),
                     if (progress.isEmpty)
-                      const Text("please wait...") // Initial state before any progress is made
+                      Text(LocaleKeys.counselor_please_wait.tr()) // Initial state before any progress is made
                     else
                       Center(
                         child: Column(
@@ -266,18 +271,18 @@ class _CounselorPageState extends State<CounselorPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Cancel Processing"),
+          title: Text(LocaleKeys.counselor_cancel_processing.tr()),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "Are you sure you want to cancel the precessing the conversation?",
+                LocaleKeys.counselor_cancel_processing_question.tr(),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 12),
-              const Text(
-                "This process helps improve your experience by extracting useful information from the conversation for future reference. All extracted information stays on your device.",
-                style: TextStyle(color: Colors.red),
+              Text(
+                LocaleKeys.counselor_processing_description.tr(),
+                style: const TextStyle(color: Colors.red),
               ),
             ],
           ),
@@ -288,10 +293,11 @@ class _CounselorPageState extends State<CounselorPage> {
                 context.navBack(); // Close the Conversation Processing bottom sheet
                 context.navBack(); // Close the counselor page
               },
-              child: const Text("Cancel"),
+              child: Text(LocaleKeys.counselor_cancel_button.tr()),
             ),
             const SizedBox(width: 16),
-            FilledButton(onPressed: context.navBack, child: const Text("Continue Processing")),
+            FilledButton(
+                onPressed: context.navBack, child: Text(LocaleKeys.counselor_continue_processing.tr())),
           ],
         );
       },
