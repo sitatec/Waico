@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/workout_camera_widget.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
-import 'package:waico/features/workout/pose_detection/exercise_classifiers.dart';
 import 'package:waico/generated/locale_keys.g.dart';
 
 /// Page that displays the camera for a specific exercise

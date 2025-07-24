@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
-import 'package:waico/features/workout/pose_detection/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 
 void main() {

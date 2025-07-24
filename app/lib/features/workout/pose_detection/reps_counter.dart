@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
-import 'package:waico/features/workout/pose_detection/exercise_classifiers.dart';
+import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 
 /// Configuration for rep counting parameters
