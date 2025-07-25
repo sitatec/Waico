@@ -33,7 +33,7 @@ abstract class PoseClassifier {
 
   /// Calculate exercise-specific form metrics
   /// Returns a map of metric names to scores (0.0 - 1.0)
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {

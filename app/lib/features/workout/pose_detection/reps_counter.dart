@@ -115,7 +115,7 @@ class RepsCounter {
 
   // Current frame data (not stored in history until we reach an endpoint)
   double _currentConfidence = 0.0;
-  Map<String, double> _currentFormMetrics = <String, double>{};
+  Map<String, dynamic> _currentFormMetrics = {};
 
   // Stream controllers for real-time updates
   final StreamController<RepCountingState> _stateController = StreamController<RepCountingState>.broadcast();
@@ -262,7 +262,7 @@ class RepsCounter {
   }
 
   /// Calculate form metrics based on pose landmarks
-  Map<String, double> _calculateFormMetrics(PoseDetectionResult poseResult) {
+  Map<String, dynamic> _calculateFormMetrics(PoseDetectionResult poseResult) {
     return _classifier.calculateFormMetrics(
       worldLandmarks: poseResult.worldLandmarks,
       imageLandmarks: poseResult.landmarks,
@@ -270,13 +270,13 @@ class RepsCounter {
   }
 
   /// Calculate overall form score from individual metrics
-  double _calculateFormScore(Map<String, double> formMetrics) {
+  double _calculateFormScore(Map<String, dynamic> formMetrics) {
     if (formMetrics.isEmpty) return 0.5;
 
-    final values = formMetrics.values.where((v) => !v.isNaN).toList();
+    final values = formMetrics.values.where((v) => !v['score'].isNaN).toList();
     if (values.isEmpty) return 0.5;
 
-    return values.reduce((a, b) => a + b) / values.length;
+    return values.reduce((a, b) => a['score'] + b['score']) / values.length;
   }
 
   /// Determine rep quality based on form score and confidence

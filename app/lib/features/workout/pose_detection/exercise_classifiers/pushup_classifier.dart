@@ -121,7 +121,7 @@ class PushUpClassifier extends PoseClassifier {
   }
 
   @override
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -169,7 +169,7 @@ class PushUpClassifier extends PoseClassifier {
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return metrics;
+    return _generateFeedbackMessages(formMetrics: metrics);
   }
 
   /// Calculate body alignment metrics based on push-up type
@@ -389,5 +389,64 @@ class PushUpClassifier extends PoseClassifier {
         PoseLandmarkType.rightWrist,
       ];
     }
+  }
+
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+    final feedback = <String, dynamic>{};
+
+    // Body alignment feedback
+    if (formMetrics['body_alignment'] != null) {
+      final alignment = formMetrics['body_alignment']!;
+      feedback['body_alignment'] = {'score': alignment};
+      if (alignment < 0.7) {
+        if (type == PushUpType.knee) {
+          feedback['body_alignment']['message'] =
+              'Should maintain a straight line from shoulders to knees, avoiding sagging hips';
+        } else {
+          feedback['body_alignment']['message'] =
+              'Should keep the body straight from head to heels, avoiding sagging hips';
+        }
+      }
+    }
+
+    // Hand width feedback
+    if (formMetrics['hand_width'] != null) {
+      final handWidth = formMetrics['hand_width']!;
+      feedback['hand_width'] = {'score': handWidth};
+      if (handWidth < 0.6) {
+        switch (type) {
+          case PushUpType.diamond:
+            feedback['hand_width']['message'] = 'Should bring the hands closer together to form a diamond shape';
+            break;
+          case PushUpType.wide:
+            feedback['hand_width']['message'] = 'Should place the hands wider than shoulder-width apart';
+            break;
+          default:
+            feedback['hand_width']['message'] =
+                'Should adjust their hand placement to be slightly wider than shoulder-width';
+        }
+      }
+    }
+
+    // Wrist positioning feedback
+    if (formMetrics['wrist_positioning'] != null) {
+      final wristPos = formMetrics['wrist_positioning']!;
+      feedback['wrist_positioning'] = {'score': wristPos};
+      if (wristPos < 0.5) {
+        feedback['wrist_positioning']['message'] =
+            'Should position wrists directly under shoulders for better stability';
+      }
+    }
+
+    // Overall visibility feedback
+    if (formMetrics['overall_visibility'] != null) {
+      final visibility = formMetrics['overall_visibility']!;
+      feedback['overall_visibility'] = {'score': visibility};
+      if (visibility < 0.7) {
+        feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
+      }
+    }
+
+    return feedback;
   }
 }

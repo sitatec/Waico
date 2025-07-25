@@ -31,7 +31,7 @@ class SupermanClassifier extends PoseClassifier {
   }
 
   @override
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -83,6 +83,57 @@ class SupermanClassifier extends PoseClassifier {
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return metrics;
+    return _generateFeedbackMessages(formMetrics: metrics);
+  }
+
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+    final feedback = <String, dynamic>{};
+
+    // Spinal alignment feedback
+    if (formMetrics['spinal_alignment'] != null) {
+      final spinalAlignment = formMetrics['spinal_alignment']!;
+      feedback['spinal_alignment'] = {'score': spinalAlignment};
+      if (spinalAlignment < 0.6) {
+        feedback['spinal_alignment']['message'] = 'Should lift the chest higher and extend the back more';
+      }
+    }
+
+    // Arm extension feedback
+    if (formMetrics['arm_extension'] != null) {
+      final armExtension = formMetrics['arm_extension']!;
+      feedback['arm_extension'] = {'score': armExtension};
+      if (armExtension < 0.6) {
+        feedback['arm_extension']['message'] = 'Should extend the arms further forward and lift them higher';
+      }
+    }
+
+    // Leg extension feedback
+    if (formMetrics['leg_extension'] != null) {
+      final legExtension = formMetrics['leg_extension']!;
+      feedback['leg_extension'] = {'score': legExtension};
+      if (legExtension < 0.6) {
+        feedback['leg_extension']['message'] = 'Should lift the legs higher and extend them further back';
+      }
+    }
+
+    // Bilateral symmetry feedback
+    if (formMetrics['bilateral_symmetry'] != null) {
+      final symmetry = formMetrics['bilateral_symmetry']!;
+      feedback['bilateral_symmetry'] = {'score': symmetry};
+      if (symmetry < 0.6) {
+        feedback['bilateral_symmetry']['message'] = 'Should ensure both arms and legs lift evenly';
+      }
+    }
+
+    // Overall visibility feedback
+    if (formMetrics['overall_visibility'] != null) {
+      final visibility = formMetrics['overall_visibility']!;
+      feedback['overall_visibility'] = {'score': visibility};
+      if (visibility < 0.7) {
+        feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
+      }
+    }
+
+    return feedback;
   }
 }

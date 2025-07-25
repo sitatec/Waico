@@ -71,7 +71,7 @@ class CrunchClassifier extends PoseClassifier {
   }
 
   @override
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -116,7 +116,50 @@ class CrunchClassifier extends PoseClassifier {
         requiredLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return metrics;
+    return _generateFeedbackMessages(formMetrics: metrics);
+  }
+
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+    final feedback = <String, dynamic>{};
+
+    // Neck alignment feedback
+    if (formMetrics['neck_alignment'] != null) {
+      final neckAlignment = formMetrics['neck_alignment']!;
+      feedback['neck_alignment'] = {'score': neckAlignment};
+      if (neckAlignment < 0.4) {
+        feedback['neck_alignment']['message'] = 'Head should move with torso, not independently';
+      }
+    }
+
+    // Knee stability feedback
+    if (formMetrics['knee_stability'] != null) {
+      final kneeStability = formMetrics['knee_stability']!;
+      feedback['knee_stability'] = {'score': kneeStability};
+      if (kneeStability < 0.55) {
+        feedback['knee_stability']['message'] =
+            'Should keep the knees bent at about 90 degrees and stable throughout the movement';
+      }
+    }
+
+    // Hip stability feedback
+    if (formMetrics['hip_stability'] != null) {
+      final hipStability = formMetrics['hip_stability']!;
+      feedback['hip_stability'] = {'score': hipStability};
+      if (hipStability < 0.65) {
+        feedback['hip_stability']['message'] = 'Should keep the hips level and avoid lifting them';
+      }
+    }
+
+    // Overall visibility feedback
+    if (formMetrics['overall_visibility'] != null) {
+      final visibility = formMetrics['overall_visibility']!;
+      feedback['overall_visibility'] = {'score': visibility};
+      if (visibility < 0.7) {
+        feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
+      }
+    }
+
+    return feedback;
   }
 }
 
@@ -154,7 +197,7 @@ class ReverseCrunchClassifier extends PoseClassifier {
   }
 
   @override
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -189,7 +232,41 @@ class ReverseCrunchClassifier extends PoseClassifier {
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return metrics;
+    return _generateFeedbackMessages(formMetrics: metrics);
+  }
+
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+    final feedback = <String, dynamic>{};
+
+    // Knee symmetry feedback
+    if (formMetrics['knee_symmetry'] != null) {
+      final kneeSymmetry = formMetrics['knee_symmetry']!;
+      feedback['knee_symmetry'] = {'score': kneeSymmetry};
+      if (kneeSymmetry < 0.65) {
+        feedback['knee_symmetry']['message'] = 'Should move both knees together, keeping them aligned';
+      }
+    }
+
+    // Range of motion feedback
+    if (formMetrics['range_of_motion'] != null) {
+      final rom = formMetrics['range_of_motion']!;
+      feedback['range_of_motion'] = {'score': rom};
+      if (rom < 0.65) {
+        feedback['range_of_motion']['message'] =
+            'Should bring the knees closer to the chest for a fuller range of motion';
+      }
+    }
+
+    // Overall visibility feedback
+    if (formMetrics['overall_visibility'] != null) {
+      final visibility = formMetrics['overall_visibility']!;
+      feedback['overall_visibility'] = {'score': visibility};
+      if (visibility < 0.7) {
+        feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
+      }
+    }
+
+    return feedback;
   }
 }
 
@@ -231,7 +308,7 @@ class DoubleCrunchClassifier extends PoseClassifier {
   }
 
   @override
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -276,6 +353,50 @@ class DoubleCrunchClassifier extends PoseClassifier {
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return metrics;
+    return _generateFeedbackMessages(formMetrics: metrics);
+  }
+
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+    final feedback = <String, dynamic>{};
+
+    // Movement coordination feedback
+    if (formMetrics['movement_coordination'] != null) {
+      final coordination = formMetrics['movement_coordination']!;
+      feedback['movement_coordination'] = {'score': coordination};
+      if (coordination < 0.5) {
+        feedback['movement_coordination']['message'] =
+            'Should coordinate both the upper body crunch and knee-to-chest movement simultaneously';
+      }
+    }
+
+    // Bilateral symmetry feedback
+    if (formMetrics['bilateral_symmetry'] != null) {
+      final symmetry = formMetrics['bilateral_symmetry']!;
+      feedback['bilateral_symmetry'] = {'score': symmetry};
+      if (symmetry < 0.5) {
+        feedback['bilateral_symmetry']['message'] = 'Should ensure both sides of the body move evenly';
+      }
+    }
+
+    // Full range activation feedback
+    if (formMetrics['full_range_activation'] != null) {
+      final activation = formMetrics['full_range_activation']!;
+      feedback['full_range_activation'] = {'score': activation};
+      if (activation < 0.4) {
+        feedback['full_range_activation']['message'] =
+            'Should engage both upper and lower abdominals for maximum muscle activation';
+      }
+    }
+
+    // Overall visibility feedback
+    if (formMetrics['overall_visibility'] != null) {
+      final visibility = formMetrics['overall_visibility']!;
+      feedback['overall_visibility'] = {'score': visibility};
+      if (visibility < 0.7) {
+        feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
+      }
+    }
+
+    return feedback;
   }
 }
