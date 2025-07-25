@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:math';
 import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
@@ -78,21 +77,64 @@ class RepetitionData {
 class RepCountingState {
   final int totalReps;
   final ExerciseState currentState;
-  final double confidence;
   final RepetitionData? lastRep;
   final List<RepetitionData> allReps;
-  final double averageFormScore;
   final RepQuality averageQuality;
 
   const RepCountingState({
     required this.totalReps,
     required this.currentState,
-    required this.confidence,
     this.lastRep,
     required this.allReps,
-    required this.averageFormScore,
     required this.averageQuality,
   });
+
+  Map<String, dynamic> get statistics {
+    return {
+      'totalReps': totalReps,
+      'averageFormScore': _getAverageFormScore(),
+      'qualityDistribution': _getQualityDistribution(),
+      'averageRepDuration': _getAverageRepDuration(),
+      'bestRep': _getBestRep()?.toMap(),
+      'worstRep': _getWorstRep()?.toMap(),
+    };
+  }
+
+  /// Get average form score across all reps
+  double _getAverageFormScore() {
+    if (allReps.isEmpty) return 0.0;
+    return allReps.map((r) => r.formScore).reduce((a, b) => a + b) / allReps.length;
+  }
+
+  /// Get distribution of rep qualities
+  Map<String, int> _getQualityDistribution() {
+    final distribution = <String, int>{'excellent': 0, 'good': 0, 'fair': 0, 'poor': 0};
+
+    for (final rep in allReps) {
+      distribution[rep.quality.toString().split('.').last] =
+          (distribution[rep.quality.toString().split('.').last] ?? 0) + 1;
+    }
+
+    return distribution;
+  }
+
+  /// Get average rep duration
+  double _getAverageRepDuration() {
+    if (allReps.isEmpty) return 0.0;
+    return allReps.map((r) => r.duration).reduce((a, b) => a + b) / allReps.length;
+  }
+
+  /// Get the best quality rep
+  RepetitionData? _getBestRep() {
+    if (allReps.isEmpty) return null;
+    return allReps.reduce((a, b) => a.formScore > b.formScore ? a : b);
+  }
+
+  /// Get the worst quality rep
+  RepetitionData? _getWorstRep() {
+    if (allReps.isEmpty) return null;
+    return allReps.reduce((a, b) => a.formScore < b.formScore ? a : b);
+  }
 }
 
 /// Advanced repetition counter with form quality assessment
@@ -108,9 +150,6 @@ class RepsCounter {
   DateTime? _lastRepTime;
   DateTime? _transitionStartTime;
 
-  // Quality tracking - only for stable endpoint positions
-  final Queue<double> _endpointConfidenceHistory = Queue();
-  final Queue<Map<String, double>> _endpointFormMetricsHistory = Queue();
   final List<RepetitionData> _repetitions = <RepetitionData>[];
 
   // Current frame data (not stored in history until we reach an endpoint)
@@ -133,10 +172,8 @@ class RepsCounter {
   RepCountingState get currentState => RepCountingState(
     totalReps: _totalReps,
     currentState: _currentState,
-    confidence: _getAverageConfidence(),
     lastRep: _repetitions.isNotEmpty ? _repetitions.last : null,
     allReps: List.unmodifiable(_repetitions),
-    averageFormScore: _getAverageFormScore(),
     averageQuality: _getAverageQuality(),
   );
 
@@ -204,31 +241,12 @@ class RepsCounter {
       _stableFrameCount = 0;
       _targetState = null; // Reset target state tracking
 
-      // Record quality metrics only at stable endpoint positions
-      _recordEndpointQuality();
-
       // Count rep when transitioning from down to up (completing a full cycle)
       if (previousState == ExerciseState.down && _currentState == ExerciseState.up) {
         _completeRepetition(timestamp);
       } else if (previousState == ExerciseState.up && _currentState == ExerciseState.down) {
         // Starting a new rep cycle
         _transitionStartTime = timestamp;
-      }
-    }
-  }
-
-  /// Record quality metrics when reaching a stable endpoint position
-  void _recordEndpointQuality() {
-    // Only record quality at stable positions (not during transitions)
-    if (_currentState != ExerciseState.transitioning) {
-      _endpointConfidenceHistory.add(_currentConfidence);
-      if (_endpointConfidenceHistory.length > _config.maxHistorySize) {
-        _endpointConfidenceHistory.removeFirst();
-      }
-
-      _endpointFormMetricsHistory.add(Map.from(_currentFormMetrics));
-      if (_endpointFormMetricsHistory.length > _config.maxHistorySize) {
-        _endpointFormMetricsHistory.removeFirst();
       }
     }
   }
@@ -289,29 +307,6 @@ class RepsCounter {
     return RepQuality.poor;
   }
 
-  /// Get average confidence from recent endpoint history
-  /// Confidence represents how certain the classifier is about pose states at stable positions
-  /// 0.0 = completely uncertain (50/50), 1.0 = completely certain (90/10 or 10/90)
-  double _getAverageConfidence() {
-    if (_endpointConfidenceHistory.isEmpty) return 0.0;
-    return _endpointConfidenceHistory.reduce((a, b) => a + b) / _endpointConfidenceHistory.length;
-  }
-
-  /// Get average form score from recent endpoint history
-  double _getAverageFormScore() {
-    if (_endpointFormMetricsHistory.isEmpty) return 0.0;
-
-    double totalScore = 0.0;
-    int count = 0;
-
-    for (final metrics in _endpointFormMetricsHistory) {
-      totalScore += _calculateFormScore(metrics);
-      count++;
-    }
-
-    return count > 0 ? totalScore / count : 0.0;
-  }
-
   /// Get average quality from all completed repetitions
   RepQuality _getAverageQuality() {
     if (_repetitions.isEmpty) return RepQuality.fair;
@@ -334,55 +329,9 @@ class RepsCounter {
     _totalReps = 0;
     _lastRepTime = null;
     _transitionStartTime = null;
-    _endpointConfidenceHistory.clear();
-    _endpointFormMetricsHistory.clear();
     _repetitions.clear();
 
     _stateController.add(currentState);
-  }
-
-  /// Get detailed statistics
-  Map<String, dynamic> getStatistics() {
-    return {
-      'totalReps': _totalReps,
-      'averageFormScore': _getAverageFormScore(),
-      'averageQuality': _getAverageQuality().toString(),
-      'averageConfidence': _getAverageConfidence(),
-      'qualityDistribution': _getQualityDistribution(),
-      'averageRepDuration': _getAverageRepDuration(),
-      'bestRep': _getBestRep()?.toMap(),
-      'worstRep': _getWorstRep()?.toMap(),
-    };
-  }
-
-  /// Get distribution of rep qualities
-  Map<String, int> _getQualityDistribution() {
-    final distribution = <String, int>{'excellent': 0, 'good': 0, 'fair': 0, 'poor': 0};
-
-    for (final rep in _repetitions) {
-      distribution[rep.quality.toString().split('.').last] =
-          (distribution[rep.quality.toString().split('.').last] ?? 0) + 1;
-    }
-
-    return distribution;
-  }
-
-  /// Get average rep duration
-  double _getAverageRepDuration() {
-    if (_repetitions.isEmpty) return 0.0;
-    return _repetitions.map((r) => r.duration).reduce((a, b) => a + b) / _repetitions.length;
-  }
-
-  /// Get the best quality rep
-  RepetitionData? _getBestRep() {
-    if (_repetitions.isEmpty) return null;
-    return _repetitions.reduce((a, b) => a.formScore > b.formScore ? a : b);
-  }
-
-  /// Get the worst quality rep
-  RepetitionData? _getWorstRep() {
-    if (_repetitions.isEmpty) return null;
-    return _repetitions.reduce((a, b) => a.formScore < b.formScore ? a : b);
   }
 
   /// Dispose of resources

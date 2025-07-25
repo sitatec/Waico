@@ -98,7 +98,7 @@ void main() {
 
       await Future.delayed(Duration(milliseconds: 100));
 
-      final stats = testCounter.getStatistics();
+      final stats = testCounter.currentState.statistics;
       expect(stats['totalReps'], equals(5));
       expect(stats['averageFormScore'], isA<double>());
       expect(stats['qualityDistribution'], isA<Map<String, int>>());
