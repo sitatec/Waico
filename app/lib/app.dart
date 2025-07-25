@@ -40,7 +40,10 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     if (state == AppLifecycleState.detached) {
       log("App closing detected, disposing Models");
       ChatModel.unloadBaseModel();
-      TtsModel.dispose();
+      // Only one of the TTS model need to be disposed, but we can call dispose unconditionally.
+      // It will gracefully handle the case where the model is not initialized.
+      PremiumTtsModel.dispose();
+      LiteTtsModel.dispose();
       SttModel.dispose();
     }
   }

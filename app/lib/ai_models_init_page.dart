@@ -363,13 +363,14 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     try {
       // Loading all the model is not memory efficient but if we don't load them here,
       // every time the user opens a chat screen they will wait for a long time.
-      // Even with the current approach, creating a new chat session takes 5-15 seconds
+      // Even with the current approach (pre-loading), creating a new chat session takes 5-15 seconds
       // On a Samsung S21 Ultra. TODO: do lazy loading
       final gemmaModelPath = await _modelsToDownload[1].downloadedFilePath;
       await ChatModel.loadBaseModel(gemmaModelPath);
 
+      // TODO: conditionally load TTS model based on user choice (premium vs lite)
       final ttsModelPath = await _modelsToDownload[2].downloadedFilePath;
-      await TtsModel.initialize(modelPath: ttsModelPath);
+      await PremiumTtsModel.initialize(modelPath: ttsModelPath);
 
       final sttModelPath = await _modelsToDownload[0].downloadedFilePath;
       await SttModel.initialize(modelPath: sttModelPath);

@@ -30,7 +30,7 @@ class VoiceChatPipeline {
     UserSpeechToTextListener? userSpeechToTextListener,
     TtsModel? tts,
     AudioStreamPlayer? audioStreamPlayer,
-  }) : _tts = tts ?? TtsModel(),
+  }) : _tts = tts ?? PremiumTtsModel(),
        _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer(),
        _userSpeechToTextListener = userSpeechToTextListener ?? UserSpeechListener.withTranscription();
 

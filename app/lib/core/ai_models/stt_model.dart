@@ -120,8 +120,8 @@ class SttModel {
                 final decoderFile = File('$modelDirPath/decoder.onnx');
                 final tokensFile = File('$modelDirPath/tokens.txt');
 
-                if (!await encoderFile.exists()) throw Exception("encoder.int8.onnx not found in $modelDirPath");
-                if (!await decoderFile.exists()) throw Exception("decoder.int8.onnx not found in $modelDirPath");
+                if (!await encoderFile.exists()) throw Exception("encoder.onnx not found in $modelDirPath");
+                if (!await decoderFile.exists()) throw Exception("decoder.onnx not found in $modelDirPath");
                 if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
 
                 final canaryConfig = OfflineCanaryModelConfig(
@@ -129,7 +129,7 @@ class SttModel {
                   decoder: decoderFile.path,
                   srcLang: 'en',
                   tgtLang: 'en',
-                  usePnc: true,
+                  usePnc: false,
                 );
 
                 final modelConfig = OfflineModelConfig(

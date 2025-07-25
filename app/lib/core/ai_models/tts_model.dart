@@ -9,7 +9,12 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:sherpa_onnx/sherpa_onnx.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
 
-class TtsModel {
+abstract class TtsModel {
+  Future<TtsResult> generateSpeech({required String text, required String voice, double speed = 1.0});
+}
+
+// Premium TTS models sound natural, near human quality, but slow on most devices. Currently using Kokoro v1.0
+class PremiumTtsModel implements TtsModel {
   /// Loading the model in GPU/CPU takes time, so we load once for the app lifecycle and use a singleton instance
   static Isolate? _isolate;
   static SendPort? _sendPort;
@@ -17,7 +22,7 @@ class TtsModel {
   static int _requestCounter = 0;
   static final Map<int, Completer<TtsResult>> _pendingRequests = {};
 
-  TtsModel() {
+  PremiumTtsModel() {
     if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call TtsModel.initialize first");
     }
@@ -87,6 +92,7 @@ class TtsModel {
   }
 
   /// Generate audio from text
+  @override
   Future<TtsResult> generateSpeech({required String text, required String voice, double speed = 1.0}) async {
     if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call TtsModel.initialize first");
@@ -203,11 +209,205 @@ class TtsModel {
   }
 
   static int _getSpeakerId(String voice) {
-    final speakerId = _voiceToSpeakerId[voice];
+    final speakerId = _premiumVoiceToSpeakerId[voice];
     if (speakerId == null) {
-      throw ArgumentError("Invalid voice: $voice. Supported voice: \n${_voiceToSpeakerId.keys}");
+      throw ArgumentError("Invalid voice: $voice. Supported voice: \n${_premiumVoiceToSpeakerId.keys}");
     }
     return speakerId;
+  }
+}
+
+// Lite TTS models are faster than premium models but sound a bit robotic. Currently using Piper models.
+class LiteTtsModel implements TtsModel {
+  /// Loading the model in GPU/CPU takes time, so we load once for the app lifecycle and use a singleton instance
+  static Isolate? _isolate;
+  static SendPort? _sendPort;
+  static ReceivePort? _receivePort;
+  static int _requestCounter = 0;
+  static final Map<int, Completer<TtsResult>> _pendingRequests = {};
+
+  LiteTtsModel() {
+    if (_isolate == null || _sendPort == null) {
+      throw StateError("Model not initialized. Call LiteTtsModel.initialize first");
+    }
+  }
+
+  static Future<void> initialize({required String modelPath}) async {
+    if (_isolate != null) {
+      log("LiteTtsModel Already initialized, Skipping.");
+      return;
+    }
+
+    _receivePort = ReceivePort();
+    _isolate = await Isolate.spawn(_isolateEntryPoint, _receivePort!.sendPort);
+
+    // Get the send port from the isolate and handle all responses
+    final completer = Completer<SendPort>();
+    bool handshakeCompleted = false;
+
+    _receivePort!.listen((message) {
+      if (!handshakeCompleted && message is SendPort) {
+        // Initial handshake - get the send port
+        _sendPort = message;
+        handshakeCompleted = true;
+        completer.complete(message);
+      } else if (handshakeCompleted && message is Map<String, dynamic>) {
+        // Handle TTS responses
+        final requestId = message['requestId'] as int;
+        final pendingCompleter = _pendingRequests.remove(requestId);
+        if (pendingCompleter != null) {
+          if (message['error'] != null) {
+            pendingCompleter.completeError(Exception(message['error']));
+          } else if (message['action'] == 'initialize') {
+            // Special case for initialization - return a dummy TtsResult
+            pendingCompleter.complete(TtsResult(samples: Float32List(0), sampleRate: 0));
+          } else {
+            final samples = message['samples'] as Float32List;
+            final sampleRate = message['sampleRate'] as int;
+            pendingCompleter.complete(TtsResult(samples: samples, sampleRate: sampleRate));
+          }
+        }
+      }
+    });
+
+    await completer.future;
+
+    // Initialize the model in the isolate
+    final initCompleter = Completer<TtsResult>();
+    final initRequestId = _requestCounter++;
+    _pendingRequests[initRequestId] = initCompleter;
+
+    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath});
+
+    await initCompleter.future;
+    log("Lite TTS model initialized successfully");
+  }
+
+  static Future<void> dispose() async {
+    if (_isolate != null) {
+      _sendPort?.send({'action': 'dispose'});
+      _isolate?.kill(priority: Isolate.immediate);
+      _receivePort?.close();
+      _isolate = null;
+      _sendPort = null;
+      _receivePort = null;
+      _pendingRequests.clear();
+    }
+  }
+
+  /// Generate audio from text
+  @override
+  Future<TtsResult> generateSpeech({
+    required String text,
+    double speed = 1.0,
+    String voice = 'not_supported_for_lite_models',
+  }) async {
+    if (_isolate == null || _sendPort == null) {
+      throw StateError("Model not initialized. Call LiteTtsModel.initialize first");
+    }
+
+    final completer = Completer<TtsResult>();
+    final requestId = _requestCounter++;
+    _pendingRequests[requestId] = completer;
+
+    _sendPort!.send({'action': 'generate', 'requestId': requestId, 'text': text, 'speed': speed});
+
+    return completer.future;
+  }
+
+  static void _isolateEntryPoint(SendPort mainSendPort) {
+    initBindings();
+
+    final receivePort = ReceivePort();
+    mainSendPort.send(receivePort.sendPort);
+
+    OfflineTts? tts;
+
+    receivePort.listen((message) async {
+      try {
+        if (message is Map<String, dynamic>) {
+          final action = message['action'] as String;
+          final requestId = message['requestId'] as int?;
+
+          switch (action) {
+            case 'initialize':
+              try {
+                final modelPath = message['modelPath'] as String;
+
+                // modelPath path point to a tar.gz archive containing all the model weights and extras
+                final modelDirPath = await extractModelData(modelPath);
+
+                final modelFile = File('$modelDirPath/model.onnx');
+                final tokensFile = File('$modelDirPath/tokens.txt');
+                final espeakDataDir = Directory('$modelDirPath/espeak-ng-data');
+
+                if (!await modelFile.exists()) throw Exception("model.onnx not found in $modelDirPath");
+                if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
+                if (!await espeakDataDir.exists()) {
+                  throw Exception("espeak-ng-data directory not found in $modelDirPath");
+                }
+
+                // Create VITS model configuration for Lite TTS
+                final vits = OfflineTtsVitsModelConfig(
+                  model: modelPath,
+                  tokens: tokensFile.path,
+                  dataDir: espeakDataDir.path,
+                  lengthScale: 1.0, // Will be adjusted per request based on speed
+                );
+
+                final modelConfig = OfflineTtsModelConfig(
+                  vits: vits,
+                  // If device have more than 4 cores, use 4 threads, otherwise use all the cores
+                  numThreads: min(Platform.numberOfProcessors, 4),
+                  provider: Platform.isAndroid ? "xnnpack" : "cpu",
+                  debug: kDebugMode,
+                );
+
+                final config = OfflineTtsConfig(model: modelConfig, maxNumSenetences: 1);
+
+                tts = OfflineTts(config);
+
+                mainSendPort.send({
+                  'requestId': requestId,
+                  'action': 'initialize',
+                  'samples': Float32List(0), // Dummy response
+                  'sampleRate': 0,
+                });
+              } catch (e) {
+                mainSendPort.send({'requestId': requestId, 'error': e.toString()});
+              }
+              break;
+
+            case 'generate':
+              try {
+                if (tts == null) {
+                  throw StateError("TTS not initialized");
+                }
+
+                final text = message['text'] as String;
+                final speed = message['speed'] as double;
+
+                final start = DateTime.now();
+                // For Lite TTS, always use sid = 0 since it doesn't support multiple voices
+                final audio = tts!.generate(text: text, sid: 0, speed: speed);
+                log("[InIsolate | Lite TTS took: ${DateTime.now().difference(start).inMilliseconds / 1000} seconds");
+
+                mainSendPort.send({'requestId': requestId, 'samples': audio.samples, 'sampleRate': audio.sampleRate});
+              } catch (e) {
+                mainSendPort.send({'requestId': requestId, 'error': e.toString()});
+              }
+              break;
+
+            case 'dispose':
+              tts?.free();
+              tts = null;
+              Isolate.exit();
+          }
+        }
+      } catch (e) {
+        log('Error in Lite TTS isolate: $e');
+      }
+    });
   }
 }
 
@@ -274,7 +474,7 @@ class TtsResult {
   }
 }
 
-final Map<String, int> _voiceToSpeakerId = {
+final Map<String, int> _premiumVoiceToSpeakerId = {
   'af_alloy': 0,
   'af_aoede': 1,
   'af_bella': 2,
