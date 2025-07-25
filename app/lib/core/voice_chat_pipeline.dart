@@ -30,7 +30,7 @@ class VoiceChatPipeline {
     UserSpeechToTextListener? userSpeechToTextListener,
     TtsModel? tts,
     AudioStreamPlayer? audioStreamPlayer,
-  }) : _tts = tts ?? PremiumTtsModel(),
+  }) : _tts = tts ?? TtsModelFactory.instance,
        _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer(),
        _userSpeechToTextListener = userSpeechToTextListener ?? UserSpeechListener.withTranscription();
 
@@ -122,7 +122,7 @@ class VoiceChatPipeline {
   Future<void> _generateSpeech(String text, {bool isLastInCurrentTurn = false}) async {
     await _asyncLock.synchronized(() async {
       final start = DateTime.now();
-      final ttsResult = await _tts.generateSpeech(text: text, voice: voice!, speed: 1.0);
+      final ttsResult = await _tts.generateSpeech(text: text, voice: voice, speed: 1.0);
       await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
       log("TTS took: ${DateTime.now().difference(start).inMilliseconds / 1000} seconds");
     });

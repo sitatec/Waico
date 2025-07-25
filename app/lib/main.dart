@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/app.dart';
 import 'package:waico/core/services/database/db.dart';
+import 'package:waico/core/services/app_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,7 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
 
   await DB.init();
+  await AppPreferences.initialize();
 
   runApp(
     EasyLocalization(

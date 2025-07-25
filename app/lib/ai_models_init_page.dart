@@ -10,6 +10,8 @@ import 'package:waico/core/ai_models/embedding_model.dart';
 import 'package:waico/core/ai_models/stt_model.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
+import 'package:waico/core/services/app_preferences.dart';
+import 'package:waico/core/widgets/voice_model_selection_modal.dart';
 import 'package:waico/generated/locale_keys.g.dart';
 
 class DownloadItem {
@@ -65,37 +67,18 @@ class AiModelsInitializationPage extends StatefulWidget {
 }
 
 class _AiModelsInitializationPageState extends State<AiModelsInitializationPage> {
-  final _modelsToDownload = <DownloadItem>[
-    DownloadItem(
-      url: "${DownloadItem.baseUrl}/canary-180m-flash.tar.gz",
-      fileName: "canary-180m-flash.tar.gz",
-      displayName: "Canary Flash",
-    ),
-    DownloadItem(
-      url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
-      fileName: "gemma-3n-E2B-it-int4.task",
-      displayName: "Gemma 3n E2B",
-    ),
-    DownloadItem(
-      url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
-      fileName: "kokoro-v1_0.tar.gz",
-      displayName: "Kokoro TTS",
-    ),
-    DownloadItem(
-      url: "${DownloadItem.baseUrl}/Qwen3-Embedding-0.6B-Q8_0.gguf",
-      fileName: "Qwen3-Embedding-0.6B-Q8_0.gguf",
-      displayName: "Qwen3 Embedding",
-    ),
-  ];
-
+  List<DownloadItem> _modelsToDownload = [];
+  bool isReady = false;
   bool isDownloading = false;
-  bool isInitializing = false;
+  bool isInitializingModels = false;
   bool isInitializationComplete = false;
   double modelLoadingProgress = 0.0;
   int currentDownloadIndex = 0;
   late final StreamSubscription<TaskUpdate> _downloadUpdatesSubscription;
   Timer? _progressTimer;
   final _downloader = FileDownloader();
+  bool _hasShownDevicePerfSelection = false;
+  late final currentLanguageCode = context.locale.languageCode;
 
   @override
   void initState() {
@@ -105,7 +88,45 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
   Future<void> init() async {
     await _setupDownloader();
+
+    // Check if we need to show voice model selection
+    if (!AppPreferences.hasShownDevicePerfSelection()) {
+      _showDevicePerfSelectionModal();
+      return;
+    }
+
+    await _continueAfterDevicePerfSelection();
+  }
+
+  void _showDevicePerfSelectionModal() {
+    if (_hasShownDevicePerfSelection) return;
+
+    _hasShownDevicePerfSelection = true;
+    showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: VoiceModelSelectionModal(
+            onContinue: () {
+              Navigator.of(context).pop();
+              _continueAfterDevicePerfSelection();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _continueAfterDevicePerfSelection() async {
+    await _setupModelsToDownload();
     await _initDownloadTasks();
+    setState(() {
+      isReady = true;
+    });
 
     // Check if all downloads are already complete if this is not the first time the app is opened
     final allComplete = _modelsToDownload.every((item) => item.isCompleted);
@@ -113,6 +134,62 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       await _startInitialization();
     } else {
       _downloadNextFile();
+    }
+  }
+
+  Future<void> _setupModelsToDownload() async {
+    final voiceModelType = AppPreferences.getVoiceModelType();
+
+    _modelsToDownload = [
+      DownloadItem(
+        url: "${DownloadItem.baseUrl}/canary-180m-flash.tar.gz",
+        fileName: "canary-180m-flash.tar.gz",
+        displayName: "Canary Flash",
+      ),
+      DownloadItem(
+        url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
+        fileName: "gemma-3n-E2B-it-int4.task",
+        displayName: "Gemma 3n E2B",
+      ),
+      DownloadItem(
+        url: "${DownloadItem.baseUrl}/Qwen3-Embedding-0.6B-Q8_0.gguf",
+        fileName: "Qwen3-Embedding-0.6B-Q8_0.gguf",
+        displayName: "Qwen3 Embedding",
+      ),
+    ];
+
+    // Add the appropriate TTS model based on user choice
+    if (voiceModelType == VoiceModelType.premium) {
+      _modelsToDownload.add(
+        DownloadItem(
+          url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
+          fileName: "kokoro-v1_0.tar.gz",
+          displayName: "Kokoro TTS",
+        ),
+      );
+    } else {
+      // Add lite TTS model based on current language
+      final liteModelData = _getLiteTtsModelForLanguage(currentLanguageCode);
+      _modelsToDownload.add(
+        DownloadItem(
+          url: "${DownloadItem.baseUrl}/${liteModelData['fileName']!}",
+          fileName: liteModelData['fileName']!,
+          displayName: liteModelData['displayName']!,
+        ),
+      );
+    }
+  }
+
+  Map<String, String> _getLiteTtsModelForLanguage(String languageCode) {
+    switch (languageCode) {
+      case 'de':
+        return {'fileName': 'piper-de-mls.tar.gz', 'displayName': 'Piper TTS DE'};
+      case 'es':
+        return {'fileName': 'piper-es-mx_ald.tar.gz', 'displayName': 'Piper TTS ES'};
+      case 'fr':
+        return {'fileName': 'piper-fr-mls.tar.gz', 'displayName': 'Piper TTS FR'};
+      default:
+        return {'fileName': 'piper-en-hfc-female.tar.gz', 'displayName': 'Piper TTS EN'};
     }
   }
 
@@ -219,10 +296,18 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       if (taskRecord.expectedFileSize >= 0) {
         item.fileSize = _formatBytes(taskRecord.expectedFileSize);
       } else {
-        final fileSize = await item.task!.expectedFileSize();
-        if (fileSize > 0) {
-          item.fileSize = _formatBytes(fileSize);
-        }
+        item.task!
+            .expectedFileSize()
+            // Not using await to avoid prolonging initialization time since this is not critical,
+            // also gracefully handles of errors
+            .then((fileSize) {
+              if (fileSize > 0) {
+                item.fileSize = _formatBytes(fileSize);
+              }
+            })
+            .catchError((e, s) {
+              log("Failed to get file size for ${item.fileName}", error: e, stackTrace: s);
+            });
       }
     }
   }
@@ -305,6 +390,9 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   Future<void> _downloadItem(DownloadItem item) async {
     try {
       log("Downloading ${item.url}");
+      setState(() {
+        isDownloading = true;
+      });
       // Enqueue the task (don't wait for completion)
       final success = await _downloader.enqueue(item.task!);
       if (!success) {
@@ -342,7 +430,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       isDownloading = true;
       currentDownloadIndex = _modelsToDownload.indexOf(item);
     });
-    await _downloader.resume(item.task!);
+    await _downloader.enqueue(item.task!);
   }
 
   Future<void> _startInitialization() async {
@@ -350,10 +438,10 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     // It is possible that we reach here even if download is not complete in the case
     // where the user open the app and there some canceled/failed downloads in DB, they won't
     // automatically retry. Some error types may be retried but not user cancelled downloads
-    if (isInitializing || isInitializationComplete || !downloadComplete) return;
+    if (isInitializingModels || isInitializationComplete || !downloadComplete) return;
 
     setState(() {
-      isInitializing = true;
+      isInitializingModels = true;
       modelLoadingProgress = 0.0;
     });
 
@@ -368,14 +456,18 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       final gemmaModelPath = await _modelsToDownload[1].downloadedFilePath;
       await ChatModel.loadBaseModel(gemmaModelPath);
 
-      // TODO: conditionally load TTS model based on user choice (premium vs lite)
-      final ttsModelPath = await _modelsToDownload[2].downloadedFilePath;
-      await PremiumTtsModel.initialize(modelPath: ttsModelPath);
+      // Load TTS model based on user choice
+      final voiceModelType = AppPreferences.getVoiceModelType();
+      String ttsModelPath;
+
+      ttsModelPath = await _modelsToDownload[3].downloadedFilePath; // Premium TTS model
+
+      await TtsModelFactory.initialize(type: voiceModelType, modelPath: ttsModelPath);
 
       final sttModelPath = await _modelsToDownload[0].downloadedFilePath;
-      await SttModel.initialize(modelPath: sttModelPath);
+      await SttModel.initialize(modelPath: sttModelPath, lang: currentLanguageCode);
 
-      final embeddingModelPath = await _modelsToDownload[3].downloadedFilePath;
+      final embeddingModelPath = await _modelsToDownload[2].downloadedFilePath;
       await EmbeddingModel.initialize(modelPath: embeddingModelPath);
 
       // Model loaded successfully, set to 100%
@@ -397,7 +489,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       // Handle error
       _progressTimer?.cancel();
       setState(() {
-        isInitializing = false;
+        isInitializingModels = false;
         modelLoadingProgress = 0.0;
       });
       if (mounted) {
@@ -452,81 +544,89 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     return Scaffold(
       appBar: AppBar(title: Text(LocaleKeys.ai_models_title.tr())),
       body: Center(
-        child: ListView(
-          shrinkWrap: true,
-          padding: EdgeInsets.only(
-            // Push centered content up a little
-            bottom: MediaQuery.sizeOf(context).height * 0.2,
-            left: 16,
-            right: 16,
-          ),
-          children: [
-            Row(
-              children: [
-                Text(LocaleKeys.ai_models_downloading.tr(), style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
-                if (_modelsToDownload.every((item) => item.isCompleted)) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.check, color: Colors.green, size: 22),
-                ],
-              ],
-            ),
-            Text(LocaleKeys.ai_models_download_description.tr(), style: theme.textTheme.bodySmall),
-            const SizedBox(height: 12),
-            for (final item in _modelsToDownload)
-              _DownloadItemWidget(
-                item: item,
-                onRetry: () => _retryDownload(item),
-                onPause: item.task != null ? () => _downloader.pause(item.task!) : null,
-                onResume: item.task != null ? () => _downloader.resume(item.task!) : null,
-              ),
-            const SizedBox(height: 42),
-            Text(LocaleKeys.ai_models_initializing.tr(), style: theme.textTheme.titleMedium?.copyWith(fontSize: 17)),
-            const SizedBox(height: 20),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 380),
-              child: Column(
+        child: isReady
+            ? ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.only(
+                  // Push centered content up a little
+                  bottom: MediaQuery.sizeOf(context).height * 0.2,
+                  left: 16,
+                  right: 16,
+                ),
                 children: [
                   Row(
                     children: [
-                      _buildInitializationIcon(),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
+                      Text(
+                        LocaleKeys.ai_models_downloading.tr(),
+                        style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
+                      ),
+                      if (_modelsToDownload.every((item) => item.isCompleted)) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.check, color: Colors.green, size: 22),
+                      ],
+                    ],
+                  ),
+                  Text(LocaleKeys.ai_models_download_description.tr(), style: theme.textTheme.bodySmall),
+                  const SizedBox(height: 12),
+                  for (final item in _modelsToDownload)
+                    _DownloadItemWidget(
+                      item: item,
+                      onRetry: () => _retryDownload(item),
+                      onPause: item.task != null ? () => _downloader.pause(item.task!) : null,
+                      onResume: item.task != null ? () => _downloader.resume(item.task!) : null,
+                    ),
+                  const SizedBox(height: 42),
+                  Text(
+                    LocaleKeys.ai_models_initializing.tr(),
+                    style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
+                  ),
+                  const SizedBox(height: 20),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 380),
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  LocaleKeys.ai_models_loading_model_weights.tr(),
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color: isInitializationComplete ? null : Colors.black54,
+                            _buildInitializationIcon(),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        LocaleKeys.ai_models_loading_model_weights.tr(),
+                                        style: theme.textTheme.labelLarge?.copyWith(
+                                          color: isInitializationComplete ? null : Colors.black54,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      if (isInitializingModels)
+                                        Text(
+                                          '${(modelLoadingProgress * 100).toStringAsFixed(0)}%',
+                                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                        ),
+                                    ],
                                   ),
-                                ),
-                                const Spacer(),
-                                if (isInitializing)
-                                  Text(
-                                    '${(modelLoadingProgress * 100).toStringAsFixed(0)}%',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                  const SizedBox(height: 2),
+                                  LinearProgressIndicator(
+                                    value: isInitializationComplete ? 1.0 : modelLoadingProgress,
+                                    backgroundColor: Colors.grey.shade300,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isInitializationComplete ? Colors.green : theme.colorScheme.primary,
+                                    ),
                                   ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            LinearProgressIndicator(
-                              value: isInitializationComplete ? 1.0 : modelLoadingProgress,
-                              backgroundColor: Colors.grey.shade300,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                isInitializationComplete ? Colors.green : theme.colorScheme.primary,
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
+              )
+            : CircularProgressIndicator.adaptive(),
       ),
     );
   }
@@ -538,7 +638,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       return CircularProgressIndicator.adaptive(
         constraints: const BoxConstraints.tightFor(width: 18, height: 18),
         strokeWidth: 3,
-        valueColor: isInitializing ? null : AlwaysStoppedAnimation<Color>(Colors.grey.shade300),
+        valueColor: isInitializingModels ? null : AlwaysStoppedAnimation<Color>(Colors.grey.shade300),
       );
     }
   }

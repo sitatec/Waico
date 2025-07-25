@@ -120,7 +120,19 @@
     "download_failed": "Download Failed",
     "download_canceled": "Download Canceled",
     "download_paused": "Download Paused",
-    "failed_enqueue": "Failed to enqueue download"
+    "failed_enqueue": "Failed to enqueue download",
+    "voice_model_selection": {
+      "title": "Choose Voice Quality",
+      "description": "Select the voice model that best fits your device's performance:",
+      "premium_title": "Premium Voices",
+      "premium_description": "Near-human quality with natural speech patterns.",
+      "premium_performance": "May have small delays on devices like Samsung S21 Ultra and below (varies based on device performance)",
+      "lite_title": "Lite Voices", 
+      "lite_description": "Faster response with slightly robotic quality.",
+      "lite_performance": "Recommended for Samsung S21 Ultra and lower-end devices for an optimal experience.",
+      "continue": "Continue",
+      "recommendation": "Recommended for your device"
+    }
   },
   "health": {
     "dashboard_title": "Today's Health Overview",

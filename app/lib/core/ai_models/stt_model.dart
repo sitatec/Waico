@@ -22,7 +22,7 @@ class SttModel {
       throw StateError("Model not initialized. Call SttModel.initialize first");
     }
   }
-  static Future<void> initialize({required String modelPath}) async {
+  static Future<void> initialize({required String modelPath, String lang = 'en'}) async {
     if (_isolate != null) {
       log("SttModel Already initialized, Skipping.");
       return;
@@ -62,7 +62,7 @@ class SttModel {
     final initRequestId = _requestCounter++;
     _pendingRequests[initRequestId] = initCompleter;
 
-    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath});
+    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath, 'lang': lang});
 
     await initCompleter.future;
     log("Stt model initialized successfully");
@@ -124,11 +124,12 @@ class SttModel {
                 if (!await decoderFile.exists()) throw Exception("decoder.onnx not found in $modelDirPath");
                 if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
 
+                final lang = message['lang'] as String? ?? 'en';
                 final canaryConfig = OfflineCanaryModelConfig(
                   encoder: encoderFile.path,
                   decoder: decoderFile.path,
-                  srcLang: 'en',
-                  tgtLang: 'en',
+                  srcLang: lang,
+                  tgtLang: lang,
                   usePnc: false,
                 );
 

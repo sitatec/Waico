@@ -40,10 +40,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     if (state == AppLifecycleState.detached) {
       log("App closing detected, disposing Models");
       ChatModel.unloadBaseModel();
-      // Only one of the TTS model need to be disposed, but we can call dispose unconditionally.
-      // It will gracefully handle the case where the model is not initialized.
-      PremiumTtsModel.dispose();
-      LiteTtsModel.dispose();
+      // Dispose TTS models using the factory
+      TtsModelFactory.dispose();
       SttModel.dispose();
     }
   }
@@ -61,7 +59,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
         appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),
       ),
-      home: true
+      home: false
           ? HomePage()
           : Builder(
               // Using a Builder to ensure we get the correct context from material app for navigation

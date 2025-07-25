@@ -111,6 +111,17 @@ abstract class  LocaleKeys {
   static const ai_models_download_canceled = 'ai_models.download_canceled';
   static const ai_models_download_paused = 'ai_models.download_paused';
   static const ai_models_failed_enqueue = 'ai_models.failed_enqueue';
+  static const ai_models_voice_model_selection_title = 'ai_models.voice_model_selection.title';
+  static const ai_models_voice_model_selection_description = 'ai_models.voice_model_selection.description';
+  static const ai_models_voice_model_selection_premium_title = 'ai_models.voice_model_selection.premium_title';
+  static const ai_models_voice_model_selection_premium_description = 'ai_models.voice_model_selection.premium_description';
+  static const ai_models_voice_model_selection_premium_performance = 'ai_models.voice_model_selection.premium_performance';
+  static const ai_models_voice_model_selection_lite_title = 'ai_models.voice_model_selection.lite_title';
+  static const ai_models_voice_model_selection_lite_description = 'ai_models.voice_model_selection.lite_description';
+  static const ai_models_voice_model_selection_lite_performance = 'ai_models.voice_model_selection.lite_performance';
+  static const ai_models_voice_model_selection_continue = 'ai_models.voice_model_selection.continue';
+  static const ai_models_voice_model_selection_recommendation = 'ai_models.voice_model_selection.recommendation';
+  static const ai_models_voice_model_selection = 'ai_models.voice_model_selection';
   static const ai_models = 'ai_models';
   static const health_dashboard_title = 'health.dashboard_title';
   static const health_refresh_tooltip = 'health.refresh_tooltip';

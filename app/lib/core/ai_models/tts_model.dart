@@ -10,7 +10,7 @@ import 'package:sherpa_onnx/sherpa_onnx.dart';
 import 'package:waico/core/utils/model_download_utils.dart';
 
 abstract class TtsModel {
-  Future<TtsResult> generateSpeech({required String text, required String voice, double speed = 1.0});
+  Future<TtsResult> generateSpeech({required String text, String? voice, double speed = 1.0});
 }
 
 // Premium TTS models sound natural, near human quality, but slow on most devices. Currently using Kokoro v1.0
@@ -93,16 +93,25 @@ class PremiumTtsModel implements TtsModel {
 
   /// Generate audio from text
   @override
-  Future<TtsResult> generateSpeech({required String text, required String voice, double speed = 1.0}) async {
+  Future<TtsResult> generateSpeech({required String text, String? voice, double speed = 1.0}) async {
     if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call TtsModel.initialize first");
     }
+
+    // Premium models require a voice to be specified
+    final selectedVoice = voice ?? 'af_alloy'; // Default voice if none provided
 
     final completer = Completer<TtsResult>();
     final requestId = _requestCounter++;
     _pendingRequests[requestId] = completer;
 
-    _sendPort!.send({'action': 'generate', 'requestId': requestId, 'text': text, 'voice': voice, 'speed': speed});
+    _sendPort!.send({
+      'action': 'generate',
+      'requestId': requestId,
+      'text': text,
+      'voice': selectedVoice,
+      'speed': speed,
+    });
 
     return completer.future;
   }
@@ -299,8 +308,8 @@ class LiteTtsModel implements TtsModel {
   @override
   Future<TtsResult> generateSpeech({
     required String text,
+    String? voice, // Not used in lite models, they have single voice
     double speed = 1.0,
-    String voice = 'not_supported_for_lite_models',
   }) async {
     if (_isolate == null || _sendPort == null) {
       throw StateError("Model not initialized. Call LiteTtsModel.initialize first");
@@ -529,3 +538,54 @@ final Map<String, int> _premiumVoiceToSpeakerId = {
   'zm_yunxia': 51,
   'zm_yunyang': 52,
 };
+
+enum VoiceModelType { premium, lite }
+
+/// Factory for creating and managing TTS models
+class TtsModelFactory {
+  static TtsModel? _currentModel;
+  static VoiceModelType? _currentType;
+
+  /// Initialize TTS model based on type
+  static Future<void> initialize({required VoiceModelType type, required String modelPath}) async {
+    if (_currentModel != null) {
+      log("TtsModel Already initialized, Skipping. If you want to reset/reinitialize the model, call dispose first");
+      return;
+    }
+
+    _currentType = type;
+
+    switch (type) {
+      case VoiceModelType.premium:
+        await PremiumTtsModel.initialize(modelPath: modelPath);
+        _currentModel = PremiumTtsModel();
+        break;
+      case VoiceModelType.lite:
+        await LiteTtsModel.initialize(modelPath: modelPath);
+        _currentModel = LiteTtsModel();
+        break;
+    }
+  }
+
+  /// Get the current TTS model instance
+  static TtsModel get instance {
+    if (_currentModel == null) {
+      throw StateError('TTS model not initialized. Call TtsModelFactory.initialize() first.');
+    }
+    return _currentModel!;
+  }
+
+  /// Dispose the current TTS model
+  static Future<void> dispose() async {
+    if (_currentType == VoiceModelType.premium) {
+      await PremiumTtsModel.dispose();
+    } else if (_currentType == VoiceModelType.lite) {
+      await LiteTtsModel.dispose();
+    }
+    _currentModel = null;
+    _currentType = null;
+  }
+
+  /// Get current model type
+  static VoiceModelType? get currentType => _currentType;
+}
