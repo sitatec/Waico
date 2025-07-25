@@ -47,11 +47,13 @@ class PoseUtilities {
     final leftVisibility =
         landmarks[PoseLandmarkType.leftShoulder].visibility +
         landmarks[PoseLandmarkType.leftHip].visibility +
-        landmarks[PoseLandmarkType.leftKnee].visibility;
+        landmarks[PoseLandmarkType.leftKnee].visibility +
+        landmarks[PoseLandmarkType.leftAnkle].visibility;
     final rightVisibility =
         landmarks[PoseLandmarkType.rightShoulder].visibility +
         landmarks[PoseLandmarkType.rightHip].visibility +
-        landmarks[PoseLandmarkType.rightKnee].visibility;
+        landmarks[PoseLandmarkType.rightKnee].visibility +
+        landmarks[PoseLandmarkType.rightAnkle].visibility;
     return leftVisibility >= rightVisibility;
   }
 }
