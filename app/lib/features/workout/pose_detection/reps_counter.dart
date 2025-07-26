@@ -44,7 +44,9 @@ enum RepQuality {
 class RepetitionData {
   final int repNumber;
   final DateTime timestamp;
-  final double duration; // Duration in milliseconds
+
+  /// Duration of the rep in milliseconds
+  final double duration;
   final RepQuality quality;
   final double confidence;
   final double formScore;
@@ -64,7 +66,7 @@ class RepetitionData {
     return {
       'repNumber': repNumber,
       'timestamp': timestamp.millisecondsSinceEpoch,
-      'duration': duration,
+      'duration': '${duration / 1000} seconds',
       'quality': quality.toString(),
       'averageConfidence': confidence,
       'formScore': formScore,
@@ -79,15 +81,8 @@ class RepCountingState {
   final ExerciseState currentState;
   final RepetitionData? lastRep;
   final List<RepetitionData> allReps;
-  final RepQuality averageQuality;
 
-  const RepCountingState({
-    required this.totalReps,
-    required this.currentState,
-    this.lastRep,
-    required this.allReps,
-    required this.averageQuality,
-  });
+  const RepCountingState({required this.totalReps, required this.currentState, this.lastRep, required this.allReps});
 
   Map<String, dynamic> get statistics {
     return {
@@ -97,7 +92,22 @@ class RepCountingState {
       'averageRepDuration': _getAverageRepDuration(),
       'bestRep': _getBestRep()?.toMap(),
       'worstRep': _getWorstRep()?.toMap(),
+      'averageQuality': averageQuality.toString(),
     };
+  }
+
+  /// Get average quality from all completed repetitions
+  RepQuality get averageQuality {
+    if (allReps.isEmpty) return RepQuality.fair;
+
+    final qualityScores = allReps.map((rep) => rep.quality.score).toList();
+
+    final average = qualityScores.reduce((a, b) => a + b) / qualityScores.length;
+
+    if (average >= 3.5) return RepQuality.excellent;
+    if (average >= 2.5) return RepQuality.good;
+    if (average >= 1.5) return RepQuality.fair;
+    return RepQuality.poor;
   }
 
   /// Get average form score across all reps
@@ -174,7 +184,6 @@ class RepsCounter {
     currentState: _currentState,
     lastRep: _repetitions.isNotEmpty ? _repetitions.last : null,
     allReps: List.unmodifiable(_repetitions),
-    averageQuality: _getAverageQuality(),
   );
 
   /// Process new pose detection results
@@ -304,20 +313,6 @@ class RepsCounter {
     if (combinedScore >= 0.9) return RepQuality.excellent;
     if (combinedScore >= 0.75) return RepQuality.good;
     if (combinedScore >= 0.6) return RepQuality.fair;
-    return RepQuality.poor;
-  }
-
-  /// Get average quality from all completed repetitions
-  RepQuality _getAverageQuality() {
-    if (_repetitions.isEmpty) return RepQuality.fair;
-
-    final qualityScores = _repetitions.map((rep) => rep.quality.score).toList();
-
-    final average = qualityScores.reduce((a, b) => a + b) / qualityScores.length;
-
-    if (average >= 3.5) return RepQuality.excellent;
-    if (average >= 2.5) return RepQuality.good;
-    if (average >= 1.5) return RepQuality.fair;
     return RepQuality.poor;
   }
 

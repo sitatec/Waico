@@ -15,7 +15,7 @@ class WorkoutSessionManager {
   final WorkoutSession session;
   final UserRepository userRepository;
   WorkoutProgress progress = WorkoutProgress.empty();
-  final VoiceChatPipeline voiceChatPipeline; // Private state
+  final VoiceChatPipeline voiceChatPipeline;
   int _currentExerciseIndex = 0;
   RepsCounter? _repsCounter;
   final int workoutWeek;
@@ -26,9 +26,13 @@ class WorkoutSessionManager {
   StreamSubscription<PoseDetectionResult>? _poseDetectionSubscription;
   bool _isPoseDetectionActive = false;
 
+  // Rep counting management
+  StreamSubscription<RepetitionData>? _repStreamSubscription;
+  final List<RepetitionData> _cachedReps = [];
+  int? _lastExcellentRepSent;
+
   // Stream controllers for state updates
   final StreamController<int> _exerciseIndexController = StreamController<int>.broadcast();
-  final StreamController<Exercise> _currentExerciseController = StreamController<Exercise>.broadcast();
 
   WorkoutSessionManager({
     required this.session,
@@ -51,9 +55,6 @@ class WorkoutSessionManager {
 
   /// Stream of current exercise index changes
   Stream<int> get exerciseIndexStream => _exerciseIndexController.stream;
-
-  /// Stream of current exercise changes
-  Stream<Exercise> get currentExerciseStream => _currentExerciseController.stream;
 
   /// Current rep counter (null if current exercise doesn't support rep counting)
   RepsCounter? get repsCounter => _repsCounter;
@@ -87,13 +88,13 @@ class WorkoutSessionManager {
         break;
       }
     }
-    _updateRepsCounter();
+    _resetState();
     _emitCurrentExercise();
   }
 
   /// Start the current exercise
   Future<void> startCurrentExercise() async {
-    _updateRepsCounter();
+    _resetState();
     _emitCurrentExercise();
     await _startPoseDetection();
   }
@@ -103,7 +104,7 @@ class WorkoutSessionManager {
     if (hasNextExercise) {
       await _stopPoseDetection();
       _currentExerciseIndex++;
-      _updateRepsCounter();
+      _resetState();
       _emitCurrentExercise();
       await _startPoseDetection();
     }
@@ -114,7 +115,7 @@ class WorkoutSessionManager {
     if (hasPreviousExercise) {
       await _stopPoseDetection();
       _currentExerciseIndex--;
-      _updateRepsCounter();
+      _resetState();
       _emitCurrentExercise();
       await _startPoseDetection();
     }
@@ -141,16 +142,28 @@ class WorkoutSessionManager {
     if (index >= 0 && index < session.exercises.length) {
       await _stopPoseDetection();
       _currentExerciseIndex = index;
-      _updateRepsCounter();
+      _resetState();
       _emitCurrentExercise();
       await _startPoseDetection();
     }
   }
 
-  /// Create appropriate rep counter based on exercise name
-  void _updateRepsCounter() {
+  void _resetState() {
+    // Dispose previous rep counter and subscription
+    _repStreamSubscription?.cancel();
     _repsCounter?.dispose();
+
+    // Clear cached data for new exercise
+    _cachedReps.clear();
+    _lastExcellentRepSent = null;
+
+    // Create new rep counter
     _repsCounter = _createRepsCounter(currentExercise);
+
+    // Listen to rep stream if rep counter exists
+    if (_repsCounter != null) {
+      _repStreamSubscription = _repsCounter!.repStream.listen(_handleRepetitionData);
+    }
   }
 
   /// Create rep counter for the given exercise
@@ -218,7 +231,6 @@ class WorkoutSessionManager {
   /// Emit current exercise change
   void _emitCurrentExercise() {
     _exerciseIndexController.add(_currentExerciseIndex);
-    _currentExerciseController.add(currentExercise);
   }
 
   /// Start pose detection and connect it to the reps counter
@@ -251,15 +263,15 @@ class WorkoutSessionManager {
 
   /// Stop pose detection
   Future<void> _stopPoseDetection() async {
-    if (!_isPoseDetectionActive) {
-      return; // Already stopped
-    }
-
-    _isPoseDetectionActive = false;
-    await _poseDetectionSubscription?.cancel();
-    _poseDetectionSubscription = null;
-
     try {
+      if (!_isPoseDetectionActive) {
+        return; // Already stopped
+      }
+
+      _isPoseDetectionActive = false;
+      await _poseDetectionSubscription?.cancel();
+      _poseDetectionSubscription = null;
+
       await _poseDetectionService.stop();
     } catch (e, s) {
       log('Error stopping pose detection', error: e, stackTrace: s);
@@ -267,11 +279,88 @@ class WorkoutSessionManager {
     }
   }
 
+  /// Handle new repetition data from the rep counter
+  Future<void> _handleRepetitionData(RepetitionData repData) async {
+    // Add rep to cache and maintain max size of 15
+    _cachedReps.add(repData);
+    if (_cachedReps.length > 15) {
+      _cachedReps.removeAt(0); // Remove oldest rep
+    }
+
+    final hasFeedbackMessage = repData.formMetrics.values.any((value) => value is Map && value.containsKey('message'));
+
+    if (hasFeedbackMessage) {
+      await _sendRepDataToAI(repData, isFormFeedback: true);
+    } else if (repData.formScore > 9.0) {
+      // Check if we should send excellent form feedback (at least 3 reps since last excellent feedback)
+      final shouldSendExcellentFeedback =
+          _lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 3;
+
+      if (shouldSendExcellentFeedback) {
+        final success = await _sendRepDataToAI(repData, isFormFeedback: false);
+        if (success) {
+          _lastExcellentRepSent = repData.repNumber;
+        }
+      } else {
+        // Just count out loud for excellent reps that don't need AI feedback
+        await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
+      }
+    } else {
+      // Regular rep - just count out loud
+      await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
+    }
+  }
+
+  /// Send repetition data along with cached reps to the AI Agent
+  /// Returns true if successfully sent, false if pipeline was busy
+  Future<bool> _sendRepDataToAI(RepetitionData currentRep, {required bool isFormFeedback}) async {
+    final repsToSend = _cachedReps.sublist(
+      // Send last 5 reps from cache
+      _cachedReps.length > 5 ? _cachedReps.length - 5 : 0,
+    );
+
+    // Add current rep if not already in the list
+    if (!repsToSend.any((rep) => rep.repNumber == currentRep.repNumber)) {
+      repsToSend.add(currentRep);
+    }
+
+    // Prepare the message for AI Agent
+    final exerciseName = currentExercise.name;
+    final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
+
+    final message =
+        '''Exercise: $exerciseName
+Feedback Type: $feedbackType
+
+Recent Repetitions Data:
+${repsToSend.map((rep) => 'Rep ${rep.repNumber}: Score ${rep.formScore}, Quality: ${rep.quality.name}, Duration: ${rep.duration / 1000} seconds').join('\n')}
+
+Current Rep Analysis:
+- Rep Number: ${currentRep.repNumber}
+- Form Score: ${currentRep.formScore}
+- Quality: ${currentRep.quality}${isFormFeedback ? '''
+- Duration: ${currentRep.duration / 1000} seconds
+- Form Feedback: 
+    ${currentRep.formMetrics.entries.where((entry) => entry.value is Map && entry.value.containsKey('message')).map((entry) => '${entry.key}: ${entry.value['message']}').join('\n    ')}
+''' : ''}
+''';
+
+    // Send to AI Agent
+    final success = await voiceChatPipeline.addSystemMessage(message);
+
+    if (success) {
+      // Remove sent reps from cache
+      _cachedReps.removeWhere((rep) => repsToSend.any((sent) => sent.repNumber == rep.repNumber));
+    }
+
+    return success;
+  }
+
   /// Dispose of resources
   Future<void> dispose() async {
     await _stopPoseDetection();
+    await _repStreamSubscription?.cancel();
     _repsCounter?.dispose();
     await _exerciseIndexController.close();
-    await _currentExerciseController.close();
   }
 }
