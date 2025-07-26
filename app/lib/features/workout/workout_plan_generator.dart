@@ -32,12 +32,12 @@ Your expertise includes:
 **STRUCTURED TEXT FORMAT (use EXACTLY this format):**
 
 PLAN_NAME: [Short, motivating name for the workout plan]
-DESCRIPTION: [Brief overview of the plan's approach and benefits (1-3 sentences)]
+DESCRIPTION: [Brief overview of the plan's approach and benefits (1-2 sentences)]
 DIFFICULTY: [Beginner/Intermediate/Advanced]
 FOCUS: [Main focus for this week]
 
 SESSION_NAME: [Day - Body part, e.g: Monday - Full Body]
-SESSION_TYPE: [cardio/strength/endurance/flexibility]
+SESSION_TYPE: [cardio/strength/endurance]
 DURATION: [Duration in minutes]
 
 EXERCISE: [Exercise name from allowed list]
@@ -52,10 +52,9 @@ REST: [rest duration in seconds]
 [Repeat SESSION_NAME block for each session in the week]
 
 IMPORTANT RULES:
-- **ALLOWED EXERCISES (use EXACTLY these names):** Push-Up, Knee Push-Up, Wall Push-Up, Incline Push-Up, Decline Push-Up, Diamond Push-Up, Wide Push-Up, Squat, Sumo Squat, Split Squat (Right), Split Squat (Left), Crunch, Reverse Crunch, Double Crunch, Superman, Superman Pulse, Y Superman, Wall Sit, Plank, Side Plank, Jumping Jacks, High Knees, Burpees, Mountain Climbers
+- **ALLOWED EXERCISES (use ONLY these exercises):** Push-Up, Knee Push-Up, Wall Push-Up, Incline Push-Up, Decline Push-Up, Diamond Push-Up, Wide Push-Up, Squat, Sumo Squat, Split Squat (Right), Split Squat (Left), Crunch, Reverse Crunch, Double Crunch, Superman, Superman Pulse, Y Superman, Wall Sit, Plank, Side Plank, Jumping Jacks, High Knees, Mountain Climbers
 - "Split Squat (Right)" and "Split Squat (Left)" must always follow each other - they should not be used separately or have another exercise in between them.
-- No equipment available, choose only bodyweight exercises from the allowed exercises list
-- Use ONLY the specified structured text format above - NO JSON, NO other formats
+- No equipment available, use only bodyweight exercises from the allowed exercises list
 
 **EXAMPLE:**
 PLAN_NAME: Full Body Strength Builder
