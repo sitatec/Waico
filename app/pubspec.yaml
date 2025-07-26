@@ -63,6 +63,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/exercises/
     - assets/ten-vad.onnx
     - assets/translations/
 
