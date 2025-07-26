@@ -358,10 +358,9 @@ class LiteTtsModel implements TtsModel {
 
                 // Create VITS model configuration for Lite TTS
                 final vits = OfflineTtsVitsModelConfig(
-                  model: modelPath,
+                  model: modelFile.path,
                   tokens: tokensFile.path,
                   dataDir: espeakDataDir.path,
-                  lengthScale: 1.0, // Will be adjusted per request based on speed
                 );
 
                 final modelConfig = OfflineTtsModelConfig(
@@ -372,7 +371,7 @@ class LiteTtsModel implements TtsModel {
                   debug: kDebugMode,
                 );
 
-                final config = OfflineTtsConfig(model: modelConfig, maxNumSenetences: 1);
+                final config = OfflineTtsConfig(model: modelConfig);
 
                 tts = OfflineTts(config);
 

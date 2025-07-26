@@ -78,7 +78,6 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
   Timer? _progressTimer;
   final _downloader = FileDownloader();
   bool _hasShownDevicePerfSelection = false;
-  late final currentLanguageCode = context.locale.languageCode;
 
   @override
   void initState() {
@@ -142,9 +141,9 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
     _modelsToDownload = [
       DownloadItem(
-        url: "${DownloadItem.baseUrl}/canary-180m-flash.tar.gz",
-        fileName: "canary-180m-flash.tar.gz",
-        displayName: "Canary Flash",
+        url: "${DownloadItem.baseUrl}/nemo-fast-conformer-ctc-en-de-es-fr-14288.tar.gz",
+        fileName: "nemo-fast-conformer-ctc-en-de-es-fr-14288.tar.gz",
+        displayName: "Nemo STT",
       ),
       DownloadItem(
         url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
@@ -169,7 +168,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       );
     } else {
       // Add lite TTS model based on current language
-      final liteModelData = _getLiteTtsModelForLanguage(currentLanguageCode);
+      final liteModelData = _getLiteTtsModelForLanguage(context.locale.languageCode);
       _modelsToDownload.add(
         DownloadItem(
           url: "${DownloadItem.baseUrl}/${liteModelData['fileName']!}",
@@ -465,7 +464,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       await TtsModelFactory.initialize(type: voiceModelType, modelPath: ttsModelPath);
 
       final sttModelPath = await _modelsToDownload[0].downloadedFilePath;
-      await SttModel.initialize(modelPath: sttModelPath, lang: currentLanguageCode);
+      await SttModel.initialize(modelPath: sttModelPath);
 
       final embeddingModelPath = await _modelsToDownload[2].downloadedFilePath;
       await EmbeddingModel.initialize(modelPath: embeddingModelPath);

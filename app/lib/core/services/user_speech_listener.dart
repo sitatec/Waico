@@ -19,7 +19,7 @@ class UserSpeechListener {
     int sampleRate = 16_000,
     double minSilenceDuration = 0.6,
     double minSpeechDuration = 0.2,
-    int windowFrameCount = 512,
+    int windowFrameCount = 256,
     int numThreads = 1,
     AudioRecorder? audioRecorder,
   }) {
@@ -68,7 +68,7 @@ class UserSpeechListener {
     this.sampleRate = 16_000,
     this.minSilenceDuration = 0.6,
     this.minSpeechDuration = 0.2,
-    this.windowFrameCount = 512,
+    this.windowFrameCount = 256,
     this.numThreads = 1,
     AudioRecorder? audioRecorder,
   }) : _audioRecorder = audioRecorder ?? AudioRecorder();
@@ -85,22 +85,16 @@ class UserSpeechListener {
     }
 
     try {
-      final sileroVadConfig = SileroVadModelConfig(
+      final tenVad = TenVadModelConfig(
         model: vadModelPath ?? await _loadVadModelFromAssets(),
         minSilenceDuration: minSilenceDuration,
         minSpeechDuration: minSpeechDuration,
         windowSize: windowFrameCount,
-        maxSpeechDuration: 60,
       );
 
-      final config = VadModelConfig(
-        sileroVad: sileroVadConfig,
-        numThreads: numThreads,
-        debug: kDebugMode,
-        sampleRate: sampleRate,
-      );
+      final config = VadModelConfig(tenVad: tenVad, numThreads: numThreads, debug: kDebugMode, sampleRate: sampleRate);
 
-      _vad = VoiceActivityDetector(config: config, bufferSizeInSeconds: sileroVadConfig.maxSpeechDuration);
+      _vad = VoiceActivityDetector(config: config, bufferSizeInSeconds: tenVad.maxSpeechDuration);
 
       _isInitialized = true;
     } catch (e, s) {
@@ -111,11 +105,12 @@ class UserSpeechListener {
 
   Future<String> _loadVadModelFromAssets() async {
     final dir = await getApplicationDocumentsDirectory();
-    final modelFile = File('${dir.path}/silero_vad_v5.onnx');
+    final modelName = 'ten-vad.onnx';
+    final modelFile = File('${dir.path}/$modelName');
 
     if (!await modelFile.exists()) {
       // First app open or model was removed from app doc dir.
-      final byteData = await rootBundle.load('assets/silero_vad_v5.onnx');
+      final byteData = await rootBundle.load('assets/$modelName');
       await modelFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
     }
 
@@ -213,7 +208,7 @@ class UserSpeechListener {
   }
 }
 
-/// Internal class that combines UserSpeechListener and SttModel for real-time speech-to-text transcription.
+/// A class that combines UserSpeechListener and SttModel for real-time speech-to-text transcription.
 /// This class listens to speech from UserSpeechListener and transcribes it using SttModel,
 /// outputting the transcribed text in a stream whenever the user finishes speaking.
 ///

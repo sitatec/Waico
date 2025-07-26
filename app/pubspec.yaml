@@ -20,7 +20,7 @@ dependencies:
   just_audio: ^0.10.4
   audio_session: ^0.2.2
   provider: ^6.1.5
-  sherpa_onnx: ^1.12.5
+  sherpa_onnx: ^1.12.6
   archive: ^4.0.7
   record: ^6.0.0
   path_provider: ^2.1.5
@@ -63,7 +63,7 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/silero_vad_v5.onnx
+    - assets/ten-vad.onnx
     - assets/translations/
 
 

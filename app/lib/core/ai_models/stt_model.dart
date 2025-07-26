@@ -22,7 +22,7 @@ class SttModel {
       throw StateError("Model not initialized. Call SttModel.initialize first");
     }
   }
-  static Future<void> initialize({required String modelPath, String lang = 'en'}) async {
+  static Future<void> initialize({required String modelPath}) async {
     if (_isolate != null) {
       log("SttModel Already initialized, Skipping.");
       return;
@@ -62,7 +62,7 @@ class SttModel {
     final initRequestId = _requestCounter++;
     _pendingRequests[initRequestId] = initCompleter;
 
-    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath, 'lang': lang});
+    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath});
 
     await initCompleter.future;
     log("Stt model initialized successfully");
@@ -116,25 +116,16 @@ class SttModel {
                 final modelPath = message['modelPath'] as String;
                 modelDirPath = await extractModelData(modelPath);
 
-                final encoderFile = File('$modelDirPath/encoder.onnx');
-                final decoderFile = File('$modelDirPath/decoder.onnx');
+                final encoderFile = File('$modelDirPath/model.onnx');
                 final tokensFile = File('$modelDirPath/tokens.txt');
 
-                if (!await encoderFile.exists()) throw Exception("encoder.onnx not found in $modelDirPath");
-                if (!await decoderFile.exists()) throw Exception("decoder.onnx not found in $modelDirPath");
+                if (!await encoderFile.exists()) throw Exception("model.onnx not found in $modelDirPath");
                 if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
 
-                final lang = message['lang'] as String? ?? 'en';
-                final canaryConfig = OfflineCanaryModelConfig(
-                  encoder: encoderFile.path,
-                  decoder: decoderFile.path,
-                  srcLang: lang,
-                  tgtLang: lang,
-                  usePnc: false,
-                );
+                final canaryConfig = OfflineNemoEncDecCtcModelConfig(model: encoderFile.path);
 
                 final modelConfig = OfflineModelConfig(
-                  canary: canaryConfig,
+                  nemoCtc: canaryConfig,
                   tokens: tokensFile.path,
                   debug: kDebugMode,
                   // If device have more than 4 cores, use 4 threads, otherwise use all the cores
