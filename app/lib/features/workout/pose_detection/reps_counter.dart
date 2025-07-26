@@ -48,7 +48,7 @@ class RepetitionData {
   final RepQuality quality;
   final double confidence;
   final double formScore;
-  final Map<String, double> formMetrics;
+  final Map<String, dynamic> formMetrics;
 
   const RepetitionData({
     required this.repNumber,

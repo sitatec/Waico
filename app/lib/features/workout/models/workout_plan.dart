@@ -163,8 +163,17 @@ class Exercise {
   final List<String> targetMuscles;
   final ExerciseLoad load;
   final int restDuration; // in seconds
+  final String? image; // Path to exercise demonstration image/gif
+  final String? instruction; // Exercise instruction text
 
-  const Exercise({required this.name, required this.targetMuscles, required this.load, required this.restDuration});
+  const Exercise({
+    required this.name,
+    required this.targetMuscles,
+    required this.load,
+    required this.restDuration,
+    this.image,
+    this.instruction,
+  });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
     return Exercise(
@@ -172,11 +181,20 @@ class Exercise {
       targetMuscles: List<String>.from(json['targetMuscles'] as List),
       load: ExerciseLoad.fromJson(json['load'] as Map<String, dynamic>),
       restDuration: json['restDuration'] as int,
+      image: json['image'] as String?,
+      instruction: json['instruction'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'name': name, 'targetMuscles': targetMuscles, 'load': load.toJson(), 'restDuration': restDuration};
+    return {
+      'name': name,
+      'targetMuscles': targetMuscles,
+      'load': load.toJson(),
+      'restDuration': restDuration,
+      'image': image,
+      'instruction': instruction,
+    };
   }
 
   @override
@@ -187,12 +205,19 @@ class Exercise {
         other.name == name &&
         other.targetMuscles == targetMuscles &&
         other.load == load &&
-        other.restDuration == restDuration;
+        other.restDuration == restDuration &&
+        other.image == image &&
+        other.instruction == instruction;
   }
 
   @override
   int get hashCode {
-    return name.hashCode ^ targetMuscles.hashCode ^ load.hashCode ^ restDuration.hashCode;
+    return name.hashCode ^
+        targetMuscles.hashCode ^
+        load.hashCode ^
+        restDuration.hashCode ^
+        image.hashCode ^
+        instruction.hashCode;
   }
 }
 

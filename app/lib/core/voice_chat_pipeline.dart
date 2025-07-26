@@ -19,11 +19,16 @@ class VoiceChatPipeline {
   final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _userSpeechStreamSubscription;
   bool _hasChatEnded = false;
+  bool _isBusy = false;
   // Used wait until the current TTS task complete before starting the next one.
   final _asyncLock = Lock();
 
   /// Can be used to animate the AI speech waves widget (value range 0-1)
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
+
+  /// `true` if the pipeline is currently busy (typically when processing a message from use or system).
+  /// This can be used to prevent conflicts, or overload the AI agent with many messages, and in an unordered manner.
+  bool get isBusy => _isBusy;
 
   VoiceChatPipeline({
     required this.agent,
@@ -41,22 +46,44 @@ class VoiceChatPipeline {
     this.voice = voice;
     _hasChatEnded = false;
     await _userSpeechToTextListener.initialize();
-    _userSpeechStreamSubscription = _userSpeechToTextListener.listen(_onUserSpeechTranscribed);
-    _startListeningToUser();
+    _userSpeechStreamSubscription = _userSpeechToTextListener.listen(_onMessageReceived);
+    startListeningToUser();
+  }
+
+  /// Sends a system message to the AI agent. This is not the same as a system prompt
+  /// It is just a message from the system/app to the AI agent.
+  ///
+  /// Returns `true` if the message was successfully added, `false` if nor (chat has ended or the pipeline is busy)
+  Future<bool> addSystemMessage(String message) async {
+    if (_hasChatEnded || isBusy) return false;
+
+    _onMessageReceived(message);
+    return true;
+  }
+
+  /// Adds a system speech to the chat. For now it just generates the speech and plays it.
+  /// This is not sent to the AI agent.
+  ///
+  /// Returns `true` if the speech was successfully added, `false` if not (chat has ended or the pipeline is busy)
+  Future<bool> addSystemSpeech(String text) async {
+    if (_hasChatEnded || isBusy) return false;
+
+    await _generateSpeech(text);
+    return true;
   }
 
   Future<void> endChat() async {
     if (_hasChatEnded) return;
     _hasChatEnded = true;
+    await stopListeningToUser();
     await _userSpeechStreamSubscription?.cancel();
-    await _audioStreamPlayer.stop();
   }
 
-  Future<void> _onUserSpeechTranscribed(String text) async {
+  Future<void> _onMessageReceived(String text) async {
     // TODO: Check for interruption and notify the user that interruption is not supported yet, they need to wait for
     // the ai speech to finish
-
-    _stopListeningToUser(); // Stop listening to the user since interruption is not supported yet.
+    if (_hasChatEnded) return;
+    _enterBusyState();
 
     final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
     _pendingImages.clear();
@@ -98,7 +125,7 @@ class VoiceChatPipeline {
       await _generateSpeech(sentenceBuffer, isLastInCurrentTurn: true);
     } else {
       // Use _asyncLock to make sure we start listening to the user after the last tts task is complete.
-      await _asyncLock.synchronized(() => _audioStreamPlayer.appendCallback(_startListeningToUser));
+      await _asyncLock.synchronized(() => _audioStreamPlayer.appendCallback(_exitBusyState));
     }
   }
 
@@ -106,16 +133,24 @@ class VoiceChatPipeline {
     _pendingImages.addAll(imageFiles);
   }
 
-  /// TODO: Remove when interruption support added.
-  Future<void> _startListeningToUser() async {
+  Future<void> startListeningToUser() async {
     await _audioStreamPlayer.pause();
     await _userSpeechToTextListener.resume();
   }
 
-  /// TODO: Remove when interruption support added.
-  Future<void> _stopListeningToUser() async {
+  Future<void> stopListeningToUser() async {
     await _userSpeechToTextListener.pause();
     await _audioStreamPlayer.resume();
+  }
+
+  Future<void> _enterBusyState() async {
+    _isBusy = true;
+    await stopListeningToUser(); // Stop listening to the user since interruption is not supported yet.
+  }
+
+  Future<void> _exitBusyState() async {
+    _isBusy = false;
+    await startListeningToUser(); // Start listening again when the last AI speech is done.
   }
 
   /// Generate and queue TTS audio
@@ -128,8 +163,7 @@ class VoiceChatPipeline {
     });
 
     if (isLastInCurrentTurn) {
-      // Start listening again when the last AI speech is done.
-      await _audioStreamPlayer.appendCallback(_startListeningToUser);
+      await _audioStreamPlayer.appendCallback(_exitBusyState);
     }
   }
 

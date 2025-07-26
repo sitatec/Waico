@@ -20,7 +20,7 @@ class WorkoutGenerationProgress {
 class WorkoutPlanGenerator {
   late final ChatModel _chatModel;
 
-  static const String _systemPrompt = r'''
+  static const String _systemPrompt = '''
 You are an expert personal trainer and exercise physiologist with over 15 years of experience designing customized workout programs. You specialize in creating safe, effective, and sustainable bodyweight workout plans tailored to individual goals, and workout experience levels.
 
 Your expertise includes:
@@ -475,8 +475,10 @@ class _WorkoutProgressTracker {
               estimatedDuration: currentSession['estimatedDuration'] as int? ?? 30,
               exercises: currentExercises.map((exerciseMap) {
                 try {
+                  final exerciseName = exerciseMap['name'] as String? ?? 'Unknown Exercise';
+                  final guide = _getExerciseGuide(exerciseName);
                   return Exercise(
-                    name: exerciseMap['name'] as String? ?? 'Unknown Exercise',
+                    name: exerciseName,
                     targetMuscles: List<String>.from(exerciseMap['targetMuscles'] as List? ?? []),
                     load: ExerciseLoad(
                       type: ExerciseLoadType.fromString(exerciseMap['load']?['type'] as String? ?? 'reps'),
@@ -485,14 +487,19 @@ class _WorkoutProgressTracker {
                       duration: exerciseMap['load']?['duration'] as int?,
                     ),
                     restDuration: exerciseMap['restDuration'] as int? ?? 60,
+                    image: guide?['image'],
+                    instruction: guide?['instruction'],
                   );
                 } catch (e) {
                   // Return a default exercise if parsing fails
+                  final guide = _getExerciseGuide('Push-Up');
                   return Exercise(
                     name: 'Push-Up',
                     targetMuscles: ['chest'],
                     load: ExerciseLoad(type: ExerciseLoadType.reps, sets: 1, reps: 10),
                     restDuration: 60,
+                    image: guide?['image'],
+                    instruction: guide?['instruction'],
                   );
                 }
               }).toList(),
@@ -575,8 +582,10 @@ class _WorkoutProgressTracker {
           estimatedDuration: currentSession['estimatedDuration'] as int? ?? 30,
           exercises: currentExercises.map((exerciseMap) {
             try {
+              final exerciseName = exerciseMap['name'] as String? ?? 'Unknown Exercise';
+              final guide = _getExerciseGuide(exerciseName);
               return Exercise(
-                name: exerciseMap['name'] as String? ?? 'Unknown Exercise',
+                name: exerciseName,
                 targetMuscles: List<String>.from(exerciseMap['targetMuscles'] as List? ?? []),
                 load: ExerciseLoad(
                   type: ExerciseLoadType.fromString(exerciseMap['load']?['type'] as String? ?? 'reps'),
@@ -585,14 +594,19 @@ class _WorkoutProgressTracker {
                   duration: exerciseMap['load']?['duration'] as int?,
                 ),
                 restDuration: exerciseMap['restDuration'] as int? ?? 60,
+                image: guide?['image'],
+                instruction: guide?['instruction'],
               );
             } catch (e) {
               // Return a default exercise if parsing fails
+              final guide = _getExerciseGuide('Push-Up');
               return Exercise(
                 name: 'Push-Up',
                 targetMuscles: ['chest'],
                 load: ExerciseLoad(type: ExerciseLoadType.reps, sets: 1, reps: 10),
                 restDuration: 60,
+                image: guide?['image'],
+                instruction: guide?['instruction'],
               );
             }
           }).toList(),
@@ -648,3 +662,169 @@ class WorkoutPlanGenerationException implements Exception {
     return 'WorkoutPlanGenerationException: $message';
   }
 }
+
+/// Get exercise guide data based on exercise name using intelligent parsing
+Map<String, String>? _getExerciseGuide(String exerciseName) {
+  final lowerName = exerciseName.toLowerCase();
+  final exerciseGuideMap = _getExerciseGuideMap();
+
+  // Use intelligent parsing similar to WorkoutSessionManager
+  if (lowerName.contains('push') && lowerName.contains('up')) {
+    if (lowerName.contains('knee')) {
+      return exerciseGuideMap['knee_push_up'];
+    } else if (lowerName.contains('wall')) {
+      return exerciseGuideMap['wall_pushup'];
+    } else if (lowerName.contains('incline')) {
+      return exerciseGuideMap['incline_push_up'];
+    } else if (lowerName.contains('decline')) {
+      return exerciseGuideMap['decline_push_up'];
+    } else if (lowerName.contains('diamond') || lowerName.contains('close')) {
+      return exerciseGuideMap['close_push_up'];
+    } else if (lowerName.contains('wide')) {
+      return exerciseGuideMap['push_up']; // Use standard push-up for wide
+    } else {
+      return exerciseGuideMap['push_up'];
+    }
+  } else if (lowerName.contains('squat')) {
+    if (lowerName.contains('sumo')) {
+      return exerciseGuideMap['sumo_squat'];
+    } else if (lowerName.contains('split')) {
+      return exerciseGuideMap['split_squat'];
+    } else {
+      return exerciseGuideMap['squat'];
+    }
+  } else if (lowerName.contains('crunch')) {
+    if (lowerName.contains('reverse')) {
+      return exerciseGuideMap['reverse_crunch'];
+    } else if (lowerName.contains('double')) {
+      return exerciseGuideMap['double_crunch'];
+    } else {
+      return exerciseGuideMap['crunch'];
+    }
+  } else if (lowerName.contains('superman')) {
+    return exerciseGuideMap['superman'];
+  } else if (lowerName.contains('plank')) {
+    if (lowerName.contains('side')) {
+      return exerciseGuideMap['side_plank'];
+    } else {
+      return exerciseGuideMap['plank'];
+    }
+  } else if (lowerName.contains('jumping') && lowerName.contains('jack')) {
+    return exerciseGuideMap['jumping_jacks'];
+  } else if (lowerName.contains('high') && lowerName.contains('knee')) {
+    return exerciseGuideMap['high_knee'];
+  } else if (lowerName.contains('mountain') && lowerName.contains('climber')) {
+    return exerciseGuideMap['mountain_climbers'];
+  } else if (lowerName.contains('wall') && lowerName.contains('sit')) {
+    return exerciseGuideMap['wall_sit'];
+  }
+
+  // Fallback: try exact normalized matching
+  final normalizedName = exerciseName
+      .toLowerCase()
+      .replaceAll(' ', '_')
+      .replaceAll('-', '_')
+      .replaceAll('(', '')
+      .replaceAll(')', '');
+
+  return exerciseGuideMap[normalizedName];
+}
+
+/// Exercise guide map with images and instructions
+Map<String, Map<String, String>> _getExerciseGuideMap() => {
+  "close_push_up": {
+    "image": "assets/images/exercises/close_puch_up.gif",
+    "instruction":
+        "Start in a plank with hands close together under your chest. Lower your body, keeping elbows tucked. Push back up, keeping your core tight and body in a straight line.",
+  },
+  "crunch": {
+    "image": "assets/images/exercises/crunch.gif",
+    "instruction":
+        "Lie on your back with knees bent and feet flat. Place hands behind your head or across your chest. Engage your abs to lift your shoulders, then slowly return.",
+  },
+  "decline_push_up": {
+    "image": "assets/images/exercises/decline_push_up.gif",
+    "instruction":
+        "Place your feet on an elevated surface, hands on the floor slightly wider than shoulders. Lower your chest with control, then push back up, keeping a straight body.",
+  },
+  "double_crunch": {
+    "image": "assets/images/exercises/duble_crunch.gif",
+    "instruction":
+        "Lie on your back, hands behind your head. Simultaneously lift your shoulders and knees toward each other, engaging your entire core. Slowly return to start.",
+  },
+  "high_knee": {
+    "image": "assets/images/exercises/high_knee.gif",
+    "instruction":
+        "Stand tall and jog in place, driving your knees up toward your chest quickly. Swing your arms naturally to keep the rhythm and intensity up.",
+  },
+  "incline_push_up": {
+    "image": "assets/images/exercises/incline_push_up.gif",
+    "instruction":
+        "Place your hands on a sturdy elevated surface. Step your feet back into a straight plank. Lower your chest until elbows reach 90°, then press up to start.",
+  },
+  "jumping_jacks": {
+    "image": "assets/images/exercises/jumping_jacks.gif",
+    "instruction":
+        "Begin standing tall with arms at sides. Jump while spreading legs and raising arms overhead. Jump again to return to start. Maintain a steady rhythm.",
+  },
+  "knee_push_up": {
+    "image": "assets/images/exercises/knee_push_up.gif",
+    "instruction":
+        "Start in a modified plank with knees on the floor and hands under shoulders. Lower your chest while keeping your hips aligned, then press back up.",
+  },
+  "mountain_climbers": {
+    "image": "assets/images/exercises/mountain_climbers.webp",
+    "instruction":
+        "In a high plank position, drive one knee toward your chest, then quickly switch. Alternate legs at a brisk pace while keeping your core stable.",
+  },
+  "plank": {
+    "image": "assets/images/exercises/plank.webp",
+    "instruction":
+        "Support your body on forearms and toes, keeping your spine straight and hips level. Engage your abs and hold this steady position without sagging.",
+  },
+  "push_up": {
+    "image": "assets/images/exercises/push_up.gif",
+    "instruction":
+        "Begin in a plank with hands under shoulders. Lower your body until your chest nearly touches the ground, then push back up in one fluid motion.",
+  },
+  "reverse_crunch": {
+    "image": "assets/images/exercises/reverse_crunch.gif",
+    "instruction":
+        "Lie flat with legs bent and feet lifted. Curl your hips off the ground toward your chest using your lower abs, then slowly lower back down.",
+  },
+  "side_plank": {
+    "image": "assets/images/exercises/side_plank.png",
+    "instruction":
+        "Lie on one side, stack your feet, and lift your hips off the ground using your forearm. Keep your body aligned and hold, engaging your obliques.",
+  },
+  "split_squat": {
+    "image": "assets/images/exercises/split_squat.gif",
+    "instruction":
+        "Stand in a staggered stance with one foot forward. Lower your back knee toward the floor, keeping your torso upright, then push through the front heel to rise.",
+  },
+  "squat": {
+    "image": "assets/images/exercises/squat.gif",
+    "instruction":
+        "Stand with feet shoulder-width apart. Push your hips back and bend your knees to lower down, keeping chest up. Press through heels to stand.",
+  },
+  "sumo_squat": {
+    "image": "assets/images/exercises/sumo_squat.gif",
+    "instruction":
+        "Take a wide stance with toes turned out. Lower your hips straight down until thighs are parallel to the ground. Keep your chest up and core engaged.",
+  },
+  "superman": {
+    "image": "assets/images/exercises/superman.gif",
+    "instruction":
+        "Lie face down with arms extended forward. Lift your arms, chest, and legs off the ground at once, hold briefly, then lower with control.",
+  },
+  "wall_pushup": {
+    "image": "assets/images/exercises/wall_pushup.webp",
+    "instruction":
+        "Stand a few feet from a wall and place hands at shoulder height. Bend elbows to bring your chest toward the wall, then push back to the start position.",
+  },
+  "wall_sit": {
+    "image": "assets/images/exercises/wall_sit.jpg.webp",
+    "instruction":
+        "Lean against a wall and slide down until your thighs are parallel to the ground. Hold this seated position, keeping your back flat and core braced.",
+  },
+};
