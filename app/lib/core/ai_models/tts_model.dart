@@ -538,7 +538,7 @@ final Map<String, int> _premiumVoiceToSpeakerId = {
   'zm_yunyang': 52,
 };
 
-enum VoiceModelType { premium, lite }
+enum VoiceModelType { advanced, lite }
 
 /// Factory for creating and managing TTS models
 class TtsModelFactory {
@@ -555,7 +555,7 @@ class TtsModelFactory {
     _currentType = type;
 
     switch (type) {
-      case VoiceModelType.premium:
+      case VoiceModelType.advanced:
         await PremiumTtsModel.initialize(modelPath: modelPath);
         _currentModel = PremiumTtsModel();
         break;
@@ -576,7 +576,7 @@ class TtsModelFactory {
 
   /// Dispose the current TTS model
   static Future<void> dispose() async {
-    if (_currentType == VoiceModelType.premium) {
+    if (_currentType == VoiceModelType.advanced) {
       await PremiumTtsModel.dispose();
     } else if (_currentType == VoiceModelType.lite) {
       await LiteTtsModel.dispose();

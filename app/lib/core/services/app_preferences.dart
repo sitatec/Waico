@@ -1,9 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:waico/core/ai_models/chat_model.dart' show ChatModelType;
 import 'package:waico/core/ai_models/tts_model.dart';
 
 /// Service for managing app preferences using SharedPreferences
 class AppPreferences {
   static const String _voiceModelTypeKey = 'voice_model_type';
+  static const String _chatModelTypeKey = 'chat_model_type';
   static const String _hasShownDevicePerfSelectionKey = 'has_shown_device_performance_selection';
 
   static SharedPreferences? _preferences;
@@ -24,13 +26,26 @@ class AppPreferences {
   static VoiceModelType getVoiceModelType() {
     _ensureInitialized();
     final value = _preferences!.getString(_voiceModelTypeKey);
-    return value == 'lite' ? VoiceModelType.lite : VoiceModelType.premium;
+    return value == 'lite' ? VoiceModelType.lite : VoiceModelType.advanced;
   }
 
   /// Set the selected voice model type
   static Future<void> setVoiceModelType(VoiceModelType type) async {
     _ensureInitialized();
     await _preferences!.setString(_voiceModelTypeKey, type == VoiceModelType.lite ? 'lite' : 'premium');
+  }
+
+  /// Get the selected Gemma model type
+  static ChatModelType getChatModelType() {
+    _ensureInitialized();
+    final value = _preferences!.getString(_chatModelTypeKey);
+    return value == 'lite' ? ChatModelType.lite : ChatModelType.advanced;
+  }
+
+  /// Set the selected Gemma model type
+  static Future<void> setChatModelType(ChatModelType type) async {
+    _ensureInitialized();
+    await _preferences!.setString(_chatModelTypeKey, type == ChatModelType.lite ? 'lite' : 'advanced');
   }
 
   /// Check if voice model selection has been shown before

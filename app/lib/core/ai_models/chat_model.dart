@@ -216,3 +216,6 @@ class MaxTokensExceededException implements Exception {
   @override
   String toString() => 'Gemma3nMaxTokensExceededException: $message';
 }
+
+/// Enum for Gemma model types based on device performance
+enum ChatModelType { lite, advanced }

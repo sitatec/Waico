@@ -403,7 +403,7 @@ If the conversation doesn't contain enough information for a meaningful observat
       // Save the conversation
       _conversationRepository.save(conversation);
       log(
-        'ConversationProcessor: Stored conversation with summary: ${summary.length} chars, observation: ${observation.length} chars',
+        'ConversationProcessor: Stored conversation with summary: ${summary.length} chars, observation: ${observation.length} chars, memories: ${memories.length}',
       );
 
       // Generate embeddings and save memories if any exist

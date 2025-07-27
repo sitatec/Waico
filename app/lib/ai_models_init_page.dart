@@ -89,7 +89,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     await _setupDownloader();
 
     // Check if we need to show voice model selection
-    if (!AppPreferences.hasShownDevicePerfSelection()) {
+    if (AppPreferences.hasShownDevicePerfSelection()) {
       _showDevicePerfSelectionModal();
       return;
     }
@@ -106,14 +106,18 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
+      clipBehavior: Clip.hardEdge,
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: VoiceModelSelectionModal(
-            onContinue: () {
-              Navigator.of(context).pop();
-              _continueAfterDevicePerfSelection();
-            },
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: ModelSelectionModal(
+              onContinue: () {
+                Navigator.of(context).pop();
+                _continueAfterDevicePerfSelection();
+              },
+            ),
           ),
         ),
       ),
@@ -138,6 +142,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
   Future<void> _setupModelsToDownload() async {
     final voiceModelType = AppPreferences.getVoiceModelType();
+    final chatModelType = AppPreferences.getChatModelType();
 
     _modelsToDownload = [
       DownloadItem(
@@ -145,16 +150,18 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         fileName: "nemo-fast-conformer-transducer-en-de-es-fr-14288.tar.gz",
         displayName: "Nemo STT",
       ),
-      // DownloadItem(
-      //   url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
-      //   fileName: "gemma-3n-E2B-it-int4.task",
-      //   displayName: "Gemma 3n E2B",
-      // ),
-      DownloadItem(
-        url: "${DownloadItem.baseUrl}/gemma-3n-E4B-it-int4.task",
-        fileName: "gemma-3n-E4B-it-int4.task",
-        displayName: "Gemma 3n E4B",
-      ),
+      if (chatModelType == ChatModelType.lite)
+        DownloadItem(
+          url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
+          fileName: "gemma-3n-E2B-it-int4.task",
+          displayName: "Gemma 3n E2B",
+        )
+      else
+        DownloadItem(
+          url: "${DownloadItem.baseUrl}/gemma-3n-E4B-it-int4.task",
+          fileName: "gemma-3n-E4B-it-int4.task",
+          displayName: "Gemma 3n E4B",
+        ),
       DownloadItem(
         url: "${DownloadItem.baseUrl}/Qwen3-Embedding-0.6B-Q8_0.gguf",
         fileName: "Qwen3-Embedding-0.6B-Q8_0.gguf",
@@ -163,7 +170,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     ];
 
     // Add the appropriate TTS model based on user choice
-    if (voiceModelType == VoiceModelType.premium) {
+    if (voiceModelType == VoiceModelType.advanced) {
       _modelsToDownload.add(
         DownloadItem(
           url: "${DownloadItem.baseUrl}/kokoro-v1_0.tar.gz",
@@ -466,7 +473,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
       final voiceModelType = AppPreferences.getVoiceModelType();
       String ttsModelPath;
 
-      ttsModelPath = await _modelsToDownload[3].downloadedFilePath; // Premium TTS model
+      ttsModelPath = await _modelsToDownload[3].downloadedFilePath;
 
       await TtsModelFactory.initialize(type: voiceModelType, modelPath: ttsModelPath);
 
