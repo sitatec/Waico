@@ -345,6 +345,11 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: () => context.navigateTo(const WorkoutSetupPage(), replaceCurrent: true),
+          child: Text(LocaleKeys.workout_setup_update_profile.tr()),
+        ),
       ],
     );
   }
@@ -390,7 +395,7 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         const SizedBox(height: 16),
         TextButton(
           onPressed: () => context.navigateTo(const WorkoutSetupPage(), replaceCurrent: true),
-          child: Text(LocaleKeys.workout_setup_update_setup.tr()),
+          child: Text(LocaleKeys.workout_setup_update_profile.tr()),
         ),
       ],
     );

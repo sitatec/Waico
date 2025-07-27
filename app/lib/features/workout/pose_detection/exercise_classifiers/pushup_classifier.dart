@@ -397,7 +397,7 @@ class PushUpClassifier extends PoseClassifier {
     // Body alignment feedback
     if (formMetrics['body_alignment'] != null) {
       final alignment = formMetrics['body_alignment']!;
-      feedback['body_alignment'] = {'score': alignment};
+      feedback['body_alignment'] = <String, dynamic>{'score': alignment};
       if (alignment < 0.7) {
         if (type == PushUpType.knee) {
           feedback['body_alignment']['message'] =
@@ -412,7 +412,7 @@ class PushUpClassifier extends PoseClassifier {
     // Hand width feedback
     if (formMetrics['hand_width'] != null) {
       final handWidth = formMetrics['hand_width']!;
-      feedback['hand_width'] = {'score': handWidth};
+      feedback['hand_width'] = <String, dynamic>{'score': handWidth};
       if (handWidth < 0.6) {
         switch (type) {
           case PushUpType.diamond:
@@ -431,7 +431,7 @@ class PushUpClassifier extends PoseClassifier {
     // Wrist positioning feedback
     if (formMetrics['wrist_positioning'] != null) {
       final wristPos = formMetrics['wrist_positioning']!;
-      feedback['wrist_positioning'] = {'score': wristPos};
+      feedback['wrist_positioning'] = <String, dynamic>{'score': wristPos};
       if (wristPos < 0.5) {
         feedback['wrist_positioning']['message'] =
             'Should position wrists directly under shoulders for better stability';
@@ -441,7 +441,7 @@ class PushUpClassifier extends PoseClassifier {
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {
       final visibility = formMetrics['overall_visibility']!;
-      feedback['overall_visibility'] = {'score': visibility};
+      feedback['overall_visibility'] = <String, dynamic>{'score': visibility};
       if (visibility < 0.7) {
         feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
       }

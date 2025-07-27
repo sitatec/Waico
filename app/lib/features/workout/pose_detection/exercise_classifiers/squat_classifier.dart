@@ -97,7 +97,7 @@ class SquatClassifier extends PoseClassifier {
     // Knee tracking feedback
     if (formMetrics['knee_tracking'] != null) {
       final kneeTracking = formMetrics['knee_tracking']!;
-      feedback['knee_tracking'] = {'score': kneeTracking};
+      feedback['knee_tracking'] = <String, dynamic>{'score': kneeTracking};
       if (kneeTracking < 0.6) {
         feedback['knee_tracking']['message'] =
             'Should keep the knees aligned over the toes, not allowing them to cave inward';
@@ -107,7 +107,7 @@ class SquatClassifier extends PoseClassifier {
     // Squat depth feedback
     if (formMetrics['squat_depth'] != null) {
       final depth = formMetrics['squat_depth']!;
-      feedback['squat_depth'] = {'score': depth};
+      feedback['squat_depth'] = <String, dynamic>{'score': depth};
       if (depth < 0.7) {
         feedback['squat_depth']['message'] =
             'Should squat deeper, lowering the hips below knee level for a full range of motion';
@@ -117,7 +117,7 @@ class SquatClassifier extends PoseClassifier {
     // Stance width feedback
     if (formMetrics['stance_width'] != null) {
       final stanceWidth = formMetrics['stance_width']!;
-      feedback['stance_width'] = {'score': stanceWidth};
+      feedback['stance_width'] = <String, dynamic>{'score': stanceWidth};
       if (stanceWidth < 0.6) {
         feedback['stance_width']['message'] =
             'Should adjust the feet to be about shoulder-width apart for optimal stability';
@@ -127,7 +127,7 @@ class SquatClassifier extends PoseClassifier {
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {
       final visibility = formMetrics['overall_visibility']!;
-      feedback['overall_visibility'] = {'score': visibility};
+      feedback['overall_visibility'] = <String, dynamic>{'score': visibility};
       if (visibility < 0.7) {
         feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
       }
@@ -233,7 +233,7 @@ class SumoSquatClassifier extends PoseClassifier {
     // Knee tracking feedback
     if (formMetrics['knee_tracking'] != null) {
       final kneeTracking = formMetrics['knee_tracking']!;
-      feedback['knee_tracking'] = {'score': kneeTracking};
+      feedback['knee_tracking'] = <String, dynamic>{'score': kneeTracking};
       if (kneeTracking < 0.6) {
         feedback['knee_tracking']['message'] =
             'Should keep both knees aligned over the toes and avoid letting them cave inward';
@@ -243,7 +243,7 @@ class SumoSquatClassifier extends PoseClassifier {
     // Sumo stance width feedback
     if (formMetrics['sumo_stance_width'] != null) {
       final stanceWidth = formMetrics['sumo_stance_width']!;
-      feedback['sumo_stance_width'] = {'score': stanceWidth};
+      feedback['sumo_stance_width'] = <String, dynamic>{'score': stanceWidth};
       if (stanceWidth < 0.7) {
         feedback['sumo_stance_width']['message'] =
             'Should position the feet wider than shoulder-width with toes pointed outward';
@@ -253,7 +253,7 @@ class SumoSquatClassifier extends PoseClassifier {
     // Squat depth feedback
     if (formMetrics['squat_depth'] != null) {
       final depth = formMetrics['squat_depth']!;
-      feedback['squat_depth'] = {'score': depth};
+      feedback['squat_depth'] = <String, dynamic>{'score': depth};
       if (depth < 0.7) {
         feedback['squat_depth']['message'] =
             'Should squat deeper, lowering the hips below knee level for a full range of motion';
@@ -263,7 +263,7 @@ class SumoSquatClassifier extends PoseClassifier {
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {
       final visibility = formMetrics['overall_visibility']!;
-      feedback['overall_visibility'] = {'score': visibility};
+      feedback['overall_visibility'] = <String, dynamic>{'score': visibility};
       if (visibility < 0.7) {
         feedback['overall_visibility'] = {'message': 'Should ensure the whole body is clearly visible in the camera'};
       }
@@ -363,7 +363,7 @@ class SplitSquatClassifier extends PoseClassifier {
     // Front knee tracking feedback
     if (formMetrics['front_knee_tracking'] != null) {
       final frontKneeTracking = formMetrics['front_knee_tracking']!;
-      feedback['front_knee_tracking'] = {'score': frontKneeTracking};
+      feedback['front_knee_tracking'] = <String, dynamic>{'score': frontKneeTracking};
       if (frontKneeTracking < 0.65) {
         feedback['front_knee_tracking']['message'] =
             'Should keep the front knee aligned over the ankle and avoid letting it drift inward';
@@ -373,7 +373,7 @@ class SplitSquatClassifier extends PoseClassifier {
     // Stance length feedback
     if (formMetrics['stance_length'] != null) {
       final stanceLength = formMetrics['stance_length']!;
-      feedback['stance_length'] = {'score': stanceLength};
+      feedback['stance_length'] = <String, dynamic>{'score': stanceLength};
       if (stanceLength < 0.7) {
         feedback['stance_length']['message'] =
             'Should adjust the stance to have an appropriate distance between their front and back foot for stability';
@@ -383,7 +383,7 @@ class SplitSquatClassifier extends PoseClassifier {
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {
       final visibility = formMetrics['overall_visibility']!;
-      feedback['overall_visibility'] = {'score': visibility};
+      feedback['overall_visibility'] = <String, dynamic>{'score': visibility};
       if (visibility < 0.7) {
         feedback['overall_visibility'] = {'message': 'Should ensure the whole body is clearly visible in the camera'};
       }

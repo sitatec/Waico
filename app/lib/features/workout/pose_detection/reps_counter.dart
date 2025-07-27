@@ -303,7 +303,7 @@ class RepsCounter {
     final values = formMetrics.values.where((v) => !v['score'].isNaN).toList();
     if (values.isEmpty) return 0.5;
 
-    return values.reduce((a, b) => a['score'] + b['score']) / values.length;
+    return values.fold(0.0, (a, b) => a + b['score']) / values.length;
   }
 
   /// Determine rep quality based on form score and confidence

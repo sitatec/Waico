@@ -81,8 +81,10 @@ class _CounselorPageState extends State<CounselorPage> {
                   }
                 },
               ),
-              title: Text(LocaleKeys.counselor_title.tr(),
-                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white, fontSize: 20)),
+              title: Text(
+                LocaleKeys.counselor_title.tr(),
+                style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white, fontSize: 20),
+              ),
               actions: [
                 Text("${LocaleKeys.counselor_mode_label.tr()}:"),
                 const SizedBox(width: 8),
@@ -128,6 +130,7 @@ class _CounselorPageState extends State<CounselorPage> {
   Future<void> _showChatEndConfirmationBottomSheet() {
     return showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isDismissible: false,
       builder: (context) {
         return PopScope(
@@ -146,14 +149,13 @@ class _CounselorPageState extends State<CounselorPage> {
                     FilledButton(
                       onPressed: () {
                         context.navBack(); // Close the confirmation dialog
-                        _showChatProcessingProgressModal();
+                        Future.microtask(_showChatProcessingProgressModal);
                         chatProcessingModalShown = true;
                       },
                       child: Text(LocaleKeys.counselor_end_chat_button.tr()),
                     ),
                     const SizedBox(width: 16),
-                    TextButton(
-                        onPressed: context.navBack, child: Text(LocaleKeys.counselor_continue_chatting.tr())),
+                    TextButton(onPressed: context.navBack, child: Text(LocaleKeys.counselor_continue_chatting.tr())),
                   ],
                 ),
               ],
@@ -166,18 +168,19 @@ class _CounselorPageState extends State<CounselorPage> {
 
   Future<void> _showChatProcessingProgressModal() {
     Map<String, bool> progress = {};
-    bool finalizationStarted = false;
+    bool processingStarted = false;
     // The element being processed (elements are processed sequentially, since its on-device llm inference)
     String currentElement = '';
     return showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isDismissible: false,
       builder: (context) {
         return PopScope(
           canPop: false,
           child: StatefulBuilder(
             builder: (context, setState) {
-              if (!finalizationStarted) {
+              if (!processingStarted) {
                 _voiceChat!.endChat();
                 _agent!.finalize(
                   updateProgress: (newProgress) {
@@ -191,16 +194,16 @@ class _CounselorPageState extends State<CounselorPage> {
                     if (newProgress.isNotEmpty && newProgress.values.every((value) => value)) {
                       // All tasks completed, close the modal
                       Future.delayed(const Duration(milliseconds: 700), () {
-                        // Close the finalization modal and the counselor page
+                        // Close the processing modal and the counselor page
                         if (context.mounted) {
                           context.navBack();
-                          context.navBack();
+                          Future.microtask(context.navBack);
                         }
                       });
                     }
                   },
                 );
-                finalizationStarted = true;
+                processingStarted = true;
               }
               return Container(
                 padding: const EdgeInsets.all(16),
@@ -208,12 +211,12 @@ class _CounselorPageState extends State<CounselorPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(LocaleKeys.counselor_processing_conversation.tr(),
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 10),
                     Text(
-                      LocaleKeys.counselor_processing_description.tr(),
+                      LocaleKeys.counselor_processing_conversation.tr(),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
+                    const SizedBox(height: 10),
+                    Text(LocaleKeys.counselor_processing_description.tr()),
                     const SizedBox(height: 20),
                     if (progress.isEmpty)
                       Text(LocaleKeys.counselor_please_wait.tr()) // Initial state before any progress is made
@@ -275,15 +278,9 @@ class _CounselorPageState extends State<CounselorPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                LocaleKeys.counselor_cancel_processing_question.tr(),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
+              Text(LocaleKeys.counselor_cancel_processing_question.tr(), style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 12),
-              Text(
-                LocaleKeys.counselor_processing_description.tr(),
-                style: const TextStyle(color: Colors.red),
-              ),
+              Text(LocaleKeys.counselor_processing_description.tr(), style: const TextStyle(color: Colors.red)),
             ],
           ),
           actions: [
@@ -296,8 +293,7 @@ class _CounselorPageState extends State<CounselorPage> {
               child: Text(LocaleKeys.counselor_cancel_button.tr()),
             ),
             const SizedBox(width: 16),
-            FilledButton(
-                onPressed: context.navBack, child: Text(LocaleKeys.counselor_continue_processing.tr())),
+            FilledButton(onPressed: context.navBack, child: Text(LocaleKeys.counselor_continue_processing.tr())),
           ],
         );
       },

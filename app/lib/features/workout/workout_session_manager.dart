@@ -4,7 +4,6 @@ import 'dart:developer' show log;
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
-import 'package:waico/features/workout/models/workout_progress.dart';
 import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/pose_detection_service.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
@@ -14,7 +13,6 @@ import 'package:waico/features/workout/pose_detection/reps_counter.dart';
 class WorkoutSessionManager {
   final WorkoutSession session;
   final UserRepository userRepository;
-  WorkoutProgress progress = WorkoutProgress.empty();
   final VoiceChatPipeline voiceChatPipeline;
   int _currentExerciseIndex = 0;
   RepsCounter? _repsCounter;
@@ -22,10 +20,8 @@ class WorkoutSessionManager {
   final int workoutSessionIndex;
 
   // Pose detection
-  final PoseDetectionService _poseDetectionService = PoseDetectionService.instance;
+  final PoseDetectionService poseDetectionService;
   StreamSubscription<PoseDetectionResult>? _poseDetectionSubscription;
-  bool _isPoseDetectionActive = false;
-
   // Rep counting management
   StreamSubscription<RepetitionData>? _repStreamSubscription;
   final List<RepetitionData> _cachedReps = [];
@@ -37,30 +33,18 @@ class WorkoutSessionManager {
   WorkoutSessionManager({
     required this.session,
     UserRepository? userRepository,
+    PoseDetectionService? poseDetectionService,
     required this.voiceChatPipeline,
     required this.workoutWeek,
     required this.workoutSessionIndex,
-  }) : userRepository = userRepository ?? UserRepository() {
-    this.userRepository
-        .getWorkoutProgress()
-        .then((value) {
-          progress = value;
-          _initializeCurrentExercise();
-        })
-        .catchError((error, stackTrace) {
-          log('Error loading workout progress', error: error, stackTrace: stackTrace);
-          throw Exception('Failed to load workout progress During WorkoutSessionManager initialization');
-        });
-  }
+  }) : userRepository = userRepository ?? UserRepository(),
+       poseDetectionService = poseDetectionService ?? PoseDetectionService.instance;
 
   /// Stream of current exercise index changes
   Stream<int> get exerciseIndexStream => _exerciseIndexController.stream;
 
   /// Current rep counter (null if current exercise doesn't support rep counting)
   RepsCounter? get repsCounter => _repsCounter;
-
-  /// Whether pose detection is currently active
-  bool get isPoseDetectionActive => _isPoseDetectionActive;
 
   /// Current exercise
   Exercise get currentExercise => session.exercises[_currentExerciseIndex];
@@ -77,13 +61,21 @@ class WorkoutSessionManager {
   /// Whether there is a previous exercise
   bool get hasPreviousExercise => _currentExerciseIndex > 0;
 
+  /// Initialize the workout session manager
+  Future<void> initialize() async {
+    // Initialize the current exercise
+    await voiceChatPipeline.startChat(voice: 'am_santa'); // TODO: get voice based on language
+    // We start listening only when the exercise starts, to avoid peeking up user speech with others
+    await voiceChatPipeline.stopListeningToUser();
+    await _initializeCurrentExercise();
+  }
+
   /// Initialize the current exercise (finds first incomplete exercise or defaults to first)
-  void _initializeCurrentExercise() {
+  Future<void> _initializeCurrentExercise() async {
     // Find first incomplete exercise or default to first exercise
     _currentExerciseIndex = 0;
     for (int i = 0; i < session.exercises.length; i++) {
-      final exerciseKey = WorkoutProgress.getExerciseKey(workoutWeek, workoutSessionIndex, i);
-      if (!progress.isExerciseCompleted(exerciseKey)) {
+      if (!await userRepository.isExerciseCompleted(workoutWeek, workoutSessionIndex, i)) {
         _currentExerciseIndex = i;
         break;
       }
@@ -94,14 +86,14 @@ class WorkoutSessionManager {
 
   /// Start the current exercise
   Future<void> startCurrentExercise() async {
-    _resetState();
-    _emitCurrentExercise();
+    await voiceChatPipeline.startListeningToUser();
     await _startPoseDetection();
   }
 
   /// Go to the next exercise
   Future<void> goToNextExercise() async {
     if (hasNextExercise) {
+      await voiceChatPipeline.stopListeningToUser();
       await _stopPoseDetection();
       _currentExerciseIndex++;
       _resetState();
@@ -113,11 +105,11 @@ class WorkoutSessionManager {
   /// Go to the previous exercise
   Future<void> goToPreviousExercise() async {
     if (hasPreviousExercise) {
+      await voiceChatPipeline.stopListeningToUser();
       await _stopPoseDetection();
       _currentExerciseIndex--;
       _resetState();
       _emitCurrentExercise();
-      await _startPoseDetection();
     }
   }
 
@@ -125,9 +117,7 @@ class WorkoutSessionManager {
   Future<void> markCurrentExerciseAsComplete() async {
     // Note: In a real implementation, this would update the workout progress
     // For now, we just move to the next exercise if available
-    final exerciseKey = WorkoutProgress.getExerciseKey(workoutWeek, workoutSessionIndex, _currentExerciseIndex);
-    progress = progress.withExerciseCompleted(exerciseKey, true);
-    await userRepository.saveWorkoutProgress(progress);
+    await userRepository.setExerciseCompletion(workoutWeek, workoutSessionIndex, _currentExerciseIndex, true);
 
     if (hasNextExercise) {
       await goToNextExercise();
@@ -144,7 +134,6 @@ class WorkoutSessionManager {
       _currentExerciseIndex = index;
       _resetState();
       _emitCurrentExercise();
-      await _startPoseDetection();
     }
   }
 
@@ -235,44 +224,34 @@ class WorkoutSessionManager {
 
   /// Start pose detection and connect it to the reps counter
   Future<void> _startPoseDetection() async {
-    if (_isPoseDetectionActive || _repsCounter == null) {
+    if (poseDetectionService.isActive || _repsCounter == null) {
       return; // Already active or no rep counter to feed
     }
 
     try {
-      final success = await _poseDetectionService.start();
+      final success = await poseDetectionService.start();
       if (success) {
-        _isPoseDetectionActive = true;
-
         // Subscribe to pose detection results and feed them to the reps counter
-        _poseDetectionSubscription = _poseDetectionService.landmarkStream.listen(
-          (PoseDetectionResult result) {
-            _repsCounter?.processFrame(result);
-          },
-          onError: (error) {
-            // Handle pose detection errors
-            _isPoseDetectionActive = false;
-          },
-        );
+        _poseDetectionSubscription = poseDetectionService.landmarkStream.listen((PoseDetectionResult result) {
+          _repsCounter?.processFrame(result);
+        });
       }
     } catch (e, s) {
       log('Error starting pose detection', error: e, stackTrace: s);
-      _isPoseDetectionActive = false;
     }
   }
 
   /// Stop pose detection
   Future<void> _stopPoseDetection() async {
     try {
-      if (!_isPoseDetectionActive) {
+      if (!poseDetectionService.isActive) {
         return; // Already stopped
       }
 
-      _isPoseDetectionActive = false;
       await _poseDetectionSubscription?.cancel();
       _poseDetectionSubscription = null;
 
-      await _poseDetectionService.stop();
+      await poseDetectionService.stop();
     } catch (e, s) {
       log('Error stopping pose detection', error: e, stackTrace: s);
       // Handle stop errors silently
@@ -329,7 +308,8 @@ class WorkoutSessionManager {
     final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
 
     final message =
-        '''Exercise: $exerciseName
+        '''<system>
+Exercise: $exerciseName
 Feedback Type: $feedbackType
 
 Recent Repetitions Data:
@@ -341,8 +321,9 @@ Current Rep Analysis:
 - Quality: ${currentRep.quality}${isFormFeedback ? '''
 - Duration: ${currentRep.duration / 1000} seconds
 - Form Feedback: 
-    ${currentRep.formMetrics.entries.where((entry) => entry.value is Map && entry.value.containsKey('message')).map((entry) => '${entry.key}: ${entry.value['message']}').join('\n    ')}
+    ${currentRep.formMetrics.entries.where((entry) => entry.value is Map && entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
 ''' : ''}
+</system>
 ''';
 
     // Send to AI Agent

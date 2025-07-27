@@ -163,12 +163,15 @@ class _UpcomingEventCardState extends State<UpcomingEventCard> {
       if (duration.inHours < 10 && duration.inMinutes > 0) {
         // Show "in x time" format with original format below
         if (duration.inMinutes < 60) {
-          relativeTime = LocaleKeys.calendar_in_minutes.tr(namedArgs: {'count': duration.inMinutes.toString()});
+          relativeTime = LocaleKeys.calendar_in_minutes.plural(
+            duration.inMinutes,
+            namedArgs: {'count': duration.inMinutes.toString()},
+          );
         } else {
           final hours = duration.inHours;
           final minutes = duration.inMinutes % 60;
           if (minutes == 0) {
-            relativeTime = LocaleKeys.calendar_in_hours.tr(namedArgs: {'count': hours.toString()});
+            relativeTime = LocaleKeys.calendar_in_hours.plural(hours, namedArgs: {'count': hours.toString()});
           } else {
             relativeTime = LocaleKeys.calendar_in_hours_minutes.tr(
               namedArgs: {'hours': hours.toString(), 'minutes': minutes.toString()},

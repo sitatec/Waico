@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'pose_models.dart';
 
@@ -33,6 +34,8 @@ class PoseDetectionService {
 
   /// Whether pose detection is currently active
   bool get isActive => _isActive;
+
+  Future<bool> get hasCameraPermission => Permission.camera.request().isGranted;
 
   /// Start pose detection
   ///

@@ -39,7 +39,9 @@ abstract class PoseClassifier {
   }) {
     // Default implementation returns overall visibility
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
-    return {'overall_visibility': visibilityScore};
+    return {
+      'overall_visibility': {'score': visibilityScore},
+    };
   }
 
   Map<String, double> _getSmoothedProbabilities() {

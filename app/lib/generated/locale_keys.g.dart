@@ -46,7 +46,7 @@ abstract class  LocaleKeys {
   static const workout_setup_previous = 'workout.setup.previous';
   static const workout_setup_generate_plan = 'workout.setup.generate_plan';
   static const workout_setup_start_training = 'workout.setup.start_training';
-  static const workout_setup_update_setup = 'workout.setup.update_setup';
+  static const workout_setup_update_profile = 'workout.setup.update_profile';
   static const workout_setup_goal_label = 'workout.setup.goal_label';
   static const workout_setup_fitness_level_label = 'workout.setup.fitness_level_label';
   static const workout_setup_frequency_label = 'workout.setup.frequency_label';

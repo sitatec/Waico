@@ -92,7 +92,7 @@ class SupermanClassifier extends PoseClassifier {
     // Spinal alignment feedback
     if (formMetrics['spinal_alignment'] != null) {
       final spinalAlignment = formMetrics['spinal_alignment']!;
-      feedback['spinal_alignment'] = {'score': spinalAlignment};
+      feedback['spinal_alignment'] = <String, dynamic>{'score': spinalAlignment};
       if (spinalAlignment < 0.6) {
         feedback['spinal_alignment']['message'] = 'Should lift the chest higher and extend the back more';
       }
@@ -101,7 +101,7 @@ class SupermanClassifier extends PoseClassifier {
     // Arm extension feedback
     if (formMetrics['arm_extension'] != null) {
       final armExtension = formMetrics['arm_extension']!;
-      feedback['arm_extension'] = {'score': armExtension};
+      feedback['arm_extension'] = <String, dynamic>{'score': armExtension};
       if (armExtension < 0.6) {
         feedback['arm_extension']['message'] = 'Should extend the arms further forward and lift them higher';
       }
@@ -110,7 +110,7 @@ class SupermanClassifier extends PoseClassifier {
     // Leg extension feedback
     if (formMetrics['leg_extension'] != null) {
       final legExtension = formMetrics['leg_extension']!;
-      feedback['leg_extension'] = {'score': legExtension};
+      feedback['leg_extension'] = <String, dynamic>{'score': legExtension};
       if (legExtension < 0.6) {
         feedback['leg_extension']['message'] = 'Should lift the legs higher and extend them further back';
       }
@@ -119,7 +119,7 @@ class SupermanClassifier extends PoseClassifier {
     // Bilateral symmetry feedback
     if (formMetrics['bilateral_symmetry'] != null) {
       final symmetry = formMetrics['bilateral_symmetry']!;
-      feedback['bilateral_symmetry'] = {'score': symmetry};
+      feedback['bilateral_symmetry'] = <String, dynamic>{'score': symmetry};
       if (symmetry < 0.6) {
         feedback['bilateral_symmetry']['message'] = 'Should ensure both arms and legs lift evenly';
       }
@@ -128,7 +128,7 @@ class SupermanClassifier extends PoseClassifier {
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {
       final visibility = formMetrics['overall_visibility']!;
-      feedback['overall_visibility'] = {'score': visibility};
+      feedback['overall_visibility'] = <String, dynamic>{'score': visibility};
       if (visibility < 0.7) {
         feedback['overall_visibility']['message'] = 'Should ensure the whole body is clearly visible in the camera';
       }

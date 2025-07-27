@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/core/repositories/user_repository.dart';
+import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
 import 'package:waico/features/workout/pages/session_exercises_page.dart';
 import 'package:waico/generated/locale_keys.g.dart';
@@ -300,13 +301,47 @@ class _WorkoutPlanContent extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        titleSpacing: 8,
         title: Text(
           workoutPlan.planName,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 20),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 22),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text('Confirm Deletion'),
+                    content: Text(
+                      'Are you sure you want to delete this workout plan? This action cannot be undone.\n\nYou can always generate a new plan.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(LocaleKeys.common_cancel.tr()),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          await userRepository.clearWorkoutPlan();
+                          await userRepository.clearWorkoutProgress();
+                          context.navBack();
+                          context.navBack();
+                        },
+                        child: Text(LocaleKeys.common_delete.tr()),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

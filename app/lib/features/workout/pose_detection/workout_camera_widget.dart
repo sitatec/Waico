@@ -1,31 +1,24 @@
 import 'dart:async';
-import 'dart:developer' show log;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:waico/features/workout/pose_detection/pose_detection_service.dart';
-import 'package:waico/features/workout/pose_detection/pose_models.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
 
 /// A high-performance camera widget with pose detection using native platform views
 class WorkoutCameraWidget extends StatefulWidget {
   final RepsCounter? repsCounter;
   final bool showRepCounter;
-  final VoidCallback? onPermissionDenied;
 
-  const WorkoutCameraWidget({super.key, this.repsCounter, this.showRepCounter = true, this.onPermissionDenied});
+  const WorkoutCameraWidget({super.key, this.repsCounter, this.showRepCounter = true});
 
   @override
   State<WorkoutCameraWidget> createState() => _WorkoutCameraWidgetState();
 }
 
-class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  StreamSubscription<PoseDetectionResult>? _poseSubscription;
+class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget> with TickerProviderStateMixin {
   StreamSubscription<String>? _errorSubscription;
   StreamSubscription<RepCountingState>? _repCountingStateSubscription;
   StreamSubscription<RepetitionData>? _repDataSubscription;
-  final PoseDetectionService _poseDetectionService = PoseDetectionService.instance;
 
   bool _isInitialized = false;
   String? _errorMessage;
@@ -38,12 +31,10 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
   late AnimationController _repAnimationController;
   late AnimationController _pulseController;
   late Animation<double> _repScaleAnimation;
-  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _initializeAnimations();
     _checkPermissionsAndStart();
   }
@@ -54,58 +45,14 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
 
     _repScaleAnimation = Tween<double>(
       begin: 1.0,
-      end: 1.3,
+      end: 1.22,
     ).animate(CurvedAnimation(parent: _repAnimationController, curve: Curves.elasticOut));
-
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-  }
-
-  void _setupPoseDetection() {
-    // Add a small delay to ensure the platform view is fully created
-    // Start pose detection service
-    _poseDetectionService.start().then((success) {
-      if (success) {
-        // Listen to pose detection results
-        _poseSubscription = _poseDetectionService.landmarkStream.listen(
-          (result) => _handlePoseResults(result),
-          onError: (error) => _handleError('Pose detection error: $error'),
-        );
-
-        // Listen to error stream
-        _errorSubscription = _poseDetectionService.errorStream.listen(_handleError);
-      } else {
-        _handleError('Failed to start pose detection service');
-      }
-    });
-  }
-
-  void _handlePoseResults(PoseDetectionResult result) {
-    try {
-      if (result.hasPose && widget.repsCounter != null) {
-        widget.repsCounter!.processFrame(result);
-      }
-    } catch (e, s) {
-      log('Error processing pose results', error: e, stackTrace: s);
-      _handleError('Error processing pose results: $e');
-    }
-  }
-
-  void _handleError(String error) {
-    if (mounted) {
-      setState(() {
-        _errorMessage = error;
-      });
-    }
   }
 
   Future<void> _checkPermissionsAndStart() async {
     try {
       final hasPermission = await Permission.camera.request().isGranted;
       if (!hasPermission) {
-        widget.onPermissionDenied?.call();
         setState(() {
           _errorMessage = 'Camera permission required';
         });
@@ -118,7 +65,6 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
 
       // Setup pose detection and rep counter
       _setupRepCounterStream();
-      _setupPoseDetection();
 
       setState(() {
         _isInitialized = true;
@@ -151,65 +97,13 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
     }
   }
 
-  Future<void> _switchCamera() async {
-    // Switch the native camera for pose detection
-    final switched = await _poseDetectionService.switchCamera();
-    if (!switched) {
-      _handleError('Failed to switch camera');
-    }
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-        // Stop pose detection when app becomes inactive/paused
-        if (_poseDetectionService.isActive) {
-          _poseDetectionService.stop();
-        }
-        break;
-
-      case AppLifecycleState.resumed:
-        // Restart pose detection when app is resumed
-        if (_hasPermission && _isInitialized) {
-          _restartPoseDetection();
-        }
-        break;
-
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        // App state changes, but no action needed
-        break;
-    }
-  }
-
-  /// Restart pose detection after app lifecycle change
-  Future<void> _restartPoseDetection() async {
-    if (_hasPermission && _isInitialized) {
-      try {
-        final success = await _poseDetectionService.start();
-        if (!success) {
-          _handleError('Failed to restart pose detection');
-        }
-      } catch (e) {
-        _handleError('Error restarting pose detection: $e');
-      }
-    }
-  }
-
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _repAnimationController.dispose();
     _pulseController.dispose();
-    _poseSubscription?.cancel();
     _repCountingStateSubscription?.cancel();
     _repDataSubscription?.cancel();
     _errorSubscription?.cancel();
-
-    // Properly dispose of the pose detection service
-    _poseDetectionService.dispose();
 
     super.dispose();
   }
@@ -223,24 +117,9 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget>
           // Native camera preview platform view
           _NativeCameraPreview(hasPermission: _hasPermission, isInitialized: _isInitialized),
           if (widget.showRepCounter && widget.repsCounter != null && _isInitialized && _repCountingState != null)
-            _RepCounterOverlay(
-              repCountingState: _repCountingState!,
-              repScaleAnimation: _repScaleAnimation,
-              pulseAnimation: _pulseAnimation,
-            ),
+            _RepCounterOverlay(repCountingState: _repCountingState!, repScaleAnimation: _repScaleAnimation),
           if (_errorMessage != null)
             _ErrorOverlay(errorMessage: _errorMessage!, onDismiss: () => setState(() => _errorMessage = null)),
-          if (_isInitialized)
-            _ControlsOverlay(
-              repsCounter: widget.repsCounter,
-              onCameraSwitch: () async {
-                await _switchCamera();
-              },
-              onResetReps: () {
-                widget.repsCounter?.reset();
-                // State will be updated automatically via the state stream
-              },
-            ),
         ],
       ),
     );
@@ -292,13 +171,8 @@ class _NativeCameraPreview extends StatelessWidget {
 class _RepCounterOverlay extends StatelessWidget {
   final RepCountingState repCountingState;
   final Animation<double> repScaleAnimation;
-  final Animation<double> pulseAnimation;
 
-  const _RepCounterOverlay({
-    required this.repCountingState,
-    required this.repScaleAnimation,
-    required this.pulseAnimation,
-  });
+  const _RepCounterOverlay({required this.repCountingState, required this.repScaleAnimation});
 
   @override
   Widget build(BuildContext context) {
@@ -306,54 +180,44 @@ class _RepCounterOverlay extends StatelessWidget {
     final lastQuality = repCountingState.lastRep?.formScore ?? 0.0;
 
     return Positioned(
-      top: 60,
-      right: 20,
-      child: AnimatedBuilder(
-        animation: pulseAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: pulseAnimation.value,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Colors.black.withOpacity(0.8), Colors.black.withOpacity(0.6)],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isUp ? Colors.green : Colors.orange, width: 2),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _RepCountDisplay(totalReps: repCountingState.totalReps, repScaleAnimation: repScaleAnimation),
-                  const SizedBox(height: 4),
-                  Text(
-                    'REPS',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.8),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _QualityIndicator(quality: lastQuality),
-                  const SizedBox(height: 8),
-                  _PositionIndicator(isUp: isUp),
-                  if (repCountingState.lastRep != null) ...[
-                    const SizedBox(height: 8),
-                    _LastRepQualityIndicator(repData: repCountingState.lastRep!),
-                  ],
-                ],
+      top: 24,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.black.withOpacity(0.5), Colors.black.withOpacity(0.3)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.green, width: 1),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _RepCountDisplay(totalReps: repCountingState.totalReps, repScaleAnimation: repScaleAnimation),
+            const SizedBox(height: 4),
+            Text(
+              'REPS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withOpacity(0.8),
+                letterSpacing: 1.5,
               ),
             ),
-          );
-        },
+            const SizedBox(height: 8),
+            _QualityIndicator(quality: lastQuality),
+            const SizedBox(height: 8),
+            _PositionIndicator(isUp: isUp),
+            if (repCountingState.lastRep != null) ...[
+              const SizedBox(height: 8),
+              _LastRepQualityIndicator(repData: repCountingState.lastRep!),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -382,7 +246,7 @@ class _RepCountDisplay extends StatelessWidget {
           child: Text(
             totalReps.toString(),
             style: TextStyle(
-              fontSize: 48,
+              fontSize: 30,
               fontWeight: FontWeight.bold,
               color: _getRepCountColor(),
               shadows: [Shadow(color: Colors.black.withOpacity(0.5), offset: const Offset(2, 2), blurRadius: 4)],
@@ -450,7 +314,7 @@ class _PositionIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: isUp ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
         borderRadius: BorderRadius.circular(20),
@@ -459,7 +323,7 @@ class _PositionIndicator extends StatelessWidget {
       child: Text(
         isUp ? 'UP' : 'DOWN',
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
           color: isUp ? Colors.green : Colors.orange,
           letterSpacing: 1,
@@ -487,23 +351,10 @@ class _LastRepQualityIndicator extends StatelessWidget {
     }
   }
 
-  String _getQualityLabel(RepQuality quality) {
-    switch (quality) {
-      case RepQuality.excellent:
-        return 'EXCELLENT';
-      case RepQuality.good:
-        return 'GOOD';
-      case RepQuality.fair:
-        return 'FAIR';
-      case RepQuality.poor:
-        return 'POOR';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final qualityColor = _getQualityColor(repData.quality);
-    final qualityLabel = _getQualityLabel(repData.quality);
+    final qualityLabel = repData.quality.name.toUpperCase();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -548,52 +399,6 @@ class _ErrorOverlay extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ControlsOverlay extends StatelessWidget {
-  final RepsCounter? repsCounter;
-  final VoidCallback onResetReps;
-  final VoidCallback? onCameraSwitch;
-
-  const _ControlsOverlay({required this.repsCounter, required this.onResetReps, this.onCameraSwitch});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 40,
-      left: 0,
-      right: 0,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // if (repsCounter != null) _ControlButton(icon: Icons.refresh, onPressed: onResetReps),
-          if (onCameraSwitch != null) _ControlButton(icon: Icons.cameraswitch_outlined, onPressed: onCameraSwitch!),
-        ],
-      ),
-    );
-  }
-}
-
-class _ControlButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  const _ControlButton({required this.icon, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 24),
-        onPressed: onPressed,
       ),
     );
   }

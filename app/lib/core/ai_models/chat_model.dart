@@ -38,7 +38,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   List<ChatMessage> _history = [];
   int _chatTokenCount = 0;
   int _systemPromptTokenCount = 0;
-  late final InferenceModelSession _chatSession;
+  InferenceModelSession? _chatSession;
 
   final String? loraPath;
   final String? systemPrompt;
@@ -88,9 +88,9 @@ class ChatModel extends LlmProvider with ChangeNotifier {
         'The current date and time is $formattedDateAndTime.\n'
         '</system_prompt>\n\n';
 
-    await _chatSession.addQueryChunk(Message.text(text: formattedSysPrompt, isUser: true));
+    await _chatSession!.addQueryChunk(Message.text(text: formattedSysPrompt, isUser: true));
 
-    _systemPromptTokenCount = await _chatSession.sizeInTokens(formattedSysPrompt);
+    _systemPromptTokenCount = await _chatSession!.sizeInTokens(formattedSysPrompt);
     _chatTokenCount += _systemPromptTokenCount;
   }
 
@@ -109,7 +109,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
       int newTokenCount = 0;
       for (final message in _history) {
         if (message.text?.isNotEmpty == true) {
-          newTokenCount += await _chatSession.sizeInTokens(message.text!);
+          newTokenCount += await _chatSession!.sizeInTokens(message.text!);
         }
         newTokenCount += message.attachments.length * 256; // Assuming 256 tokens per image attachment
       }
@@ -121,6 +121,9 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   @override
   // Hover the function name for documentation.
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
+    if (_chatSession == null) {
+      throw StateError('Chat session must be initialized before sending messages');
+    }
     List<ImageFileAttachment>? imageAttachments;
     if (attachments.isNotEmpty) {
       if (attachments.any((e) => e is! ImageFileAttachment)) {
@@ -135,23 +138,23 @@ class ChatModel extends LlmProvider with ChangeNotifier {
 
       if ((imageAttachments?.length ?? 0) > 1) {
         for (final attachment in imageAttachments!) {
-          await _chatSession.addQueryChunk(Message.imageOnly(imageBytes: attachment.bytes, isUser: true));
+          await _chatSession!.addQueryChunk(Message.imageOnly(imageBytes: attachment.bytes, isUser: true));
         }
-        await _chatSession.addQueryChunk(Message.text(text: prompt, isUser: true));
+        await _chatSession!.addQueryChunk(Message.text(text: prompt, isUser: true));
       } else {
-        await _chatSession.addQueryChunk(
+        await _chatSession!.addQueryChunk(
           Message(text: prompt, imageBytes: imageAttachments?.first.bytes, isUser: true),
         );
       }
 
       final llmResponse = ChatMessage.llm();
       _history.add(llmResponse);
-      await for (final responseChunk in _chatSession.getResponseAsync()) {
+      await for (final responseChunk in _chatSession!.getResponseAsync()) {
         llmResponse.text = (llmResponse.text ?? '') + responseChunk;
         yield responseChunk;
       }
 
-      _chatTokenCount += await _chatSession.sizeInTokens(llmResponse.text!);
+      _chatTokenCount += await _chatSession!.sizeInTokens(llmResponse.text!);
     } catch (e, stackTrace) {
       log('Error during message generation', error: e, stackTrace: stackTrace);
       throw Exception('Failed to generate response: $e');
@@ -159,7 +162,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
   }
 
   Future<int> _getAndValidateTokenCount(String prompt, List<ImageFileAttachment>? imageAttachments) async {
-    int currentMessageTokenCount = await _chatSession.sizeInTokens(prompt);
+    int currentMessageTokenCount = await _chatSession!.sizeInTokens(prompt);
     if (imageAttachments?.isNotEmpty == true) {
       // Add token count for the image attachment
       currentMessageTokenCount += 256 * imageAttachments!.length; // Assuming 256 tokens per image
@@ -199,7 +202,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
 
   @override
   Future<void> dispose() async {
-    await _chatSession.close();
+    await _chatSession?.close();
     _history = [];
     super.dispose();
   }

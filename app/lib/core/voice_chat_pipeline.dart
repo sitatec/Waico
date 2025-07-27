@@ -47,7 +47,7 @@ class VoiceChatPipeline {
     _hasChatEnded = false;
     await _userSpeechToTextListener.initialize();
     _userSpeechStreamSubscription = _userSpeechToTextListener.listen(_onMessageReceived);
-    startListeningToUser();
+    await startListeningToUser();
   }
 
   /// Sends a system message to the AI agent. This is not the same as a system prompt

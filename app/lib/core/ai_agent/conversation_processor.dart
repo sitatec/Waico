@@ -176,10 +176,10 @@ If the conversation doesn't contain enough information for a meaningful observat
   }) async {
     final currentProgress = {
       // True == Complete | False == Incomplete
-      'Summary Generation': false,
       'Memory Generation': false,
-      'User Info Extraction': false,
       'Observations Generation': false,
+      'Summary Generation': false,
+      'User Info Extraction': false,
     };
     updateProgress?.call(currentProgress);
 

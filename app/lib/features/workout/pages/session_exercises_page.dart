@@ -65,11 +65,11 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
   void _navigateToExercise(int exerciseIndex) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ExerciseCameraPage(
-          exercise: widget.session.exercises[exerciseIndex],
-          exerciseIndex: exerciseIndex,
-          sessionIndex: widget.sessionIndex,
-          weekIndex: widget.weekIndex,
+        builder: (context) => ExercisePage(
+          session: widget.session,
+          workoutWeek: widget.weekIndex,
+          workoutSessionIndex: widget.sessionIndex,
+          startingExerciseIndex: exerciseIndex,
         ),
       ),
     );
@@ -80,24 +80,11 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(widget.session.sessionName),
+        titleSpacing: 8,
+        title: Text(widget.session.sessionName, style: const TextStyle(fontSize: 20)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Chip(
-              label: Text(
-                LocaleKeys.workout_setup_estimated_duration.tr(
-                  namedArgs: {'duration': widget.session.estimatedDuration.toString()},
-                ),
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            ),
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -124,14 +111,25 @@ class _SessionExercisesPageState extends State<SessionExercisesPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.session.type.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              widget.session.type.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            Text(
+                              LocaleKeys.workout_setup_estimated_duration.tr(
+                                namedArgs: {'duration': widget.session.estimatedDuration.toString()},
+                              ),
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Text(

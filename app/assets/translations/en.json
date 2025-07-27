@@ -51,7 +51,7 @@
       "previous": "Previous",
       "generate_plan": "Generate My Workout Plan",
       "start_training": "Start Training",
-      "update_setup": "Update Setup",
+      "update_profile": "Update Workout Profile",
       "goal_label": "Goal: {goal}",
       "fitness_level_label": "Fitness Level: {level}",
       "frequency_label": "Frequency: {frequency}x/week",
@@ -77,7 +77,10 @@
       "default_error": "An unexpected error occurred while generating your workout plan.",
       "waiting_for_start": "Waiting for generation to start...",
       "progress_overview": "Progress Overview",
-      "session_count": "{count,plural, =1{{count} session} other{{count} sessions}}",
+      "session_count": {
+        "one": "{count} session",
+        "other": "{count} sessions"
+      },
       "generating_sessions": "Generating sessions...",
       "raw_text_title": "Raw Text Generation"
     },
@@ -127,7 +130,7 @@
       "premium_title": "Premium Voices",
       "premium_description": "Near-human quality with natural speech patterns.",
       "premium_performance": "May have small delays on devices like Samsung S21 Ultra and below (varies based on device performance)",
-      "lite_title": "Lite Voices", 
+      "lite_title": "Lite Voices",
       "lite_description": "Faster response with slightly robotic quality.",
       "lite_performance": "Recommended for Samsung S21 Ultra and lower-end devices for an optimal experience.",
       "continue": "Continue",
@@ -163,8 +166,14 @@
     "failed_load_events": "Failed to load events",
     "no_title": "(No title)",
     "at": "{day} at {time}",
-    "in_minutes": "{count, plural, =1{{count} minute} other{{count} minutes}}",
-    "in_hours": "{count, plural, =1{{count} hour} other{{count} hours}}",
+    "in_minutes": {
+      "one": "{count} minute",
+      "other": "{count} minutes"
+    },
+    "in_hours": {
+      "one": "{count} hour",
+      "other": "{count} hours"
+    },
     "in_hours_minutes": "In {hours}h {minutes}m"
   },
   "common": {

@@ -1,7 +1,9 @@
 import 'dart:developer' show log;
 
+import 'package:flutter/foundation.dart';
 import 'package:meta/meta.dart';
 import 'package:waico/core/ai_models/chat_model.dart';
+import 'package:waico/core/utils/map_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
 
@@ -52,11 +54,11 @@ REST: [rest duration in seconds]
 [Repeat SESSION_NAME block for each session in the week]
 
 IMPORTANT RULES:
-- **ALLOWED EXERCISES (use ONLY these exercises):** Push-Up, Knee Push-Up, Wall Push-Up, Incline Push-Up, Decline Push-Up, Diamond Push-Up, Wide Push-Up, Squat, Sumo Squat, Split Squat (Right), Split Squat (Left), Crunch, Reverse Crunch, Double Crunch, Superman, Superman Pulse, Y Superman, Wall Sit, Plank, Side Plank, Jumping Jacks, High Knees, Mountain Climbers
+- **ALLOWED EXERCISES (use ONLY these exercises):** Push-Up, Knee Push-Up, Wall Push-Up, Incline Push-Up, Decline Push-Up, Diamond Push-Up, Wide Push-Up, Squat, Sumo Squat, Split Squat (Right), Split Squat (Left), Crunch, Reverse Crunch, Double Crunch, Superman, Superman Pulse, Y Superman, Wall Sit, Plank, Side Plank (Right), Side Plank (Left), Jumping Jacks, High Knees, Mountain Climbers
 - "Split Squat (Right)" and "Split Squat (Left)" must always follow each other - they should not be used separately or have another exercise in between them.
 - No equipment available, use only bodyweight exercises from the allowed exercises list
 
-**EXAMPLE:**
+**EXAMPLE 1:**
 PLAN_NAME: Full Body Strength Builder
 DESCRIPTION: A comprehensive bodyweight program focusing on building strength across all major muscle groups. Perfect for developing functional fitness and muscle endurance.
 DIFFICULTY: Intermediate
@@ -127,18 +129,15 @@ REST: 60
       }
 
       final responseText = response.toString().trim();
-      // TODO: remove this log in production
-      log(
-        'WorkoutPlanGenerator: Received response: \n#------------------------#\n\n$responseText\n\n#------------------------#',
-      );
-
       try {
         // Currently mediapipe's Gemma3n is in preview and only support 4096 tokens
         // I also noticed that it often generate malformed JSON when the schema is complex.
-        // To simplify the schema, we ask Gemma to generate in Structured text and for one week only with only a few informations
+        // To simplify the schema, we ask Gemma to generate in Structured text and for one week only with essential informations
         // And we fill the rest of the data and weeks programmatically.
 
         final parsedPlan = _parseStructuredText(responseText);
+
+        log('WorkoutPlanGenerator: Parsed workout plan:\n\n ############ \n\n $responseText\n\n############\n\n');
 
         // Add the programmatic data (weeks, sessions per week, etc.)
         parsedPlan["totalWeeks"] = 4;
@@ -148,18 +147,16 @@ REST: 60
         final referencePlan = parsedPlan["plan"] as Map<String, dynamic>;
 
         // Create 4 weeks with progressive intensity
-        for (int i = 1; i <= 4; i++) {
-          final plan = Map.of(referencePlan);
-          plan["week"] = i;
-          if (i > 2) {
-            plan["focus"] = "Increase intensity/volume";
-
+        for (int weekNumber = 1; weekNumber <= 4; weekNumber++) {
+          final plan = referencePlan.deepCopy();
+          plan["week"] = weekNumber;
+          if (weekNumber > 2) {
             // Progressively increase exercise difficulty
             for (final session in plan["workoutSessions"] as List<dynamic>) {
               if (session is Map<String, dynamic>) {
-                // Increase estimated duration by 5-10% for each week
+                // Increase estimated duration by 10% for each week
                 final estimatedDuration = session["estimatedDuration"] as int? ?? 0;
-                session["estimatedDuration"] = (estimatedDuration + (estimatedDuration * 0.05 * i)).round();
+                session["estimatedDuration"] = (estimatedDuration + (estimatedDuration * 0.10 * weekNumber)).ceil();
 
                 // Adjust exercises based on week
                 final exercises = session["exercises"] as List<dynamic>?;
@@ -170,13 +167,14 @@ REST: 60
                       final load = exercise["load"] as Map<String, dynamic>?;
                       if (load != null) {
                         if (load["type"] == "reps") {
-                          final reps = load["reps"] as int? ?? 0;
-                          load["reps"] = (reps + (reps * 0.05 * i)).round();
+                          final reps = load["reps"] as int? ?? 12;
+                          load["reps"] = (reps + (reps * 0.10 * weekNumber)).round();
                         } else if (load["type"] == "duration") {
-                          final duration = load["duration"] as int? ?? 0;
-                          load["duration"] = (duration + (duration * 0.05 * i)).round();
+                          final duration = load["duration"] as int? ?? 30;
+                          load["duration"] = (duration + (duration * 0.10 * weekNumber)).round();
                         }
                       }
+                      exercise["load"] = load;
                     }
                   }
                 }
@@ -187,11 +185,15 @@ REST: 60
         }
 
         return WorkoutPlan.fromJson(parsedPlan);
-      } catch (parseError) {
-        log('WorkoutPlanGenerator: Text parsing failed', error: parseError);
+      } catch (parseError, stackTrace) {
+        log('WorkoutPlanGenerator: Text parsing failed', error: parseError, stackTrace: stackTrace);
         throw WorkoutPlanGenerationException(
           'Failed to parse workout plan structured text response',
-          parseError is Exception ? parseError : Exception(parseError.toString()),
+          kDebugMode
+              ? parseError is Exception
+                    ? parseError
+                    : Exception(parseError.toString())
+              : null,
         );
       }
     } catch (e, stackTrace) {
@@ -249,7 +251,7 @@ REST: 60
     // buffer.writeln('- Timeframe: ${setupData.timeframe}');
     // TODO: Uncomment above when the full context of gemma3n is available in mediapipe
     // }
-    buffer.writeln('- Timeframe: 2 Weeks'); // Fixed to 2 weeks for now
+    // buffer.writeln('- Timeframe: 2 Weeks'); // Fixed to 2 weeks for now
 
     if (setupData.specificGoals.isNotEmpty) {
       buffer.writeln('- Specific goals: ${setupData.specificGoals.join(", ")}');
@@ -261,7 +263,8 @@ REST: 60
     buffer.writeln('1. Matches the user\'s fitness level and experience');
     buffer.writeln('2. Aligns with their specific goals and preferences');
     buffer.writeln('3. Fits within their time constraints');
-    buffer.writeln('4. Uses ONLY the structured text format specified above');
+    buffer.writeln('4. Uses ONLY the allowed exercises above');
+    buffer.writeln('4. Uses the structured text format specified above');
 
     return buffer.toString();
   }
@@ -286,6 +289,7 @@ REST: 60
 
     for (final line in lines) {
       if (line.isEmpty) continue;
+      log('Processing line: $line | LINE STARTS WITH DURATION: ${line.startsWith('DURATION:')}');
 
       if (line.startsWith('PLAN_NAME:')) {
         result['planName'] = line.substring(10).trim();
@@ -304,7 +308,7 @@ REST: 60
             currentExercise = null;
           }
 
-          currentSession['exercises'] = List<Map<String, dynamic>>.from(currentExercises);
+          currentSession['exercises'] = currentExercises.map((e) => e.deepCopy()).toList();
           sessions.add(currentSession);
           currentExercises.clear();
         }
@@ -316,7 +320,8 @@ REST: 60
         // Inside a session
         if (line.startsWith('SESSION_TYPE:')) {
           currentSession['type'] = line.substring(13).trim();
-        } else if (line.startsWith('DURATION:')) {
+        } else if (line.startsWith('DURATION:') && currentExercise == null) {
+          // If currentExercise != null then the duration if for the exercise, not the session
           currentSession['estimatedDuration'] = int.tryParse(line.substring(9).trim()) ?? 30;
         } else if (line.startsWith('EXERCISE:')) {
           // Save previous exercise if exists
@@ -339,28 +344,40 @@ REST: 60
             final loadType = line.substring(10).trim();
             currentExercise['load'] = <String, dynamic>{'type': loadType};
           } else if (line.startsWith('SETS:')) {
-            final sets = int.tryParse(line.substring(5).trim()) ?? 1;
+            final setsText = line.substring(5).trim();
+            // Remove any non-numeric characters (e.g., "sets")
+            final cleanSetsText = _cleanNumber(setsText).trim();
+            final sets = int.tryParse(cleanSetsText) ?? 1;
             final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
             load['sets'] = sets;
             currentExercise['load'] = load;
           } else if (line.startsWith('REPS:')) {
-            final repsText = line.substring(5).trim();
-            if (repsText.isNotEmpty) {
-              final reps = int.tryParse(repsText) ?? 1;
+            final repsText = line.substring(5);
+            // Remove any non-numeric characters (e.g., "reps")
+            final cleanRepsText = _cleanNumber(repsText).trim();
+            if (cleanRepsText.isNotEmpty) {
+              final reps = int.tryParse(cleanRepsText) ?? 1;
               final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
               load['reps'] = reps;
               currentExercise['load'] = load;
             }
           } else if (line.startsWith('DURATION:')) {
-            final durationText = line.substring(9).trim();
-            if (durationText.isNotEmpty) {
-              final duration = int.tryParse(durationText) ?? 30;
+            log('Processing duration line: $line');
+            final durationText = line.substring(9);
+            // Remove any non-numeric characters (e.g., "seconds")
+            final cleanDurationText = _cleanNumber(durationText).trim();
+            log('Clean duration text: $cleanDurationText, original line: $line');
+            if (cleanDurationText.isNotEmpty) {
+              final duration = int.tryParse(cleanDurationText) ?? 30;
               final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
               load['duration'] = duration;
               currentExercise['load'] = load;
             }
           } else if (line.startsWith('REST:')) {
-            final rest = int.tryParse(line.substring(5).trim()) ?? 60;
+            final restText = line.substring(5);
+            // Remove any non-numeric characters (e.g., "seconds")
+            final cleanRestText = _cleanNumber(restText).trim();
+            final rest = int.tryParse(cleanRestText) ?? 60;
             currentExercise['restDuration'] = rest;
           }
         }
@@ -376,10 +393,28 @@ REST: 60
       sessions.add(currentSession);
     }
 
+    // Add exercise image and instruction if available
+    for (final session in sessions) {
+      final exercises = session['exercises'] as List<Map<String, dynamic>>?;
+      if (exercises != null) {
+        for (final exercise in exercises) {
+          final exerciseName = exercise['name'] as String? ?? '';
+          final guide = _getExerciseGuide(exerciseName);
+          exercise['image'] = guide?['image'];
+          exercise['instruction'] = guide?['instruction'];
+        }
+      }
+    }
+
     // Build the plan structure
     result['plan'] = {'focus': planFocus ?? 'General fitness', 'workoutSessions': sessions};
 
     return result;
+  }
+
+  String _cleanNumber(String text) {
+    // Remove any non-numeric characters (e.g., "sets", "reps", "seconds")
+    return RegExp(r'\d+').firstMatch(text)?.group(0) ?? '';
   }
 
   /// Disposes of the chat model resources
@@ -518,7 +553,8 @@ class _WorkoutProgressTracker {
         // Parse session data
         if (line.startsWith('SESSION_TYPE:')) {
           currentSession['type'] = line.substring(13).trim();
-        } else if (line.startsWith('DURATION:')) {
+        } else if (line.startsWith('DURATION:') && currentExercise == null) {
+          // If currentExercise != null then the duration if for the exercise, not the session
           currentSession['estimatedDuration'] = int.tryParse(line.substring(9).trim()) ?? 30;
         } else if (line.startsWith('EXERCISE:')) {
           if (currentExercise != null) {
@@ -681,7 +717,7 @@ Map<String, String>? _getExerciseGuide(String exerciseName) {
     } else if (lowerName.contains('diamond') || lowerName.contains('close')) {
       return exerciseGuideMap['close_push_up'];
     } else if (lowerName.contains('wide')) {
-      return exerciseGuideMap['push_up']; // Use standard push-up for wide
+      return exerciseGuideMap['push_up']; // Use standard push-up for now
     } else {
       return exerciseGuideMap['push_up'];
     }
