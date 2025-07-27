@@ -89,7 +89,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     await _setupDownloader();
 
     // Check if we need to show voice model selection
-    if (AppPreferences.hasShownDevicePerfSelection()) {
+    if (!AppPreferences.hasShownDevicePerfSelection()) {
       _showDevicePerfSelectionModal();
       return;
     }
