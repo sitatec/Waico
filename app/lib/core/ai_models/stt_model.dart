@@ -116,16 +116,24 @@ class SttModel {
                 final modelPath = message['modelPath'] as String;
                 modelDirPath = await extractModelData(modelPath);
 
-                final encoderFile = File('$modelDirPath/model.onnx');
+                final encoderFile = File('$modelDirPath/encoder.onnx');
+                final decoderFile = File('$modelDirPath/decoder.onnx');
+                final joinerFile = File('$modelDirPath/joiner.onnx');
                 final tokensFile = File('$modelDirPath/tokens.txt');
 
-                if (!await encoderFile.exists()) throw Exception("model.onnx not found in $modelDirPath");
+                if (!await encoderFile.exists()) throw Exception("encoder.onnx not found in $modelDirPath");
+                if (!await decoderFile.exists()) throw Exception("decoder.onnx not found in $modelDirPath");
+                if (!await joinerFile.exists()) throw Exception("joiner.onnx not found in $modelDirPath");
                 if (!await tokensFile.exists()) throw Exception("tokens.txt not found in $modelDirPath");
 
-                final canaryConfig = OfflineNemoEncDecCtcModelConfig(model: encoderFile.path);
+                final nemoConfig = OfflineTransducerModelConfig(
+                  encoder: encoderFile.path,
+                  decoder: decoderFile.path,
+                  joiner: joinerFile.path,
+                );
 
                 final modelConfig = OfflineModelConfig(
-                  nemoCtc: canaryConfig,
+                  transducer: nemoConfig,
                   tokens: tokensFile.path,
                   debug: kDebugMode,
                   // If device have more than 4 cores, use 4 threads, otherwise use all the cores

@@ -124,6 +124,7 @@
     "download_canceled": "Download Canceled",
     "download_paused": "Download Paused",
     "failed_enqueue": "Failed to enqueue download",
+    "file_not_found": "File not found",
     "voice_model_selection": {
       "title": "Choose Voice Quality",
       "description": "Select the voice model that best fits your device's performance:",

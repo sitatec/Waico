@@ -141,8 +141,8 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
     _modelsToDownload = [
       DownloadItem(
-        url: "${DownloadItem.baseUrl}/nemo-fast-conformer-ctc-en-de-es-fr-14288.tar.gz",
-        fileName: "nemo-fast-conformer-ctc-en-de-es-fr-14288.tar.gz",
+        url: "${DownloadItem.baseUrl}/nemo-fast-conformer-transducer-en-de-es-fr-14288.tar.gz",
+        fileName: "nemo-fast-conformer-transducer-en-de-es-fr-14288.tar.gz",
         displayName: "Nemo STT",
       ),
       DownloadItem(
@@ -227,10 +227,12 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                   item.isCompleted = true;
                   _continueWithNextDownload();
                   break;
-                case TaskStatus.failed:
+                case TaskStatus.failed || TaskStatus.notFound:
                   item.isError = true;
-                  item.errorMessage = update.exception?.description ?? LocaleKeys.ai_models_download_failed.tr();
-
+                  item.errorMessage = update.exception?.description;
+                  item.errorMessage ??= update.status == TaskStatus.notFound
+                      ? LocaleKeys.ai_models_file_not_found.tr()
+                      : LocaleKeys.ai_models_download_failed.tr();
                   _continueWithNextDownload();
                   break;
                 case TaskStatus.canceled:

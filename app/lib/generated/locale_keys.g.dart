@@ -111,6 +111,7 @@ abstract class  LocaleKeys {
   static const ai_models_download_canceled = 'ai_models.download_canceled';
   static const ai_models_download_paused = 'ai_models.download_paused';
   static const ai_models_failed_enqueue = 'ai_models.failed_enqueue';
+  static const ai_models_file_not_found = 'ai_models.file_not_found';
   static const ai_models_voice_model_selection_title = 'ai_models.voice_model_selection.title';
   static const ai_models_voice_model_selection_description = 'ai_models.voice_model_selection.description';
   static const ai_models_voice_model_selection_premium_title = 'ai_models.voice_model_selection.premium_title';
