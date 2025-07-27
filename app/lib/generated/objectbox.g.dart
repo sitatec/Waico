@@ -347,9 +347,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (User object, fb.Builder fbb) {
         final preferredNameOffset = fbb.writeString(object.preferredName);
-        final userInfoOffset = object.userInfo == null
-            ? null
-            : fbb.writeString(object.userInfo!);
+        final userInfoOffset = fbb.writeString(object.userInfo);
         final dbWorkoutSetupDataOffset = object.dbWorkoutSetupData == null
             ? null
             : fbb.writeString(object.dbWorkoutSetupData!);
@@ -391,7 +389,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         ).vTableGet(buffer, rootOffset, 10, '');
         final userInfoParam = const fb.StringReader(
           asciiOptimization: true,
-        ).vTableGetNullable(buffer, rootOffset, 12);
+        ).vTableGet(buffer, rootOffset, 12, '');
         final object =
             User(
                 id: idParam,

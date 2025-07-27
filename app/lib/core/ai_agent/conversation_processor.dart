@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' show log;
+import 'package:easy_localization/easy_localization.dart' show DateFormat;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ChatMessage;
 import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/ai_models/embedding_model.dart';
@@ -24,7 +25,6 @@ First, think through the conversation step by step:
 3. Were there any important decisions or commitments made?
 4. What was the overall tone and emotional context?
 5. Were there any significant developments or changes?
-etc.
 
 Then provide a summary that captures these elements. Keep it factual, objective, and focused on the most important elements. The summary should be 1-4 paragraphs and serve as a quick reference for understanding what happened in this conversation without missing any important details.
 ''';
@@ -35,87 +35,74 @@ Given a conversation and the current user information (which can be empty), your
 
 First, analyze the conversation step by step:
 1. What personal information did the user explicitly mention?
-2. What can be reasonably inferred from their statements?
-3. What preferences, interests, or goals did they express (present goals not past)?
-4. What demographic or circumstantial information is evident?
-5. Did the user provide any information (contact details, location, name, etc.) about their healthcare/wellbeing professionals?
-6. Anything that is important to remember about the user for future interactions?
-etc.
+2. What preferences, interests, or goals did they express (present goals, not past)?
+3. What demographic or circumstantial information is evident?
+4. Did the user provide any information (contact details, location, name, etc.) about their healthcare/wellbeing professionals?
 
 Only include information that is explicitly mentioned or can be reasonably inferred.
 
 If the current user information is not empty, merge the new information from the conversation with the existing user information prioritizing the new information to keep it up-to-date.
 
-Your final answer should a concise paragraph summarizing the user information. Not a summary of the entire conversation, not a summary of everything the user says. Only informations for future reference.
+Your final answer should be a *concise* text containing only:
+- User information
+- Contact information of their healthcare/wellbeing professionals. 
+- NOTHING ELSE.
 
 Example 1:
-Let's start with a step by step analysis of the conversation...(Your reasoning here)
 ```text
 The user's goals are to improve their mental health, manage anxiety, and build better relationships. They are interested in mindfulness practices and have a therapist named Alex that they see weekly. Their therapist Alex phone number is 123-456-7890.
-They prefer to communicate via email and are located in San Francisco, CA. The user is 28 years old and works as a software engineer.
 ```
 
 Example 2:
-(Your thoughts)
 ```text
 The user is a 35-year-old male named John Doe. He is married with two children and lives in New York City. He works as a marketing manager and enjoys hiking and cooking.
 He has a Gym coach hose email is mason@gymwarriors.com, he sometimes struggles with work-life balance and is interested in improving his time management skills.
-He is considering starting therapy to address his body image issues which is the reason he started going to the gym. Going to the gym has significantly improved the way he feels about himself.
 ```
 
 If there isn't much information, keep it short:
-Step by step analysis of the conversation... (This is your reasoning)
 ```text
-The user is hard working, his boss seems to like breaking promises.
+The user is dealing stress, but is getting help from a therapist.
 ```
 
 If there is not information to extract, output an empty text:
-(Your thoughts here)
 ```text
-
 ```
 ''';
 
   static const _memoriesPrompt = '''
-You are an expert at identifying significant moments and information that should be remembered long-term from conversations.
+You are an expert at identifying significant moments that should be remembered long-term from conversations.
 
 First, analyze the conversation step by step:
 1. What significant life events or milestones were mentioned?
 2. What important decisions or commitments were made?
 3. Were there any emotional moments or breakthroughs?
 4. What key insights or realizations occurred?
-5. What important relationships or connections were mentioned?
-6. Were any significant life goals set or achievements celebrated?
-7. What challenges or difficulties were discussed?
-8. Were there any personal growth moments?
-9. What important dates or future plans were mentioned?
-etc.
+5. Were any significant life goals set or achievements celebrated?
+6. Anything that is important to remember about the user for future interactions?
 
 Then extract important memories. Each memory should be:
-- A clear, concise statement or paragraph summarizing the key point
+- Clear and concise around a single significant moment
 - Self-contained and meaningful for future reference
 - Focused on significant moments, not small talk
 
+IMPORTANT RULES:
+- Every memory should be about a single significant moment. Don't combine multiple moments into one memory.
+- A single event can not be mentioned in multiple memories to avoid redundancy.
 
-For every memory detected, include all relevant context and details from the conversation that are related to that memory.
-
-When you are done analyzing the conversation step by step, format your final answer as the following 2 examples:
+Format your final answer as the following examples:
 
 Example 1:
-Let's think through the conversation step by step... (Your reasoning here)
 ```json
 [
   "When the user was 10 years old, they moved to a new city with their family, which was a significant change for them. They remember feeling excited but also nervous about making new friends.",
-  "The user's first job was at a local bookstore, where they developed a love for reading and customer service. They worked there for 3 years during high school. This experience shaped their career interests, leading them to pursue a degree in business.",
-  "The user had an cousin named Sarah who has been a significant influence in their life. They often discuss personal growth and career goals with her, and she has helped them through difficult times. But one day, Sarah had a car accident and passed away, which was a very difficult time for the user.",
+  "The user had an cousin named Sarah who was a significant influence in their life. They use to discuss personal growth and career goals with her, and she has helped them through difficult times. But one day, Sarah had a car accident and passed away, which was a very difficult time for the user.",
 ]
 ```
 
 Example 2:
-Let's start with a step by step analysis of the conversation... (This is your reasoning)
 ```json
 [
-  "The user's math professor, Dr. Smith, is a significant figure in their academic journey. Dr. Smith has been a mentor, providing guidance and support throughout the user's studies. The user often seeks Dr. Smith's advice on academic and career decisions."
+  "The user's math professor, Dr. Smith, is an important figure in their academic journey. Dr. Smith has been a mentor, providing guidance and support throughout the user's studies. The user often seeks Dr. Smith's advice on academic and career decisions."
 ]
 ```
 
@@ -128,30 +115,31 @@ If no significant memories are found, return an empty array:
   static const _observationPrompt = '''
 You are a professional clinical observer writing notes for healthcare providers, therapists, or coaches.
 
-First, analyze the conversation systematically:
+First, analyze the conversation systematically and check if any of the following questions can be answered based on the content of the conversation:
 1. What is the user's current emotional state and mood patterns?
-2. How is their communication style and engagement level?
 3. What key concerns or issues did they present?
 4. Are there any signs of progress or changes from previous interactions?
-5. What risk factors or areas of concern are evident?
-6. What strengths and positive indicators do you observe?
-8. What notable behaviors or patterns emerged?
-9. What did the user and the assistant agree on to talk about in the next conversation (if any)?
-etc.
+5. What strengths and positive indicators do you observe?
+6. What did the user and the assistant agree on to talk about in the next conversation?
 
-Then provide a professional observation that would be valuable for someone providing care or guidance to this person. Write in a professional, objective tone suitable for clinical documentation. Be empathetic but maintain professional boundaries. Focus on observable behaviors and stated concerns rather than making diagnoses.
+Then provide a professional observation that would be valuable for someone providing care or guidance to the user. Focus on observable behaviors and stated concerns rather than making diagnoses.
+Keep the observation concise and focus on important insights.
 
-Keep the observation concise but comprehensive (1 paragraph maximum).
-
-Your final answer should formatted as follows:
-(You should think step-by-step here first. Then proceed with the output like below) 
+Your final answer should formatted as the following examples:
+Example 1:
 ```text
-The user appears to be experiencing a high level of anxiety related to their work performance. They expressed feelings of being overwhelmed and mentioned difficulty sleeping due to racing thoughts about deadlines.
+The user mentioned experiencing a high level of anxiety related to their work performance. They expressed feelings of being overwhelmed and mentioned difficulty sleeping due to racing thoughts about deadlines.
 The user also indicated a desire to improve their time management skills and is considering seeking professional help to address these issues. 
-The user doesn't appear to be making significant progress in managing their anxiety, and they have not yet implemented the coping strategies discussed in previous sessions.
 ```
 
-If the conversation doesn't contain enough information for a meaningful observation, return an empty string.
+Example 2:
+```text
+The user is showing signs of improvement in their emotional well-being. They reported feeling more optimistic about their future and have been actively engaging in self-care activities.
+```
+
+If the conversation doesn't contain enough information for a meaningful observation, return an empty string:
+```text
+```
 ''';
 
   final UserRepository _userRepository;
@@ -272,7 +260,8 @@ If the conversation doesn't contain enough information for a meaningful observat
 
       final response = StringBuffer();
       await for (final chunk in chatModel.sendMessageStream(
-        'Analyze and summarize this conversation:\n\n$conversation',
+        'Analyze and summarize the following conversation, Output only the summary, do not include any titles or additional text.'
+        'Conversation:\n\n$conversation\n\nConversation Summary:',
       )) {
         response.write(chunk);
       }
@@ -333,7 +322,10 @@ If the conversation doesn't contain enough information for a meaningful observat
 
       final decoded = json.decode(jsonText);
       if (decoded is List) {
-        return decoded.cast<String>();
+        final memories = decoded.cast<String>();
+        // Format: Wednesday, 01 January 2023
+        final formattedDate = DateFormat('EEEE, dd MMMM yyyy').format(DateTime.now());
+        return memories.map((memory) => '$memory\n\nDate: $formattedDate').toList();
       }
       return <String>[];
     } catch (e, stackTrace) {

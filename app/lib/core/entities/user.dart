@@ -25,7 +25,7 @@ class User {
   ///
   /// This can include environment/settings that calms the user, their wellbeing professional (therapist, coach,..)
   /// contact info, things that stresses them...
-  String? userInfo;
+  String userInfo;
 
   // The WorkoutSetupData type is not supported by ObjectBox.
   // So ignore this field...
@@ -106,12 +106,13 @@ class User {
     DateTime? createdAt,
     DateTime? updatedAt,
     required this.preferredName,
-    this.userInfo,
+    String? userInfo,
     this.workoutSetupData,
     this.workoutPlan,
     this.workoutProgress,
   }) : createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+       updatedAt = updatedAt ?? DateTime.now(),
+       userInfo = userInfo ?? 'The user preferred name is $preferredName.';
 
   void touch() {
     updatedAt = DateTime.now();

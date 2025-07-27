@@ -76,7 +76,7 @@ class ToolParser implements StreamTransformer<String, String> {
     final startIndex = _buffer.indexOf(_toolCallStart);
     if (startIndex == -1) {
       // No tool call start found, but check for partial patterns
-      if (_buffer.endsWith('`') || _buffer.endsWith('``')) {
+      if (_buffer.contains('```') || _buffer.endsWith('`') || _buffer.endsWith('``')) {
         return false; // Wait for more data
       }
       _controller.add(_buffer);

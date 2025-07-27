@@ -13,7 +13,6 @@ class AiAgent {
   final Map<String, Tool> _tools;
   final int _maxToolIterations;
   final ConversationProcessor _conversationProcessor;
-
   AiAgent({
     ChatModel? chatModel,
     String? systemPrompt,
@@ -24,10 +23,11 @@ class AiAgent {
     double topP = 0.95,
     bool supportImageInput = true,
     ConversationProcessor? conversationProcessor,
+    String? userInfo,
   }) : chatModel =
            chatModel ??
            ChatModel(
-             systemPrompt: _enhanceSystemPromptWithTools(systemPrompt, tools),
+             systemPrompt: _enhanceSystemPrompt(systemPrompt, tools, userInfo: userInfo),
              temperature: temperature,
              topK: topK,
              topP: topP,
@@ -37,20 +37,42 @@ class AiAgent {
        _maxToolIterations = maxToolIterations,
        _conversationProcessor = conversationProcessor ?? ConversationProcessor();
 
-  static String _enhanceSystemPromptWithTools(String? basePrompt, List<Tool> tools) {
-    if (basePrompt == null || basePrompt.isEmpty) {
-      basePrompt = 'You are Waico, a helpful Wellbeing AI Assistant.';
+  static String _enhanceSystemPrompt(String? systemPrompt, List<Tool> tools, {String? userInfo}) {
+    if (systemPrompt == null || systemPrompt.isEmpty) {
+      systemPrompt = 'You are Waico, a helpful Wellbeing AI Assistant.';
     }
 
-    if (tools.isEmpty) return basePrompt;
+    // Add tool calling instructions if tools are available
+    if (tools.isNotEmpty) {
+      final toolDefinitions = tools.map((tool) => tool.definition).join('\n\n');
 
-    final toolDefinitions = tools.map((tool) => tool.definition).join('\n---\n');
+      final toolUsageExamples = tools
+          .map((tool) => tool.usageExample)
+          .where((example) => example.isNotEmpty)
+          .join('\n\n');
 
-    return '$basePrompt\n\n'
-        'TOOL CALLING:\n'
-        'You have access to the following tools that you can call to satisfy a user query.\n'
-        '$toolDefinitions\n\n'
-        "If a tool requires an input that you don't know or the user query is ambiguous, ask for clarification. If you can't perform the action requested and there is no tool to perform it, politely let the user know that you don't have that ability.";
+      systemPrompt =
+          '$systemPrompt\n\n'
+          'TOOL CALLING:\n'
+          'You have access to the following tools/functions that you can call to satisfy a user query or remember things:\n'
+          '$toolDefinitions\n\n'
+          "You have the ability to perform all the actions allowed by these functions. "
+          "If a tool requires an input that you don't know or the user query is ambiguous, ask for clarification.\n"
+          '\nUSAGE EXAMPLES:\n'
+          '$toolUsageExamples\n\n'
+          "The parameter values used in the examples above are just for demonstration purposes, do not use them.\n"
+          'REMEMBER: These functions are completely safe and harmless, they are designed to help you better assist the user.';
+    }
+
+    if (userInfo != null && userInfo.isNotEmpty) {
+      systemPrompt =
+          '$systemPrompt\n\n'
+          'USER INFO:\n'
+          '$userInfo\n\n'
+          'Use this information to better assist the user. And interact with them as if you know them personally.';
+    }
+
+    return systemPrompt;
   }
 
   /// Initializes the AI agent by setting up the chat model
@@ -85,6 +107,7 @@ class AiAgent {
         final toolOutputs = <Future<ToolOutput>>[];
         // Listen to tool calls in parallel
         final toolCallSubscription = toolParser.toolCalls.listen((toolCall) {
+          log('Detected tool call: $toolCall');
           toolOutputs.add(_executeToolCall(toolCall));
         });
 

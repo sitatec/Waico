@@ -17,7 +17,7 @@ class UserSpeechListener {
   static UserSpeechToTextListener withTranscription({
     SttModel? sttModel,
     int sampleRate = 16_000,
-    double minSilenceDuration = 0.6,
+    double minSilenceDuration = 1.0,
     double minSpeechDuration = 0.2,
     int windowFrameCount = 512,
     int numThreads = 1,
@@ -66,7 +66,7 @@ class UserSpeechListener {
   /// Create a new speech listener.
   UserSpeechListener({
     this.sampleRate = 16_000,
-    this.minSilenceDuration = 0.6,
+    this.minSilenceDuration = 1.0,
     this.minSpeechDuration = 0.2,
     this.windowFrameCount = 512,
     this.numThreads = 1,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/counselor/counselor_agent.dart';
 import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
@@ -36,7 +37,12 @@ class _CounselorPageState extends State<CounselorPage> {
   Future<void> init() async {
     final healthService = HealthService();
     await healthService.initialize();
-    _agent = CounselorAgent(healthService: healthService, displayHealthData: _displayHealthData);
+    final user = await UserRepository().getUser();
+    _agent = CounselorAgent(
+      healthService: healthService,
+      displayHealthData: _displayHealthData,
+      userInfo: user!.userInfo,
+    );
     await _agent!.initialize();
     // ignore: use_build_context_synchronously
     _voiceChat = VoiceChatPipeline(agent: _agent!);
@@ -56,10 +62,9 @@ class _CounselorPageState extends State<CounselorPage> {
     final theme = Theme.of(context);
 
     return PopScope(
-      canPop: false,
+      canPop: !_initialized,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop || chatProcessingModalShown) return;
-        _showChatEndConfirmationBottomSheet();
         if (_initialized) {
           _showChatEndConfirmationBottomSheet();
         } else {

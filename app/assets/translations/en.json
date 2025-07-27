@@ -93,7 +93,7 @@
   },
   "counselor": {
     "title": "Counselor",
-    "mode_label": "Mode:",
+    "mode_label": "Mode",
     "speech_mode": "Speech",
     "text_mode": "Text",
     "end_chat_question": "Are you sure you want to end the chat?",
