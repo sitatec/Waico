@@ -134,7 +134,7 @@ class _CounselorPageState extends State<CounselorPage> {
       isDismissible: false,
       builder: (context) {
         return PopScope(
-          canPop: false,
+          canPop: !_initialized,
           child: Container(
             padding: const EdgeInsets.all(16),
             child: Column(

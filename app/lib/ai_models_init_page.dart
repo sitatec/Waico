@@ -145,10 +145,15 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
         fileName: "nemo-fast-conformer-transducer-en-de-es-fr-14288.tar.gz",
         displayName: "Nemo STT",
       ),
+      // DownloadItem(
+      //   url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
+      //   fileName: "gemma-3n-E2B-it-int4.task",
+      //   displayName: "Gemma 3n E2B",
+      // ),
       DownloadItem(
-        url: "${DownloadItem.baseUrl}/gemma-3n-E2B-it-int4.task",
-        fileName: "gemma-3n-E2B-it-int4.task",
-        displayName: "Gemma 3n E2B",
+        url: "${DownloadItem.baseUrl}/gemma-3n-E4B-it-int4.task",
+        fileName: "gemma-3n-E4B-it-int4.task",
+        displayName: "Gemma 3n E4B",
       ),
       DownloadItem(
         url: "${DownloadItem.baseUrl}/Qwen3-Embedding-0.6B-Q8_0.gguf",
@@ -543,7 +548,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(LocaleKeys.ai_models_title.tr())),
+      appBar: AppBar(title: Text(LocaleKeys.ai_models_title.tr(), style: TextStyle(fontSize: 20))),
       body: Center(
         child: isReady
             ? ListView(

@@ -19,7 +19,7 @@ class UserSpeechListener {
     int sampleRate = 16_000,
     double minSilenceDuration = 0.6,
     double minSpeechDuration = 0.2,
-    int windowFrameCount = 256,
+    int windowFrameCount = 512,
     int numThreads = 1,
     AudioRecorder? audioRecorder,
   }) {
@@ -68,7 +68,7 @@ class UserSpeechListener {
     this.sampleRate = 16_000,
     this.minSilenceDuration = 0.6,
     this.minSpeechDuration = 0.2,
-    this.windowFrameCount = 256,
+    this.windowFrameCount = 512,
     this.numThreads = 1,
     AudioRecorder? audioRecorder,
   }) : _audioRecorder = audioRecorder ?? AudioRecorder();
@@ -85,14 +85,19 @@ class UserSpeechListener {
     }
 
     try {
-      final tenVad = TenVadModelConfig(
+      final tenVad = SileroVadModelConfig(
         model: vadModelPath ?? await _loadVadModelFromAssets(),
         minSilenceDuration: minSilenceDuration,
         minSpeechDuration: minSpeechDuration,
         windowSize: windowFrameCount,
       );
 
-      final config = VadModelConfig(tenVad: tenVad, numThreads: numThreads, debug: kDebugMode, sampleRate: sampleRate);
+      final config = VadModelConfig(
+        sileroVad: tenVad,
+        numThreads: numThreads,
+        debug: kDebugMode,
+        sampleRate: sampleRate,
+      );
 
       _vad = VoiceActivityDetector(config: config, bufferSizeInSeconds: tenVad.maxSpeechDuration);
 
@@ -105,12 +110,12 @@ class UserSpeechListener {
 
   Future<String> _loadVadModelFromAssets() async {
     final dir = await getApplicationDocumentsDirectory();
-    final modelName = 'ten-vad.onnx';
+    final modelName = 'silero_vad_v5.onnx';
     final modelFile = File('${dir.path}/$modelName');
 
     if (!await modelFile.exists()) {
       // First app open or model was removed from app doc dir.
-      final byteData = await rootBundle.load('assets/$modelName');
+      final byteData = await rootBundle.load('assets/models/$modelName');
       await modelFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
     }
 
