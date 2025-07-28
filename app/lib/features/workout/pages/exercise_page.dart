@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'dart:developer' show log;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -33,17 +34,11 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
   WorkoutSessionManager? _sessionManager;
   VoiceChatPipeline? _voiceChatPipeline;
   WorkoutCoachAgent? _workoutCoachAgent;
-  StreamSubscription<int>? _exerciseIndexSubscription;
   PoseDetectionService? _poseDetectionService;
 
   bool _isInitialized = false;
-  bool _isExerciseStarted = false;
-  bool _showInstructions = true;
-  bool _isLoading = false;
-  int _currentExerciseIndex = 0;
   bool _isCameraPermissionGranted = false;
 
-  // Animation controllers for modern UI
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -59,10 +54,8 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
 
   @override
   void dispose() {
-    // TODO: add conversation processing for workout sessions as well
     WidgetsBinding.instance.removeObserver(this);
     _workoutCoachAgent?.chatModel.dispose();
-    _exerciseIndexSubscription?.cancel();
     _sessionManager?.dispose();
     _voiceChatPipeline?.dispose();
     _fadeController.dispose();
@@ -75,68 +68,53 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
     switch (state) {
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
-        // Stop pose detection when app becomes inactive/paused
         if (_poseDetectionService?.isActive == true) {
           _poseDetectionService?.stop();
         }
-
+        break;
       case AppLifecycleState.resumed:
-        // Restart pose detection when app is resumed
-        if (_isCameraPermissionGranted && _isInitialized) {
+        if (_isCameraPermissionGranted &&
+            _isInitialized &&
+            _sessionManager?.currentState.currentPhase == WorkoutPhaseType.exercising) {
           _poseDetectionService?.start().then((success) {
-            if (!success) {
+            if (!success && mounted) {
               log('Failed to restart pose detection service');
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(LocaleKeys.common_unknown_error.tr()), backgroundColor: Colors.red),
-                );
-              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(LocaleKeys.common_unknown_error.tr()), backgroundColor: Colors.red),
+              );
             }
           });
         }
         break;
-
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
-        // App state changes, but no action needed
         break;
     }
   }
 
   void _setupAnimations() {
     _fadeController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-
     _slideController = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
-
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut));
-
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
-
     _fadeController.forward();
     _slideController.forward();
   }
 
   Future<void> _initializeWorkoutSession() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isInitialized = false);
     try {
-      // Initialize the workout coach agent
       _workoutCoachAgent = WorkoutCoachAgent();
       await _workoutCoachAgent!.initialize();
-
-      // Initialize the voice chat pipeline
       _voiceChatPipeline = VoiceChatPipeline(agent: _workoutCoachAgent!);
-
       _poseDetectionService = PoseDetectionService.instance;
-      // Initialize the session manager
+
       _sessionManager = WorkoutSessionManager(
         session: widget.session,
         voiceChatPipeline: _voiceChatPipeline!,
@@ -144,39 +122,24 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
         workoutSessionIndex: widget.workoutSessionIndex,
         poseDetectionService: _poseDetectionService,
       );
+
       _isCameraPermissionGranted = await _poseDetectionService!.hasCameraPermission;
       _poseDetectionService?.errorStream.listen((error) {
-        log('Pose detection error: $error');
-        if (mounted) {
+        if (mounted)
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
-        }
       });
+
       await _sessionManager!.initialize();
 
-      // Listen to exercise index changes
-      _exerciseIndexSubscription = _sessionManager!.exerciseIndexStream.listen((index) {
-        setState(() {
-          _currentExerciseIndex = index;
-          _showInstructions = !_isExerciseStarted;
-        });
-      });
-
-      setState(() {
-        _isInitialized = true;
-        _isLoading = false;
-        _currentExerciseIndex = _sessionManager!.currentExerciseIndex;
-      });
-
-      // Navigate to starting exercise if specified
       if (widget.startingExerciseIndex != null &&
-          widget.startingExerciseIndex != _sessionManager!.currentExerciseIndex) {
+          widget.startingExerciseIndex != _sessionManager!.currentState.currentExerciseIndex) {
         await _sessionManager!.goToExercise(widget.startingExerciseIndex!);
       }
+
+      setState(() => _isInitialized = true);
     } catch (e, s) {
       log('Failed to initialize workout session', error: e, stackTrace: s);
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isInitialized = true); // Stop loading even on error
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to initialize workout session: $e'), backgroundColor: Colors.red),
@@ -185,51 +148,16 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
     }
   }
 
-  Future<void> _startExercise() async {
-    if (_sessionManager == null) return;
-
-    setState(() {
-      _isExerciseStarted = true;
-      _showInstructions = false;
-    });
-
-    await _sessionManager!.startCurrentExercise();
-  }
-
-  Future<void> _goToNextExercise() async {
-    if (_sessionManager?.hasNextExercise == true) {
-      setState(() {
-        _isExerciseStarted = false;
-        _showInstructions = true;
-      });
-      await _sessionManager!.goToNextExercise();
-    }
-  }
-
-  Future<void> _goToPreviousExercise() async {
-    if (_sessionManager?.hasPreviousExercise == true) {
-      setState(() {
-        _isExerciseStarted = false;
-        _showInstructions = true;
-      });
-      await _sessionManager!.goToPreviousExercise();
-    }
-  }
-
   Future<void> _markExerciseComplete() async {
     await _sessionManager?.markCurrentExerciseAsComplete();
-
-    // If this was the last exercise, navigate back
-    if (_sessionManager?.hasNextExercise == false) {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
+    if (_sessionManager?.currentState.currentPhase == WorkoutPhaseType.finished) {
+      if (mounted) Navigator.of(context).pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (!_isInitialized) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -239,90 +167,84 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
                 valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 20),
-              Text('Initializing workout session...', style: TextStyle(fontSize: 16)),
+              const Text('Initializing workout session...', style: TextStyle(fontSize: 16)),
             ],
           ),
         ),
       );
     }
 
-    if (!_isInitialized || _sessionManager == null) {
-      return Scaffold(
+    if (_sessionManager == null) {
+      return const Scaffold(
         body: Center(
           child: Text('Failed to initialize workout session', style: TextStyle(color: Colors.white, fontSize: 16)),
         ),
       );
     }
 
-    final currentExercise = _sessionManager!.currentExercise;
+    return StreamBuilder<WorkoutSessionState>(
+      stream: _sessionManager!.stateStream,
+      initialData: _sessionManager!.currentState,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final state = snapshot.data!;
+        final showInstructions = state.currentPhase == WorkoutPhaseType.preExercise && state.currentSet == 1;
 
-    return Scaffold(
-      body: SafeArea(
-        child: _showInstructions && !_isExerciseStarted
-            ? SingleChildScrollView(
-                child: InstructionsView(
-                  exercise: currentExercise,
-                  fadeAnimation: _fadeAnimation,
-                  slideAnimation: _slideAnimation,
-                  currentExerciseIndex: _currentExerciseIndex,
-                  totalExercises: _sessionManager!.totalExercises,
-                  onStartExercise: _startExercise,
-                ),
-              )
-            : Stack(
-                children: [
-                  // Main workout view
-                  WorkoutView(
-                    sessionManager: _sessionManager,
-                    onPermissionDenied: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(LocaleKeys.workout_errors_camera_permission_required.tr()),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    },
+        return Scaffold(
+          body: SafeArea(
+            child: showInstructions
+                ? SingleChildScrollView(
+                    child: InstructionsView(
+                      state: state,
+                      fadeAnimation: _fadeAnimation,
+                      slideAnimation: _slideAnimation,
+                      onStartExercise: () => _sessionManager!.startCurrentExercise(),
+                    ),
+                  )
+                : Stack(
+                    children: [
+                      WorkoutView(state: state),
+                      if (state.currentPhase == WorkoutPhaseType.resting)
+                        RestOverlay(state: state, onSkipRest: () => _sessionManager!.startCurrentExercise()),
+                      if (state.currentPhase == WorkoutPhaseType.exercising)
+                        ExerciseInfoOverlay(state: state, onBackPressed: () => Navigator.pop(context)),
+                      ControlOverlay(
+                        state: state,
+                        onGoToPrevious: () => _sessionManager!.goToPreviousExercise(),
+                        onMarkComplete: _markExerciseComplete,
+                        onGoToNext: () => _sessionManager!.goToNextExercise(),
+                        onSwitchCamera: () => _sessionManager!.poseDetectionService.switchCamera(),
+                      ),
+                    ],
                   ),
-
-                  // Control overlay
-                  ControlOverlay(
-                    showInstructions: _showInstructions,
-                    sessionManager: _sessionManager,
-                    currentExerciseIndex: _currentExerciseIndex,
-                    onGoToPrevious: _goToPreviousExercise,
-                    onMarkComplete: _markExerciseComplete,
-                    onGoToNext: _goToNextExercise,
-                    onBackPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
-// Widget classes for better separation of concerns
+// --- Widget Classes ---
 
 class InstructionsView extends StatelessWidget {
-  final Exercise exercise;
+  final WorkoutSessionState state;
   final Animation<double> fadeAnimation;
   final Animation<Offset> slideAnimation;
-  final int currentExerciseIndex;
-  final int totalExercises;
   final VoidCallback onStartExercise;
 
   const InstructionsView({
     super.key,
-    required this.exercise,
+    required this.state,
     required this.fadeAnimation,
     required this.slideAnimation,
-    required this.currentExerciseIndex,
-    required this.totalExercises,
     required this.onStartExercise,
   });
 
   @override
   Widget build(BuildContext context) {
+    final exercise = state.currentExercise;
     return FadeTransition(
       opacity: fadeAnimation,
       child: SlideTransition(
@@ -332,7 +254,6 @@ class InstructionsView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Progress info card (similar to session_exercises_page)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -354,7 +275,7 @@ class InstructionsView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'EXERCISE ${currentExerciseIndex + 1} OF $totalExercises',
+                          'EXERCISE ${state.currentExerciseIndex + 1} OF ${state.totalExercises}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -362,12 +283,11 @@ class InstructionsView extends StatelessWidget {
                             letterSpacing: 1,
                           ),
                         ),
-
                         InkWell(
                           onTap: context.navBack,
-                          child: Text(
+                          child: const Text(
                             'CLOSE',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -385,10 +305,7 @@ class InstructionsView extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Exercise image card
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -403,19 +320,14 @@ class InstructionsView extends StatelessWidget {
                   child: Image.asset(
                     exercise.image ?? 'assets/images/workout.png',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade100,
-                        child: Icon(Icons.fitness_center, size: 60, color: Theme.of(context).colorScheme.primary),
-                      );
-                    },
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey.shade100,
+                      child: Icon(Icons.fitness_center, size: 60, color: Theme.of(context).colorScheme.primary),
+                    ),
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Exercise load info
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -431,10 +343,7 @@ class InstructionsView extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Instructions card
               if (exercise.instruction != null)
                 Container(
                   width: double.infinity,
@@ -449,58 +358,15 @@ class InstructionsView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Instructions',
-                        style: TextStyle(color: Colors.grey.shade800, fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: Colors.blue.withOpacity(0.1),
-                            ),
-                            child: Text(
-                              exercise.optimalView == 'front'
-                                  ? 'Face the camera for this exercise.'
-                                  : 'Turn sideways to the camera for this exercise.',
-                              style: TextStyle(color: Colors.blue, fontSize: 14, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        ],
+                        style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        exercise.instruction!.length > 120
-                            ? '${exercise.instruction!.substring(0, 120)}...'
-                            : exercise.instruction!,
+                        exercise.instruction!,
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 14, height: 1.5),
                       ),
-                      if (exercise.instruction!.length > 120)
-                        TextButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                backgroundColor: Colors.white,
-                                title: Text(exercise.name, style: TextStyle(color: Colors.grey.shade800)),
-                                content: Text(exercise.instruction!, style: TextStyle(color: Colors.grey.shade600)),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text(
-                                      'Close',
-                                      style: TextStyle(color: Theme.of(context).colorScheme.primary),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          child: Text('Read more', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                        ),
                     ],
                   ),
                 )
@@ -521,10 +387,7 @@ class InstructionsView extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                 ),
-
               const SizedBox(height: 24),
-
-              // Start button
               Container(
                 width: double.infinity,
                 height: 48,
@@ -558,6 +421,14 @@ class InstructionsView extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (state.restTimerValue != null && state.restTimerValue! > 0)
+                Center(
+                  child: Text(
+                    'Auto-starting in ${state.restTimerValue}s...',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ),
             ],
           ),
         ),
@@ -567,152 +438,197 @@ class InstructionsView extends StatelessWidget {
 }
 
 class WorkoutView extends StatelessWidget {
-  final WorkoutSessionManager? sessionManager;
-  final VoidCallback onPermissionDenied;
-
-  const WorkoutView({super.key, required this.sessionManager, required this.onPermissionDenied});
+  final WorkoutSessionState state;
+  const WorkoutView({super.key, required this.state});
 
   @override
   Widget build(BuildContext context) {
     return WorkoutCameraWidget(
-      repsCounter: sessionManager?.repsCounter,
-      showRepCounter: sessionManager?.repsCounter != null,
+      repsCounter: state.repsCounter,
+      showRepCounter:
+          state.currentExercise.load.type == ExerciseLoadType.reps && state.currentPhase == WorkoutPhaseType.exercising,
+    );
+  }
+}
+
+class RestOverlay extends StatelessWidget {
+  final WorkoutSessionState state;
+  final VoidCallback onSkipRest;
+  const RestOverlay({super.key, required this.state, required this.onSkipRest});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          color: Colors.black.withOpacity(0.6),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'REST',
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '${state.restTimerValue ?? 0}',
+                style: const TextStyle(color: Colors.white, fontSize: 80, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Next: Set ${state.currentSet} - ${state.currentExercise.name}',
+                style: const TextStyle(color: Colors.white70, fontSize: 18),
+              ),
+              const SizedBox(height: 40),
+              TextButton(
+                onPressed: onSkipRest,
+                child: Text('SKIP REST', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ExerciseInfoOverlay extends StatelessWidget {
+  final WorkoutSessionState state;
+  final VoidCallback onBackPressed;
+  const ExerciseInfoOverlay({super.key, required this.state, required this.onBackPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final exercise = state.currentExercise;
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.grey.shade900, size: 18),
+                  onPressed: onBackPressed,
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      child: Text(
+                        exercise.name,
+                        style: TextStyle(color: Colors.grey.shade900, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        exercise.load.type == ExerciseLoadType.duration
+                            ? 'Set ${state.currentSet} | Time: ${state.exerciseTimerValue ?? exercise.load.duration}s'
+                            : 'Set ${state.currentSet} of ${exercise.load.sets} | Target: ${exercise.load.reps} reps',
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 40),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
 class ControlOverlay extends StatelessWidget {
-  final bool showInstructions;
-  final WorkoutSessionManager? sessionManager;
-  final int currentExerciseIndex;
-  final VoidCallback? onGoToPrevious;
+  final WorkoutSessionState state;
+  final VoidCallback onGoToPrevious;
   final VoidCallback onMarkComplete;
-  final VoidCallback? onGoToNext;
-  final VoidCallback onBackPressed;
+  final VoidCallback onGoToNext;
+  final VoidCallback onSwitchCamera;
 
   const ControlOverlay({
     super.key,
-    required this.showInstructions,
-    required this.sessionManager,
-    required this.currentExerciseIndex,
+    required this.state,
     required this.onGoToPrevious,
     required this.onMarkComplete,
     required this.onGoToNext,
-    required this.onBackPressed,
+    required this.onSwitchCamera,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (showInstructions) return Container();
-
-    return Stack(
-      children: [
-        // Top bar
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Back button
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.arrow_back, color: Colors.grey.shade900, size: 18),
-                      onPressed: onBackPressed,
-                    ),
-                  ),
-
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
-                          ],
-                        ),
-                        child: Text(
-                          sessionManager?.currentExercise.name ?? '',
-                          style: TextStyle(color: Colors.grey.shade900, fontSize: 13, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 32),
-                ],
-              ),
-            ),
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2))],
           ),
-        ),
-
-        // Bottom control buttons
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2)),
-                ],
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Previous exercise button
-                    ControlButton(
-                      icon: Icons.skip_previous,
-                      onPressed: sessionManager?.hasPreviousExercise == true ? onGoToPrevious : null,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-
-                    // Complete exercise button
-                    ControlButton(
-                      icon: Icons.check_circle,
-                      onPressed: onMarkComplete,
-                      color: Colors.green,
-                      isPrimary: true,
-                    ),
-
-                    // Next exercise button
-                    ControlButton(
-                      icon: Icons.skip_next,
-                      onPressed: sessionManager?.hasNextExercise == true ? onGoToNext : null,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-
-                    const VerticalDivider(endIndent: 12, indent: 12, width: 1),
-                    ControlButton(
-                      icon: Icons.cameraswitch_outlined,
-                      onPressed: () => sessionManager?.poseDetectionService.switchCamera(),
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
+          child: IntrinsicHeight(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ControlButton(
+                  icon: Icons.skip_previous,
+                  onPressed: state.hasPreviousExercise ? onGoToPrevious : null,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-              ),
+                ControlButton(
+                  icon: Icons.check_circle,
+                  onPressed: onMarkComplete,
+                  color: Colors.green,
+                  isPrimary: true,
+                ),
+                ControlButton(
+                  icon: Icons.skip_next,
+                  onPressed: state.hasNextExercise ? onGoToNext : null,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const VerticalDivider(endIndent: 12, indent: 12, width: 1),
+                ControlButton(
+                  icon: Icons.cameraswitch_outlined,
+                  onPressed: onSwitchCamera,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -722,19 +638,11 @@ class ControlButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Color color;
   final bool isPrimary;
-
-  const ControlButton({
-    super.key,
-    required this.icon,
-    required this.onPressed,
-    required this.color,
-    this.isPrimary = false,
-  });
+  const ControlButton({super.key, required this.icon, this.onPressed, required this.color, this.isPrimary = false});
 
   @override
   Widget build(BuildContext context) {
     final isEnabled = onPressed != null;
-
     return Container(
       width: isPrimary ? 48 : 36,
       height: isPrimary ? 48 : 36,

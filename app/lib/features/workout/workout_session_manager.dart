@@ -14,21 +14,29 @@ class WorkoutSessionManager {
   final WorkoutSession session;
   final UserRepository userRepository;
   final VoiceChatPipeline voiceChatPipeline;
-  int _currentExerciseIndex = 0;
-  RepsCounter? _repsCounter;
   final int workoutWeek;
   final int workoutSessionIndex;
 
   // Pose detection
   final PoseDetectionService poseDetectionService;
   StreamSubscription<PoseDetectionResult>? _poseDetectionSubscription;
+
   // Rep counting management
   StreamSubscription<RepetitionData>? _repStreamSubscription;
   final List<RepetitionData> _cachedReps = [];
   int? _lastExcellentRepSent;
 
-  // Stream controllers for state updates
-  final StreamController<int> _exerciseIndexController = StreamController<int>.broadcast();
+  // Timers
+  Timer? _autoStartTimer;
+  Timer? _exerciseDurationTimer;
+
+  // Single State Management
+  late WorkoutSessionState _state;
+  final StreamController<WorkoutSessionState> _stateController = StreamController<WorkoutSessionState>.broadcast();
+
+  // Duration-based exercise tracking
+  _DurationBasedExerciseFormTracker? _durationFormTracker;
+  StreamSubscription<_DurationBasedExerciseMetrics>? _durationMetricsSubscription;
 
   WorkoutSessionManager({
     required this.session,
@@ -40,90 +48,175 @@ class WorkoutSessionManager {
   }) : userRepository = userRepository ?? UserRepository(),
        poseDetectionService = poseDetectionService ?? PoseDetectionService.instance;
 
-  /// Stream of current exercise index changes
-  Stream<int> get exerciseIndexStream => _exerciseIndexController.stream;
+  /// Stream of workout session state changes.
+  Stream<WorkoutSessionState> get stateStream => _stateController.stream;
 
-  /// Current rep counter (null if current exercise doesn't support rep counting)
-  RepsCounter? get repsCounter => _repsCounter;
-
-  /// Current exercise
-  Exercise get currentExercise => session.exercises[_currentExerciseIndex];
-
-  /// Current exercise index
-  int get currentExerciseIndex => _currentExerciseIndex;
-
-  /// Total number of exercises in the session
-  int get totalExercises => session.exercises.length;
-
-  /// Whether there is a next exercise
-  bool get hasNextExercise => _currentExerciseIndex < session.exercises.length - 1;
-
-  /// Whether there is a previous exercise
-  bool get hasPreviousExercise => _currentExerciseIndex > 0;
+  /// The most recent state object.
+  WorkoutSessionState get currentState => _state;
 
   /// Initialize the workout session manager
   Future<void> initialize() async {
-    // Initialize the current exercise
-    await voiceChatPipeline.startChat(voice: 'am_santa'); // TODO: get voice based on language
-    // We start listening only when the exercise starts, to avoid peeking up user speech with others
+    await voiceChatPipeline.startChat(voice: 'am_santa');
     await voiceChatPipeline.stopListeningToUser();
     await _initializeCurrentExercise();
+    _startPreExerciseOrRestTimer(duration: 20, isInitialStart: true);
   }
 
-  /// Initialize the current exercise (finds first incomplete exercise or defaults to first)
+  /// Finds the first incomplete exercise and sets the initial state.
   Future<void> _initializeCurrentExercise() async {
-    // Find first incomplete exercise or default to first exercise
-    _currentExerciseIndex = 0;
+    int initialIndex = 0;
     for (int i = 0; i < session.exercises.length; i++) {
       if (!await userRepository.isExerciseCompleted(workoutWeek, workoutSessionIndex, i)) {
-        _currentExerciseIndex = i;
+        initialIndex = i;
         break;
       }
     }
-    _resetState();
-    _emitCurrentExercise();
+
+    final exercise = session.exercises[initialIndex];
+    final repsCounter = _createRepsCounter(exercise);
+
+    _state = WorkoutSessionState(
+      currentPhase: WorkoutPhaseType.preExercise,
+      currentExerciseIndex: initialIndex,
+      currentExercise: exercise,
+      currentSet: 1,
+      totalExercises: session.exercises.length,
+      hasNextExercise: initialIndex < session.exercises.length - 1,
+      hasPreviousExercise: initialIndex > 0,
+      repsCounter: repsCounter,
+    );
+    _listenToRepStream(repsCounter);
+    _emitState();
   }
 
-  /// Start the current exercise
+  /// Central method to emit the current state to listeners.
+  void _emitState() {
+    if (!_stateController.isClosed) {
+      _stateController.add(_state);
+    }
+  }
+
+  /// Start the current exercise, cancelling any pending timers.
   Future<void> startCurrentExercise() async {
+    _cancelTimers();
+
+    _state = _state.copyWith(currentPhase: WorkoutPhaseType.exercising, restTimerValue: null);
+    _emitState();
+
     await voiceChatPipeline.startListeningToUser();
-    await _startPoseDetection();
+
+    if (_state.currentExercise.load.type == ExerciseLoadType.reps) {
+      await _startPoseDetection();
+    } else if (_state.currentExercise.load.type == ExerciseLoadType.duration) {
+      await _startDurationExerciseTracking();
+      _startExerciseDurationTimer();
+    }
   }
 
-  /// Go to the next exercise
+  Future<void> _startDurationExerciseTracking() async {
+    await _stopPoseDetection();
+    _durationFormTracker?.metricsStream.drain();
+    await _durationMetricsSubscription?.cancel();
+    _durationFormTracker = null;
+
+    final classifier = _createDurationBasedClassifier(_state.currentExercise);
+    if (classifier == null) return;
+    _durationFormTracker = _DurationBasedExerciseFormTracker(classifier);
+    _durationMetricsSubscription = _durationFormTracker!.metricsStream.listen(_handleDurationMetrics);
+
+    if (!poseDetectionService.isActive) {
+      try {
+        if (await poseDetectionService.start()) {
+          _poseDetectionSubscription = poseDetectionService.landmarkStream.listen((result) {
+            _durationFormTracker?.processFrame(result);
+          });
+        }
+      } catch (e, s) {
+        log('Error starting pose detection for duration-based', error: e, stackTrace: s);
+      }
+    } else {
+      _poseDetectionSubscription = poseDetectionService.landmarkStream.listen((result) {
+        _durationFormTracker?.processFrame(result);
+      });
+    }
+  }
+
+  PoseClassifier? _createDurationBasedClassifier(Exercise exercise) {
+    final name = exercise.name.toLowerCase();
+    if (name.contains('plank')) return PlankClassifier();
+    // Add more duration-based classifiers as needed
+    return null;
+  }
+
+  Future<void> _handleDurationMetrics(_DurationBasedExerciseMetrics metrics) async {
+    // Provide feedback if form is poor or excellent
+    final hasFeedback = metrics.formMetrics.values.any((v) => v is Map && v.containsKey('message'));
+    if (hasFeedback) {
+      await _sendDurationMetricsToAI(metrics, isFormFeedback: true);
+    } else if (metrics.formScore > 0.9) {
+      await _sendDurationMetricsToAI(metrics, isFormFeedback: false);
+    }
+  }
+
+  Future<void> _sendDurationMetricsToAI(_DurationBasedExerciseMetrics metrics, {required bool isFormFeedback}) async {
+    final exerciseName = _state.currentExercise.name;
+    final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
+    final message =
+        '''<system>
+Exercise: $exerciseName
+Feedback Type: $feedbackType
+
+Current Metrics:
+- Form Score: ${metrics.formScore}
+- Exercise Correctness: ${metrics.correctness}
+- Form Feedback: 
+    ${metrics.formMetrics.entries.where((entry) => entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
+</system>
+''';
+    await voiceChatPipeline.addSystemMessage(message);
+  }
+
+  /// Go to the next exercise, triggering a rest period.
   Future<void> goToNextExercise() async {
-    if (hasNextExercise) {
-      await voiceChatPipeline.stopListeningToUser();
+    if (_state.hasNextExercise) {
+      final restDuration = _state.currentExercise.restDuration;
+
       await _stopPoseDetection();
-      _currentExerciseIndex++;
-      _resetState();
-      _emitCurrentExercise();
-      await _startPoseDetection();
+      await voiceChatPipeline.stopListeningToUser();
+      _cancelTimers();
+
+      final newIndex = _state.currentExerciseIndex + 1;
+      _updateExercise(newIndex);
+
+      // Start rest timer for the duration specified by the PREVIOUS exercise
+      _startPreExerciseOrRestTimer(duration: restDuration);
     }
   }
 
   /// Go to the previous exercise
   Future<void> goToPreviousExercise() async {
-    if (hasPreviousExercise) {
-      await voiceChatPipeline.stopListeningToUser();
+    if (_state.hasPreviousExercise) {
       await _stopPoseDetection();
-      _currentExerciseIndex--;
-      _resetState();
-      _emitCurrentExercise();
+      await voiceChatPipeline.stopListeningToUser();
+      _cancelTimers();
+
+      final newIndex = _state.currentExerciseIndex - 1;
+      _updateExercise(newIndex);
+      _startPreExerciseOrRestTimer(duration: 20, isInitialStart: true);
     }
   }
 
-  /// Mark the current exercise as complete
+  /// Mark the current exercise as complete and transition to the next state.
   Future<void> markCurrentExerciseAsComplete() async {
-    // Note: In a real implementation, this would update the workout progress
-    // For now, we just move to the next exercise if available
-    await userRepository.setExerciseCompletion(workoutWeek, workoutSessionIndex, _currentExerciseIndex, true);
+    await userRepository.setExerciseCompletion(workoutWeek, workoutSessionIndex, _state.currentExerciseIndex, true);
 
-    if (hasNextExercise) {
+    if (_state.hasNextExercise) {
       await goToNextExercise();
     } else {
-      // If this is the last exercise, stop pose detection
       await _stopPoseDetection();
+      _cancelTimers();
+      _state = _state.copyWith(currentPhase: WorkoutPhaseType.finished);
+      _emitState();
     }
   }
 
@@ -131,51 +224,53 @@ class WorkoutSessionManager {
   Future<void> goToExercise(int index) async {
     if (index >= 0 && index < session.exercises.length) {
       await _stopPoseDetection();
-      _currentExerciseIndex = index;
-      _resetState();
-      _emitCurrentExercise();
+      _cancelTimers();
+      _updateExercise(index);
+      _startPreExerciseOrRestTimer(duration: 20, isInitialStart: true);
     }
   }
 
-  void _resetState() {
-    // Dispose previous rep counter and subscription
-    _repStreamSubscription?.cancel();
-    _repsCounter?.dispose();
+  /// Updates the state to a new exercise.
+  void _updateExercise(int index) {
+    final newExercise = session.exercises[index];
+    final newRepsCounter = _createRepsCounter(newExercise);
 
-    // Clear cached data for new exercise
+    _repStreamSubscription?.cancel();
+    _state.repsCounter?.dispose();
+
     _cachedReps.clear();
     _lastExcellentRepSent = null;
 
-    // Create new rep counter
-    _repsCounter = _createRepsCounter(currentExercise);
+    _state = _state.copyWith(
+      currentExerciseIndex: index,
+      currentExercise: newExercise,
+      currentSet: 1,
+      repsCounter: newRepsCounter,
+      hasNextExercise: index < session.exercises.length - 1,
+      hasPreviousExercise: index > 0,
+    );
+    _listenToRepStream(newRepsCounter);
+    _emitState();
+  }
 
-    // Listen to rep stream if rep counter exists
-    if (_repsCounter != null) {
-      _repStreamSubscription = _repsCounter!.repStream.listen(_handleRepetitionData);
+  /// Listens to the rep stream from the provided counter.
+  void _listenToRepStream(RepsCounter? repsCounter) {
+    if (repsCounter != null) {
+      _repStreamSubscription = repsCounter.repStream.listen(_handleRepetitionData);
     }
   }
 
   /// Create rep counter for the given exercise
   RepsCounter? _createRepsCounter(Exercise exercise) {
-    // Create appropriate rep counter based on exercise name. Since the workout plans are AI generated,
-    // It's safer to use this parsing method than relying on exact values to determine exercise type.
-    final exerciseName = exercise.name.toLowerCase();
-
-    if (exerciseName.contains('push') && exerciseName.contains('up')) {
-      return RepsCounter(_createPushUpClassifier(exerciseName));
-    } else if (exerciseName.contains('squat')) {
-      return RepsCounter(_createSquatClassifier(exerciseName));
-    } else if (exerciseName.contains('crunch')) {
-      return RepsCounter(_createCrunchClassifier(exerciseName));
-    } else if (exerciseName.contains('superman')) {
-      return RepsCounter(SupermanClassifier());
-    }
-
-    // If no specific classifier found, don't show rep counter
+    if (exercise.load.type != ExerciseLoadType.reps) return null;
+    final name = exercise.name.toLowerCase();
+    if (name.contains('push') && name.contains('up')) return RepsCounter(_createPushUpClassifier(name));
+    if (name.contains('squat')) return RepsCounter(_createSquatClassifier(name));
+    if (name.contains('crunch')) return RepsCounter(_createCrunchClassifier(name));
+    if (name.contains('superman')) return RepsCounter(SupermanClassifier());
     return null;
   }
 
-  /// Create push-up classifier based on exercise name
   PoseClassifier _createPushUpClassifier(String exerciseName) {
     if (exerciseName.contains('knee')) {
       return PushUpClassifier(type: PushUpType.knee);
@@ -194,19 +289,16 @@ class WorkoutSessionManager {
     }
   }
 
-  /// Create squat classifier based on exercise name
   PoseClassifier _createSquatClassifier(String exerciseName) {
     if (exerciseName.contains('sumo')) {
       return SumoSquatClassifier();
     } else if (exerciseName.contains('split')) {
-      // Default to left leg forward, could be made configurable
       return SplitSquatClassifier(frontLeg: SplitSquatSide.left);
     } else {
       return SquatClassifier();
     }
   }
 
-  /// Create crunch classifier based on exercise name
   PoseClassifier _createCrunchClassifier(String exerciseName) {
     if (exerciseName.contains('reverse')) {
       return ReverseCrunchClassifier();
@@ -217,23 +309,12 @@ class WorkoutSessionManager {
     }
   }
 
-  /// Emit current exercise change
-  void _emitCurrentExercise() {
-    _exerciseIndexController.add(_currentExerciseIndex);
-  }
-
-  /// Start pose detection and connect it to the reps counter
   Future<void> _startPoseDetection() async {
-    if (poseDetectionService.isActive || _repsCounter == null) {
-      return; // Already active or no rep counter to feed
-    }
-
+    if (poseDetectionService.isActive || _state.repsCounter == null) return;
     try {
-      final success = await poseDetectionService.start();
-      if (success) {
-        // Subscribe to pose detection results and feed them to the reps counter
-        _poseDetectionSubscription = poseDetectionService.landmarkStream.listen((PoseDetectionResult result) {
-          _repsCounter?.processFrame(result);
+      if (await poseDetectionService.start()) {
+        _poseDetectionSubscription = poseDetectionService.landmarkStream.listen((result) {
+          _state.repsCounter?.processFrame(result);
         });
       }
     } catch (e, s) {
@@ -241,72 +322,57 @@ class WorkoutSessionManager {
     }
   }
 
-  /// Stop pose detection
   Future<void> _stopPoseDetection() async {
+    if (!poseDetectionService.isActive) return;
     try {
-      if (!poseDetectionService.isActive) {
-        return; // Already stopped
-      }
-
       await _poseDetectionSubscription?.cancel();
       _poseDetectionSubscription = null;
-
       await poseDetectionService.stop();
+
+      await _durationMetricsSubscription?.cancel();
+      _durationMetricsSubscription = null;
+      _durationFormTracker = null;
     } catch (e, s) {
       log('Error stopping pose detection', error: e, stackTrace: s);
-      // Handle stop errors silently
     }
   }
 
-  /// Handle new repetition data from the rep counter
   Future<void> _handleRepetitionData(RepetitionData repData) async {
-    // Add rep to cache and maintain max size of 15
-    _cachedReps.add(repData);
-    if (_cachedReps.length > 15) {
-      _cachedReps.removeAt(0); // Remove oldest rep
+    final targetRepsPerSet = _state.currentExercise.load.reps;
+    if (targetRepsPerSet != null && repData.repNumber >= _state.currentSet * targetRepsPerSet) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _completeSet();
+      return;
     }
 
-    final hasFeedbackMessage = repData.formMetrics.values.any((value) => value is Map && value.containsKey('message'));
+    _cachedReps.add(repData);
+    if (_cachedReps.length > 15) _cachedReps.removeAt(0);
 
-    if (hasFeedbackMessage) {
+    final hasFeedback = repData.formMetrics.values.any((v) => v is Map && v.containsKey('message'));
+    if (hasFeedback) {
       await _sendRepDataToAI(repData, isFormFeedback: true);
     } else if (repData.formScore > 9.0) {
-      // Check if we should send excellent form feedback (at least 3 reps since last excellent feedback)
-      final shouldSendExcellentFeedback =
-          _lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 3;
-
-      if (shouldSendExcellentFeedback) {
-        final success = await _sendRepDataToAI(repData, isFormFeedback: false);
-        if (success) {
+      // Check if we should send excellent form feedback (There needs to be at least 3 reps gap)
+      final shouldSend = _lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 3;
+      if (shouldSend) {
+        if (await _sendRepDataToAI(repData, isFormFeedback: false)) {
           _lastExcellentRepSent = repData.repNumber;
         }
       } else {
-        // Just count out loud for excellent reps that don't need AI feedback
         await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
       }
     } else {
-      // Regular rep - just count out loud
       await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
     }
   }
 
-  /// Send repetition data along with cached reps to the AI Agent
-  /// Returns true if successfully sent, false if pipeline was busy
   Future<bool> _sendRepDataToAI(RepetitionData currentRep, {required bool isFormFeedback}) async {
-    final repsToSend = _cachedReps.sublist(
-      // Send last 5 reps from cache
-      _cachedReps.length > 5 ? _cachedReps.length - 5 : 0,
-    );
-
-    // Add current rep if not already in the list
+    final repsToSend = _cachedReps.sublist(_cachedReps.length > 5 ? _cachedReps.length - 5 : 0);
     if (!repsToSend.any((rep) => rep.repNumber == currentRep.repNumber)) {
       repsToSend.add(currentRep);
     }
-
-    // Prepare the message for AI Agent
-    final exerciseName = currentExercise.name;
+    final exerciseName = _state.currentExercise.name;
     final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
-
     final message =
         '''<system>
 Exercise: $exerciseName
@@ -321,27 +387,267 @@ Current Rep Analysis:
 - Quality: ${currentRep.quality}${isFormFeedback ? '''
 - Duration: ${currentRep.duration / 1000} seconds
 - Form Feedback: 
-    ${currentRep.formMetrics.entries.where((entry) => entry.value is Map && entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
+    ${currentRep.formMetrics.entries.where((entry) => entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
 ''' : ''}
 </system>
 ''';
 
-    // Send to AI Agent
     final success = await voiceChatPipeline.addSystemMessage(message);
 
     if (success) {
       // Remove sent reps from cache
       _cachedReps.removeWhere((rep) => repsToSend.any((sent) => sent.repNumber == rep.repNumber));
     }
-
     return success;
   }
 
-  /// Dispose of resources
+  void _startPreExerciseOrRestTimer({required int duration, bool isInitialStart = false}) {
+    _cancelTimers();
+    if (duration <= 0) {
+      startCurrentExercise();
+      return;
+    }
+    _state = _state.copyWith(
+      currentPhase: isInitialStart ? WorkoutPhaseType.preExercise : WorkoutPhaseType.resting,
+      restTimerValue: duration,
+    );
+    _emitState();
+
+    _autoStartTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final newTime = (_state.restTimerValue ?? 1) - 1;
+      if (newTime > 0) {
+        _state = _state.copyWith(restTimerValue: newTime);
+        _emitState();
+      } else {
+        timer.cancel();
+        _autoStartTimer = null;
+        startCurrentExercise();
+      }
+    });
+  }
+
+  void _startExerciseDurationTimer() {
+    _cancelTimers();
+    final duration = _state.currentExercise.load.duration;
+    if (duration == null || duration <= 0) {
+      _completeSet();
+      return;
+    }
+    _state = _state.copyWith(exerciseTimerValue: duration);
+    _emitState();
+
+    _exerciseDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final newTime = (_state.exerciseTimerValue ?? 1) - 1;
+      if (newTime > 0) {
+        _state = _state.copyWith(exerciseTimerValue: newTime);
+        _emitState();
+      } else {
+        timer.cancel();
+        _exerciseDurationTimer = null;
+        _state = _state.copyWith(exerciseTimerValue: null);
+        _emitState();
+        _completeSet();
+      }
+    });
+  }
+
+  Future<void> _completeSet() async {
+    if (_state.currentExercise.load.type == ExerciseLoadType.reps) {
+      await _stopPoseDetection();
+    }
+    await voiceChatPipeline.stopListeningToUser();
+
+    if (_state.currentSet < _state.currentExercise.load.sets) {
+      _state = _state.copyWith(currentSet: _state.currentSet + 1);
+      _emitState();
+      _startPreExerciseOrRestTimer(duration: _state.currentExercise.restDuration);
+    } else {
+      await markCurrentExerciseAsComplete();
+    }
+  }
+
+  void _cancelTimers() {
+    _autoStartTimer?.cancel();
+    _autoStartTimer = null;
+    _exerciseDurationTimer?.cancel();
+    _exerciseDurationTimer = null;
+  }
+
   Future<void> dispose() async {
+    _cancelTimers();
     await _stopPoseDetection();
     await _repStreamSubscription?.cancel();
-    _repsCounter?.dispose();
-    await _exerciseIndexController.close();
+    _state.repsCounter?.dispose();
+    await _durationMetricsSubscription?.cancel();
+    _durationFormTracker = null;
+    await _stateController.close();
+  }
+}
+
+class _DurationBasedExerciseFormTracker {
+  final PoseClassifier classifier;
+  final StreamController<_DurationBasedExerciseMetrics> _metricsController =
+      StreamController<_DurationBasedExerciseMetrics>.broadcast();
+  _DurationBasedExerciseMetrics _pendingMetrics = _DurationBasedExerciseMetrics(
+    formScore: 0.5,
+    formMetrics: {},
+    correctness: 0.5,
+  );
+  int _numAccumulatedMetrics = 0;
+  var _lastEmittedTime = DateTime.now();
+
+  _DurationBasedExerciseFormTracker(this.classifier) {
+    if (!classifier.isDurationBased) {
+      throw ArgumentError('Classifier must be a duration-based exercise classifier');
+    }
+  }
+
+  Stream<_DurationBasedExerciseMetrics> get metricsStream => _metricsController.stream;
+
+  void processFrame(PoseDetectionResult result) {
+    final formScore = classifier.classify(worldLandmarks: result.worldLandmarks, imageLandmarks: result.landmarks);
+    final formMetrics = classifier.calculateFormMetrics(
+      worldLandmarks: result.worldLandmarks,
+      imageLandmarks: result.landmarks,
+    );
+    _numAccumulatedMetrics++;
+    _pendingMetrics = _DurationBasedExerciseMetrics(
+      // For duration-based exercises, the classifier return correct and incorrect probabilities
+      correctness: _moveAverage(formScore['correct'] ?? 0.5, _pendingMetrics.correctness, _numAccumulatedMetrics),
+      formScore: _moveAverage(_calculateFormScore(formMetrics), _pendingMetrics.formScore, _numAccumulatedMetrics),
+      formMetrics: formMetrics,
+    );
+
+    // Emit metrics every second
+    if (_lastEmittedTime.difference(DateTime.now()).inSeconds >= 1) {
+      _metricsController.add(_pendingMetrics);
+      _lastEmittedTime = DateTime.now();
+      _numAccumulatedMetrics = 0;
+      _pendingMetrics = _DurationBasedExerciseMetrics(formScore: 0.5, formMetrics: {}, correctness: 0.5);
+    }
+  }
+
+  /// Calculate a moving average prioritizing the most recent values
+  double _moveAverage(double newValue, double currentAverage, int count) {
+    if (count == 0) return newValue;
+    return (currentAverage * count + newValue) / (count + 1);
+  }
+
+  /// Calculate overall form score from individual metrics
+  double _calculateFormScore(Map<String, dynamic> formMetrics) {
+    if (formMetrics.isEmpty) return 0.5;
+
+    final values = formMetrics.values.where((v) => !v['score'].isNaN).toList();
+    if (values.isEmpty) return 0.5;
+
+    return values.fold(0.0, (a, b) => a + b['score']) / values.length;
+  }
+}
+
+class _DurationBasedExerciseMetrics {
+  /// The probability of the exercise being performed correctly (0.0 - 1.0).
+  final double correctness;
+  final double formScore;
+  final Map<String, dynamic> formMetrics;
+
+  _DurationBasedExerciseMetrics({required this.formScore, required this.formMetrics, required this.correctness});
+}
+
+/// The specific phase of the workout (e.g., exercising, resting).
+enum WorkoutPhaseType {
+  /// Waiting for the initial timer to complete before the first exercise.
+  preExercise,
+
+  /// Actively performing an exercise (rep counting or duration timer).
+  exercising,
+
+  /// Resting between sets or between exercises.
+  resting,
+
+  /// The entire workout session is complete.
+  finished,
+}
+
+/// A single, immutable state object representing the entire workout session's current state for the UI.
+class WorkoutSessionState {
+  final WorkoutPhaseType currentPhase;
+  final int currentExerciseIndex;
+  final Exercise currentExercise;
+  final int currentSet;
+  final int totalExercises;
+  final bool hasNextExercise;
+  final bool hasPreviousExercise;
+  final RepsCounter? repsCounter;
+  final int? restTimerValue;
+  final int? exerciseTimerValue;
+
+  const WorkoutSessionState({
+    required this.currentPhase,
+    required this.currentExerciseIndex,
+    required this.currentExercise,
+    required this.currentSet,
+    required this.totalExercises,
+    required this.hasNextExercise,
+    required this.hasPreviousExercise,
+    this.repsCounter,
+    this.restTimerValue,
+    this.exerciseTimerValue,
+  });
+
+  WorkoutSessionState copyWith({
+    WorkoutPhaseType? currentPhase,
+    int? currentExerciseIndex,
+    Exercise? currentExercise,
+    int? currentSet,
+    int? totalExercises,
+    bool? hasNextExercise,
+    bool? hasPreviousExercise,
+    RepsCounter? repsCounter,
+    int? restTimerValue,
+    int? exerciseTimerValue,
+  }) {
+    return WorkoutSessionState(
+      currentPhase: currentPhase ?? this.currentPhase,
+      currentExerciseIndex: currentExerciseIndex ?? this.currentExerciseIndex,
+      currentExercise: currentExercise ?? this.currentExercise,
+      currentSet: currentSet ?? this.currentSet,
+      totalExercises: totalExercises ?? this.totalExercises,
+      hasNextExercise: hasNextExercise ?? this.hasNextExercise,
+      hasPreviousExercise: hasPreviousExercise ?? this.hasPreviousExercise,
+      repsCounter: repsCounter ?? this.repsCounter,
+      restTimerValue: restTimerValue, // Nullable fields should be explicitly passed
+      exerciseTimerValue: exerciseTimerValue, // Nullable fields should be explicitly passed
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is WorkoutSessionState &&
+        other.currentPhase == currentPhase &&
+        other.currentExerciseIndex == currentExerciseIndex &&
+        other.currentExercise == currentExercise &&
+        other.currentSet == currentSet &&
+        other.totalExercises == totalExercises &&
+        other.hasNextExercise == hasNextExercise &&
+        other.hasPreviousExercise == hasPreviousExercise &&
+        other.repsCounter == repsCounter &&
+        other.restTimerValue == restTimerValue &&
+        other.exerciseTimerValue == exerciseTimerValue;
+  }
+
+  @override
+  int get hashCode {
+    return currentPhase.hashCode ^
+        currentExerciseIndex.hashCode ^
+        currentExercise.hashCode ^
+        currentSet.hashCode ^
+        totalExercises.hashCode ^
+        hasNextExercise.hashCode ^
+        hasPreviousExercise.hashCode ^
+        repsCounter.hashCode ^
+        restTimerValue.hashCode ^
+        exerciseTimerValue.hashCode;
   }
 }
