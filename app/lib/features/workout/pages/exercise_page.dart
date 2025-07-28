@@ -550,77 +550,82 @@ class ControlOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exercise = state.currentExercise;
+    final orientation = MediaQuery.orientationOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
+    return Align(
+      alignment: Alignment.bottomCenter,
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    exercise.name,
-                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    ' - Set ${state.currentSet}/${exercise.load.sets}${exercise.load.type == ExerciseLoadType.duration ? ' | Time: ${state.exerciseTimerValue ?? exercise.load.duration}s' : ''}',
-                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2)),
-                ],
-              ),
-              child: IntrinsicHeight(
+        child: SizedBox(
+          width: orientation == Orientation.portrait ? screenWidth : 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
+                  ],
+                ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    ControlButton(
-                      icon: Icons.skip_previous,
-                      onPressed: state.hasPreviousExercise ? onGoToPrevious : null,
-                      color: Theme.of(context).colorScheme.primary,
+                    Text(
+                      exercise.name,
+                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
-                    ControlButton(
-                      icon: Icons.check_circle,
-                      onPressed: onMarkComplete,
-                      color: Colors.green,
-                      isPrimary: true,
-                    ),
-                    ControlButton(
-                      icon: Icons.skip_next,
-                      onPressed: state.hasNextExercise ? onGoToNext : null,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const VerticalDivider(endIndent: 12, indent: 12, width: 1),
-                    ControlButton(
-                      icon: Icons.cameraswitch_outlined,
-                      onPressed: onSwitchCamera,
-                      color: Theme.of(context).colorScheme.primary,
+                    Text(
+                      ' - Set ${state.currentSet}/${exercise.load.sets}${exercise.load.type == ExerciseLoadType.duration ? ' | Time: ${state.exerciseTimerValue ?? exercise.load.duration}s' : ''}',
+                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2)),
+                  ],
+                ),
+                child: IntrinsicHeight(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ControlButton(
+                        icon: Icons.skip_previous,
+                        onPressed: state.hasPreviousExercise ? onGoToPrevious : null,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      ControlButton(
+                        icon: Icons.check_circle,
+                        onPressed: onMarkComplete,
+                        color: Colors.green,
+                        isPrimary: true,
+                      ),
+                      ControlButton(
+                        icon: Icons.skip_next,
+                        onPressed: state.hasNextExercise ? onGoToNext : null,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const VerticalDivider(endIndent: 12, indent: 12, width: 1),
+                      ControlButton(
+                        icon: Icons.cameraswitch_outlined,
+                        onPressed: onSwitchCamera,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
