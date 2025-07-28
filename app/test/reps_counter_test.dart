@@ -160,7 +160,7 @@ void main() {
 }
 
 /// Mock classifier for testing
-class MockPoseClassifier extends PoseClassifier {
+class MockPoseClassifier extends ExerciseClassifier {
   Map<String, double> _response = {'up': 0.5, 'down': 0.5};
 
   MockPoseClassifier() : super(smoothingWindow: 1);

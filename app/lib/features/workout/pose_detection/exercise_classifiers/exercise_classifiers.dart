@@ -10,11 +10,11 @@ part 'crunch_classifier.dart';
 part 'superman_classifier.dart';
 part 'plank_classifier.dart';
 
-abstract class PoseClassifier {
+abstract class ExerciseClassifier {
   final int smoothingWindow;
   final Queue<Map<String, double>> _history = Queue();
 
-  PoseClassifier({this.smoothingWindow = 5});
+  ExerciseClassifier({this.smoothingWindow = 5});
 
   bool get isDurationBased => false;
 

@@ -2,7 +2,7 @@ part of 'exercise_classifiers.dart';
 
 enum PushUpType { standard, knee, wall, incline, decline, diamond, wide }
 
-class PushUpClassifier extends PoseClassifier {
+class PushUpClassifier extends ExerciseClassifier {
   final PushUpType type;
 
   PushUpClassifier({this.type = PushUpType.standard, super.smoothingWindow});

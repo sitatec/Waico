@@ -1,6 +1,6 @@
 part of 'exercise_classifiers.dart';
 
-class SupermanClassifier extends PoseClassifier {
+class SupermanClassifier extends ExerciseClassifier {
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,

@@ -142,7 +142,7 @@ class WorkoutSessionManager {
     }
   }
 
-  PoseClassifier? _createDurationBasedClassifier(Exercise exercise) {
+  ExerciseClassifier? _createDurationBasedClassifier(Exercise exercise) {
     final name = exercise.name.toLowerCase();
     if (name.contains('plank')) return PlankClassifier();
     // Add more duration-based classifiers as needed
@@ -277,7 +277,7 @@ ${isFormFeedback ? '''
     return null;
   }
 
-  PoseClassifier _createPushUpClassifier(String exerciseName) {
+  ExerciseClassifier _createPushUpClassifier(String exerciseName) {
     if (exerciseName.contains('knee')) {
       return PushUpClassifier(type: PushUpType.knee);
     } else if (exerciseName.contains('wall')) {
@@ -295,7 +295,7 @@ ${isFormFeedback ? '''
     }
   }
 
-  PoseClassifier _createSquatClassifier(String exerciseName) {
+  ExerciseClassifier _createSquatClassifier(String exerciseName) {
     if (exerciseName.contains('sumo')) {
       return SumoSquatClassifier();
     } else if (exerciseName.contains('split')) {
@@ -305,7 +305,7 @@ ${isFormFeedback ? '''
     }
   }
 
-  PoseClassifier _createCrunchClassifier(String exerciseName) {
+  ExerciseClassifier _createCrunchClassifier(String exerciseName) {
     if (exerciseName.contains('reverse')) {
       return ReverseCrunchClassifier();
     } else if (exerciseName.contains('double')) {
@@ -376,10 +376,9 @@ ${isFormFeedback ? '''
   }
 
   Future<bool> _sendRepDataToAI(RepetitionData currentRep, {required bool isFormFeedback}) async {
-    final repsToSend = _cachedReps.sublist(_cachedReps.length > 5 ? _cachedReps.length - 5 : 0);
-    if (!repsToSend.any((rep) => rep.repNumber == currentRep.repNumber)) {
-      repsToSend.add(currentRep);
-    }
+    // Send the last 3 previous, unsent reps + the current rep to the AI
+    final previousRepsToSend = _cachedReps.sublist(_cachedReps.length > 3 ? _cachedReps.length - 3 : 0)
+      ..remove(currentRep); // Remove the current rep, as it will be included in the message separately
     final exerciseName = _state.currentExercise.name;
     final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
     final message =
@@ -389,7 +388,7 @@ Set: ${_state.currentSet} out of ${_state.currentExercise.load.sets}
 Feedback Type: $feedbackType
 
 Recent Repetitions Data:
-${repsToSend.map((rep) => 'Rep ${rep.repNumber}: Score ${rep.quality.score}, Quality: ${rep.quality.name}, Duration: ${rep.duration / 1000} seconds').join('\n')}
+${previousRepsToSend.map((rep) => 'Rep ${rep.repNumber}: Score ${rep.quality.score}, Quality: ${rep.quality.name}, Duration: ${rep.duration / 1000} seconds').join('\n')}
 
 Current Rep Analysis:
 - Rep: ${currentRep.repNumber} out of ${_state.currentExercise.load.reps}
@@ -409,7 +408,8 @@ ${isFormFeedback ? '''
 
     if (success) {
       // Remove sent reps from cache
-      _cachedReps.removeWhere((rep) => repsToSend.any((sent) => sent.repNumber == rep.repNumber));
+      _cachedReps.removeWhere((rep) => previousRepsToSend.any((sent) => sent.repNumber == rep.repNumber));
+      _cachedReps.remove(currentRep); // Remove the current rep as well
     }
     return success;
   }
@@ -498,7 +498,7 @@ ${isFormFeedback ? '''
 }
 
 class _DurationBasedExerciseFormTracker {
-  final PoseClassifier classifier;
+  final ExerciseClassifier classifier;
   final StreamController<_DurationBasedExerciseMetrics> _metricsController =
       StreamController<_DurationBasedExerciseMetrics>.broadcast();
   _DurationBasedExerciseMetrics _pendingMetrics = _DurationBasedExerciseMetrics(

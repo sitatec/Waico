@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 
@@ -72,6 +73,25 @@ class RepetitionData {
       'formScore': formScore,
       'formMetrics': formMetrics,
     };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other.runtimeType != runtimeType) return false;
+    return other is RepetitionData &&
+        other.repNumber == repNumber &&
+        other.timestamp == timestamp &&
+        other.duration == duration &&
+        other.quality == quality &&
+        other.confidence == confidence &&
+        other.formScore == formScore &&
+        mapEquals(other.formMetrics, formMetrics);
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(repNumber, timestamp, duration, quality, confidence, formScore, formMetrics);
   }
 }
 
@@ -149,7 +169,7 @@ class RepCountingState {
 
 /// Advanced repetition counter with form quality assessment
 class RepsCounter {
-  final PoseClassifier _classifier;
+  final ExerciseClassifier _classifier;
   final RepCountingConfig _config;
 
   // State tracking

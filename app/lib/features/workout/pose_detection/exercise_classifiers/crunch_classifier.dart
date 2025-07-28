@@ -24,7 +24,7 @@ List<int> _getRequiredLandmark(bool isLeftVisible) {
   }
 }
 
-class CrunchClassifier extends PoseClassifier {
+class CrunchClassifier extends ExerciseClassifier {
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
@@ -174,7 +174,7 @@ class CrunchClassifier extends PoseClassifier {
   }
 }
 
-class ReverseCrunchClassifier extends PoseClassifier {
+class ReverseCrunchClassifier extends ExerciseClassifier {
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
@@ -282,7 +282,7 @@ class ReverseCrunchClassifier extends PoseClassifier {
   }
 }
 
-class DoubleCrunchClassifier extends PoseClassifier {
+class DoubleCrunchClassifier extends ExerciseClassifier {
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,

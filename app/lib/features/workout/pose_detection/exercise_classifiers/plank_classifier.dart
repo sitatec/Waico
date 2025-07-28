@@ -1,6 +1,6 @@
 part of 'exercise_classifiers.dart';
 
-class PlankClassifier extends PoseClassifier {
+class PlankClassifier extends ExerciseClassifier {
   @override
   bool get isDurationBased => true;
 
@@ -190,7 +190,7 @@ class PlankClassifier extends PoseClassifier {
 
 enum SidePlankSide { left, right }
 
-class SidePlankClassifier extends PoseClassifier {
+class SidePlankClassifier extends ExerciseClassifier {
   final SidePlankSide supportingSide;
 
   SidePlankClassifier({required this.supportingSide});

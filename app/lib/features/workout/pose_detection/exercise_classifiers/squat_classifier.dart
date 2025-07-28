@@ -1,6 +1,6 @@
 part of 'exercise_classifiers.dart';
 
-class SquatClassifier extends PoseClassifier {
+class SquatClassifier extends ExerciseClassifier {
   @override
   Map<String, double> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
@@ -124,7 +124,7 @@ class SquatClassifier extends PoseClassifier {
   }
 }
 
-class SumoSquatClassifier extends PoseClassifier {
+class SumoSquatClassifier extends ExerciseClassifier {
   // Sumo Squat logic is similar to a regular squat but averages both legs.
   @override
   Map<String, double> _calculateProbabilities({
@@ -247,7 +247,7 @@ class SumoSquatClassifier extends PoseClassifier {
 
 enum SplitSquatSide { left, right }
 
-class SplitSquatClassifier extends PoseClassifier {
+class SplitSquatClassifier extends ExerciseClassifier {
   final SplitSquatSide frontLeg;
 
   SplitSquatClassifier({required this.frontLeg});
