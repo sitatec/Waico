@@ -39,7 +39,10 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
 
       final workoutStatus = await _userRepository.getWorkoutStatus();
 
-      if (mounted) {
+      // If we don't wait before navigating, the loading will appears and disappear too quickly
+      // causing a flicker. This delay ensures the loading state is visible for a short time.
+      Future.delayed((const Duration(milliseconds: 700)), () {
+        if (!mounted) return;
         switch (workoutStatus) {
           case WorkoutStatus.noSetup:
             // User hasn't completed setup, go to setup page
@@ -54,7 +57,7 @@ class _WorkoutRouterPageState extends State<WorkoutRouterPage> {
             context.navigateTo(const WorkoutPlanPage(), replaceCurrent: true);
             break;
         }
-      }
+      });
     } catch (e) {
       if (mounted) {
         setState(() {

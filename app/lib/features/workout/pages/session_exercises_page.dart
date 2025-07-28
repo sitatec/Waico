@@ -275,12 +275,12 @@ class _ExerciseCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Exercise number
-                Container(
+          child: Row(
+            children: [
+              // Exercise number
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -300,11 +300,12 @@ class _ExerciseCard extends StatelessWidget {
                           ),
                   ),
                 ),
+              ),
 
-                const SizedBox(width: 16),
-
-                // Exercise details
-                Expanded(
+              // Exercise details
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -345,13 +346,16 @@ class _ExerciseCard extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
 
-                // Completion toggle
-                GestureDetector(
-                  onTap: onToggleCompletion,
+              // Completion toggle
+              IconButton(
+                onPressed: onToggleCompletion,
+                icon: Padding(
+                  padding: const EdgeInsets.all(8.0),
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
                       color: isCompleted ? Colors.green : Colors.transparent,
                       border: Border.all(color: isCompleted ? Colors.green : Colors.grey.shade400, width: 2),
@@ -360,8 +364,8 @@ class _ExerciseCard extends StatelessWidget {
                     child: isCompleted ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

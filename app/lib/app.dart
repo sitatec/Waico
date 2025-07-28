@@ -51,6 +51,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     final defaultTheme = Theme.of(context);
 
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: LocaleKeys.app_title.tr(),
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,

@@ -625,6 +625,7 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
                                   LinearProgressIndicator(
                                     value: isInitializationComplete ? 1.0 : modelLoadingProgress,
                                     backgroundColor: Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(8),
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       isInitializationComplete ? Colors.green : theme.colorScheme.primary,
                                     ),
@@ -714,6 +715,7 @@ class _DownloadItemWidget extends StatelessWidget {
                         value: item.progress,
                         backgroundColor: Colors.grey.shade300,
                         valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ],
                   ),

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'dart:developer' show log;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
@@ -47,6 +48,12 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     WidgetsBinding.instance.addObserver(this);
     _setupAnimations();
     _initializeWorkoutSession();
@@ -54,6 +61,8 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
 
   @override
   void dispose() {
+    // Reset orientation
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
     WidgetsBinding.instance.removeObserver(this);
     _workoutCoachAgent?.chatModel.dispose();
     _sessionManager?.dispose();
@@ -111,7 +120,7 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
     setState(() => _isInitialized = false);
     try {
       _workoutCoachAgent = WorkoutCoachAgent();
-      await _workoutCoachAgent!.initialize();
+      await _workoutCoachAgent?.initialize();
       _voiceChatPipeline = VoiceChatPipeline(agent: _workoutCoachAgent!);
       _poseDetectionService = PoseDetectionService.instance;
 
@@ -123,22 +132,25 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
         poseDetectionService: _poseDetectionService,
       );
 
-      _isCameraPermissionGranted = await _poseDetectionService!.hasCameraPermission;
+      _isCameraPermissionGranted = await _poseDetectionService?.hasCameraPermission ?? false;
       _poseDetectionService?.errorStream.listen((error) {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
+        }
       });
 
-      await _sessionManager!.initialize();
+      await _sessionManager?.initialize();
 
       if (widget.startingExerciseIndex != null &&
-          widget.startingExerciseIndex != _sessionManager!.currentState.currentExerciseIndex) {
-        await _sessionManager!.goToExercise(widget.startingExerciseIndex!);
+          widget.startingExerciseIndex != _sessionManager?.currentState.currentExerciseIndex) {
+        await _sessionManager?.goToExercise(widget.startingExerciseIndex!);
       }
-
-      setState(() => _isInitialized = true);
+      if (mounted) setState(() => _isInitialized = true);
     } catch (e, s) {
       log('Failed to initialize workout session', error: e, stackTrace: s);
+      // If the user quickly navigates away, before the state is set to initialized,
+      // we need to ensure we don't call setState on a disposed widget.
+      if (!mounted) return;
       setState(() => _isInitialized = true); // Stop loading even on error
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -193,33 +205,33 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
         final showInstructions = state.currentPhase == WorkoutPhaseType.preExercise && state.currentSet == 1;
 
         return Scaffold(
-          body: SafeArea(
-            child: showInstructions
-                ? SingleChildScrollView(
+          body: showInstructions
+              ? SafeArea(
+                  child: SingleChildScrollView(
                     child: InstructionsView(
                       state: state,
                       fadeAnimation: _fadeAnimation,
                       slideAnimation: _slideAnimation,
                       onStartExercise: () => _sessionManager!.startCurrentExercise(),
                     ),
-                  )
-                : Stack(
-                    children: [
-                      WorkoutView(state: state),
-                      if (state.currentPhase == WorkoutPhaseType.resting)
-                        RestOverlay(state: state, onSkipRest: () => _sessionManager!.startCurrentExercise()),
-                      if (state.currentPhase == WorkoutPhaseType.exercising)
-                        ExerciseInfoOverlay(state: state, onBackPressed: () => Navigator.pop(context)),
-                      ControlOverlay(
-                        state: state,
-                        onGoToPrevious: () => _sessionManager!.goToPreviousExercise(),
-                        onMarkComplete: _markExerciseComplete,
-                        onGoToNext: () => _sessionManager!.goToNextExercise(),
-                        onSwitchCamera: () => _sessionManager!.poseDetectionService.switchCamera(),
-                      ),
-                    ],
                   ),
-          ),
+                )
+              : Stack(
+                  children: [
+                    WorkoutView(state: state),
+                    if (state.currentPhase == WorkoutPhaseType.resting)
+                      RestOverlay(state: state, onSkipRest: () => _sessionManager!.startCurrentExercise()),
+                    if (state.currentPhase == WorkoutPhaseType.exercising)
+                      _BackButton(onBackPressed: () => Navigator.pop(context)),
+                    ControlOverlay(
+                      state: state,
+                      onGoToPrevious: () => _sessionManager!.goToPreviousExercise(),
+                      onMarkComplete: _markExerciseComplete,
+                      onGoToNext: () => _sessionManager!.goToNextExercise(),
+                      onSwitchCamera: () => _sessionManager!.poseDetectionService.switchCamera(),
+                    ),
+                  ],
+                ),
         );
       },
     );
@@ -424,10 +436,7 @@ class InstructionsView extends StatelessWidget {
               const SizedBox(height: 8),
               if (state.restTimerValue != null && state.restTimerValue! > 0)
                 Center(
-                  child: Text(
-                    'Auto-starting in ${state.restTimerValue}s...',
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
+                  child: Text('Auto-starting in ${state.restTimerValue}s...', style: TextStyle(color: Colors.orange)),
                 ),
             ],
           ),
@@ -493,74 +502,28 @@ class RestOverlay extends StatelessWidget {
   }
 }
 
-class ExerciseInfoOverlay extends StatelessWidget {
-  final WorkoutSessionState state;
+class _BackButton extends StatelessWidget {
   final VoidCallback onBackPressed;
-  const ExerciseInfoOverlay({super.key, required this.state, required this.onBackPressed});
+  const _BackButton({required this.onBackPressed});
 
   @override
   Widget build(BuildContext context) {
-    final exercise = state.currentExercise;
     return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
+      top: 8,
+      left: 5,
       child: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.grey.shade900, size: 18),
-                  onPressed: onBackPressed,
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
-                        ],
-                      ),
-                      child: Text(
-                        exercise.name,
-                        style: TextStyle(color: Colors.grey.shade900, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        exercise.load.type == ExerciseLoadType.duration
-                            ? 'Set ${state.currentSet} | Time: ${state.exerciseTimerValue ?? exercise.load.duration}s'
-                            : 'Set ${state.currentSet} of ${exercise.load.sets} | Target: ${exercise.load.reps} reps',
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 40),
-            ],
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white.withOpacity(0.8), size: 18),
+            onPressed: onBackPressed,
+            visualDensity: VisualDensity.compact,
           ),
         ),
       ),
@@ -586,47 +549,78 @@ class ControlOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final exercise = state.currentExercise;
+
     return Positioned(
       bottom: 0,
       left: 0,
       right: 0,
       child: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2))],
-          ),
-          child: IntrinsicHeight(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ControlButton(
-                  icon: Icons.skip_previous,
-                  onPressed: state.hasPreviousExercise ? onGoToPrevious : null,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                ControlButton(
-                  icon: Icons.check_circle,
-                  onPressed: onMarkComplete,
-                  color: Colors.green,
-                  isPrimary: true,
-                ),
-                ControlButton(
-                  icon: Icons.skip_next,
-                  onPressed: state.hasNextExercise ? onGoToNext : null,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const VerticalDivider(endIndent: 12, indent: 12, width: 1),
-                ControlButton(
-                  icon: Icons.cameraswitch_outlined,
-                  onPressed: onSwitchCamera,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    exercise.name,
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    ' - Set ${state.currentSet}/${exercise.load.sets}${exercise.load.type == ExerciseLoadType.duration ? ' | Time: ${state.exerciseTimerValue ?? exercise.load.duration}s' : ''}',
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2)),
+                ],
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ControlButton(
+                      icon: Icons.skip_previous,
+                      onPressed: state.hasPreviousExercise ? onGoToPrevious : null,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    ControlButton(
+                      icon: Icons.check_circle,
+                      onPressed: onMarkComplete,
+                      color: Colors.green,
+                      isPrimary: true,
+                    ),
+                    ControlButton(
+                      icon: Icons.skip_next,
+                      onPressed: state.hasNextExercise ? onGoToNext : null,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const VerticalDivider(endIndent: 12, indent: 12, width: 1),
+                    ControlButton(
+                      icon: Icons.cameraswitch_outlined,
+                      onPressed: onSwitchCamera,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

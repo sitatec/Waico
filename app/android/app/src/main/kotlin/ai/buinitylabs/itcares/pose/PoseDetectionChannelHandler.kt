@@ -227,7 +227,7 @@ class PoseDetectionChannelHandler(
 
             // Connect pose detection
             imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
-                Log.d(TAG, "Received camera frame: ${imageProxy.width}x${imageProxy.height}")
+                // Log.d(TAG, "Received camera frame: ${imageProxy.width}x${imageProxy.height}")
                 connectPoseDetection(imageProxy)
             }
 
@@ -289,7 +289,7 @@ class PoseDetectionChannelHandler(
         try {
             // Check if pose detection is available
             if (poseLandmarkerHelper != null && isPoseDetectionAvailable()) {
-                Log.d(TAG, "Processing frame for pose detection")
+                // Log.d(TAG, "Processing frame for pose detection")
                 // Pass image to pose detection
                 poseLandmarkerHelper?.detectLiveStream(imageProxy, isFrontCamera)
             } else {
@@ -380,7 +380,7 @@ class PoseDetectionChannelHandler(
     // PoseLandmarkerHelper.LandmarkerListener implementation
     override fun onResults(resultBundle: PoseLandmarkerHelper.ResultBundle) {
         try {
-            Log.d(TAG, "Received pose detection results with ${resultBundle.results.size} poses")
+            //Log.d(TAG, "Received pose detection results with ${resultBundle.results.size} poses")
             
             // Calculate FPS for landmarks
             calculateLandmarkFPS()
@@ -418,7 +418,7 @@ class PoseDetectionChannelHandler(
                 "timestamp" to System.currentTimeMillis()
             )
 
-            Log.d(TAG, "Sending pose data to Flutter: ${landmarksData.size} poses")
+            // Log.d(TAG, "Sending pose data to Flutter: ${landmarksData.size} poses")
 
             // Send to Flutter on main thread
             mainHandler.post {

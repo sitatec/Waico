@@ -328,9 +328,12 @@ class _WorkoutPlanContent extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () async {
+                          if (!context.mounted) return;
                           await userRepository.clearWorkoutPlan();
                           await userRepository.clearWorkoutProgress();
+                          // ignore: use_build_context_synchronously
                           context.navBack();
+                          // ignore: use_build_context_synchronously
                           context.navBack();
                         },
                         child: Text(LocaleKeys.common_delete.tr()),
@@ -664,7 +667,7 @@ class _WorkoutSessionCard extends StatelessWidget {
 
             // Exercises List
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 children: session.exercises.asMap().entries.map((entry) {
                   final exerciseIndex = entry.key;
@@ -722,7 +725,6 @@ class _ExerciseItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isCompleted ? Colors.green.withOpacity(0.1) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -731,11 +733,11 @@ class _ExerciseItem extends StatelessWidget {
       child: Row(
         children: [
           // Completion Checkbox
-          GestureDetector(
-            onTap: onToggle,
-            child: Container(
-              width: 24,
-              height: 24,
+          IconButton(
+            onPressed: onToggle,
+            icon: Container(
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 color: isCompleted ? Colors.green : Colors.transparent,
                 border: Border.all(color: isCompleted ? Colors.green : Colors.grey.shade400, width: 2),
@@ -745,58 +747,62 @@ class _ExerciseItem extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(width: 16),
-
           // Exercise Details
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  exercise.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    color: isCompleted ? Colors.grey.shade600 : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exercise.name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      color: isCompleted ? Colors.grey.shade600 : null,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _getLoadDescription(context),
-                  style: TextStyle(
-                    color: isCompleted ? Colors.grey.shade500 : Theme.of(context).colorScheme.primary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (exercise.targetMuscles.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    children: exercise.targetMuscles.map((muscle) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
-                        child: Text(muscle, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                      );
-                    }).toList(),
-                  ),
-                ],
-                if (exercise.restDuration > 0) ...[
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(
-                        LocaleKeys.workout_plan_rest.tr(namedArgs: {'rest': exercise.restDuration.toString()}),
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                      ),
-                    ],
+                  Text(
+                    _getLoadDescription(context),
+                    style: TextStyle(
+                      color: isCompleted ? Colors.grey.shade500 : Theme.of(context).colorScheme.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                  if (exercise.targetMuscles.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      children: exercise.targetMuscles.map((muscle) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(muscle, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  if (exercise.restDuration > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Text(
+                          LocaleKeys.workout_plan_rest.tr(namedArgs: {'rest': exercise.restDuration.toString()}),
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],

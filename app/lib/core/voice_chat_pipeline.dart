@@ -67,8 +67,11 @@ class VoiceChatPipeline {
   /// Returns `true` if the speech was successfully added, `false` if not (chat has ended or the pipeline is busy)
   Future<bool> addSystemSpeech(String text) async {
     if (_hasChatEnded || isBusy) return false;
-
+    final isAudioPaused = !_audioStreamPlayer.isPlaying;
+    if (isAudioPaused) _audioStreamPlayer.resume();
     await _generateSpeech(text);
+    // If the audio was paused before, we pause it again after the speech is completed.
+    if (isAudioPaused) _audioStreamPlayer.appendCallback(_audioStreamPlayer.pause);
     return true;
   }
 

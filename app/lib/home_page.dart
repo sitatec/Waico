@@ -88,11 +88,11 @@ class HomePage extends StatelessWidget {
         data: theme.copyWith(
           floatingActionButtonTheme: theme.floatingActionButtonTheme.copyWith(
             backgroundColor: theme.colorScheme.primary,
-            sizeConstraints: BoxConstraints(minWidth: 160, minHeight: 56),
+            sizeConstraints: BoxConstraints(minWidth: 155, minHeight: 56),
           ),
         ),
         child: FloatingActionButton(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           onPressed: () {
             context.navigateTo(CounselorPage());
           },

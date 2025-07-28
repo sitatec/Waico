@@ -57,6 +57,7 @@ class WorkoutSessionManager {
   /// Initialize the workout session manager
   Future<void> initialize() async {
     await voiceChatPipeline.startChat(voice: 'am_santa');
+    // We only start listening when the exercise starts
     await voiceChatPipeline.stopListeningToUser();
     await _initializeCurrentExercise();
     _startPreExerciseOrRestTimer(duration: 20, isInitialStart: true);
@@ -164,15 +165,20 @@ class WorkoutSessionManager {
     final message =
         '''<system>
 Exercise: $exerciseName
+Set: ${_state.currentSet} out of ${_state.currentExercise.load.sets}
 Feedback Type: $feedbackType
 
-Current Metrics:
+Metrics:
+${_state.exerciseTimerValue != null ? '- Duration: ${_state.exerciseTimerValue!} out of ${_state.currentExercise.load.duration} seconds\n' : ''}
 - Form Score: ${metrics.formScore}
-- Exercise Correctness: ${metrics.correctness}
+- Exercise Correctness Score: ${metrics.correctness}
+${isFormFeedback ? '''
 - Form Feedback: 
     ${metrics.formMetrics.entries.where((entry) => entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
+''' : ''}
 </system>
 ''';
+    log('\n\nSending duration metrics to AI: $message\n\n');
     await voiceChatPipeline.addSystemMessage(message);
   }
 
@@ -351,9 +357,12 @@ Current Metrics:
     final hasFeedback = repData.formMetrics.values.any((v) => v is Map && v.containsKey('message'));
     if (hasFeedback) {
       await _sendRepDataToAI(repData, isFormFeedback: true);
-    } else if (repData.formScore > 9.0) {
-      // Check if we should send excellent form feedback (There needs to be at least 3 reps gap)
-      final shouldSend = _lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 3;
+    } else if (repData.quality == RepQuality.excellent) {
+      // Check if we should send excellent form feedback (There needs to be at least 4 reps gap)
+      // And at least 4 reps have been completed in the current set. This is to prevent sending
+      // too many feedback in a short time.
+      final shouldSend =
+          repData.repNumber >= 3 && _lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 4;
       if (shouldSend) {
         if (await _sendRepDataToAI(repData, isFormFeedback: false)) {
           _lastExcellentRepSent = repData.repNumber;
@@ -376,21 +385,25 @@ Current Metrics:
     final message =
         '''<system>
 Exercise: $exerciseName
+Set: ${_state.currentSet} out of ${_state.currentExercise.load.sets}
 Feedback Type: $feedbackType
 
 Recent Repetitions Data:
-${repsToSend.map((rep) => 'Rep ${rep.repNumber}: Score ${rep.formScore}, Quality: ${rep.quality.name}, Duration: ${rep.duration / 1000} seconds').join('\n')}
+${repsToSend.map((rep) => 'Rep ${rep.repNumber}: Score ${rep.quality.score}, Quality: ${rep.quality.name}, Duration: ${rep.duration / 1000} seconds').join('\n')}
 
 Current Rep Analysis:
-- Rep Number: ${currentRep.repNumber}
-- Form Score: ${currentRep.formScore}
-- Quality: ${currentRep.quality}${isFormFeedback ? '''
-- Duration: ${currentRep.duration / 1000} seconds
+- Rep: ${currentRep.repNumber} out of ${_state.currentExercise.load.reps}
+- Score: ${currentRep.quality.score}
+- Quality: ${currentRep.quality.name}
+- Rep Duration: ${currentRep.duration / 1000} seconds
+${isFormFeedback ? '''
 - Form Feedback: 
     ${currentRep.formMetrics.entries.where((entry) => entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
 ''' : ''}
 </system>
 ''';
+
+    log('\n\nSending reps metrics to AI: $message\n\n');
 
     final success = await voiceChatPipeline.addSystemMessage(message);
 

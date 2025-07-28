@@ -162,10 +162,6 @@ class RepsCounter {
 
   final List<RepetitionData> _repetitions = <RepetitionData>[];
 
-  // Current frame data (not stored in history until we reach an endpoint)
-  double _currentConfidence = 0.0;
-  Map<String, dynamic> _currentFormMetrics = {};
-
   // Stream controllers for real-time updates
   final StreamController<RepCountingState> _stateController = StreamController<RepCountingState>.broadcast();
   final StreamController<RepetitionData> _repController = StreamController<RepetitionData>.broadcast();
@@ -199,16 +195,6 @@ class RepsCounter {
 
     final upProbability = probabilities['up'] ?? 0.5;
     final downProbability = probabilities['down'] ?? 0.5;
-    // Confidence represents certainty: 0.0 (uncertain) to 1.0 (very certain)
-    // Convert from probability space to confidence space
-    final confidence = (max(upProbability, downProbability) - 0.5) * 2;
-
-    // Calculate form metrics
-    final formMetrics = _calculateFormMetrics(poseResult);
-
-    // Store current frame data (will be saved to history only at stable endpoints)
-    _currentConfidence = confidence;
-    _currentFormMetrics = formMetrics;
 
     // Determine target state based on probabilities
     ExerciseState targetState;
@@ -220,14 +206,14 @@ class RepsCounter {
       targetState = ExerciseState.transitioning;
     }
 
-    _updateState(targetState, poseResult.timestamp);
+    _updateState(targetState, poseResult, probabilities);
 
     // Emit current state
     _stateController.add(currentState);
   }
 
   /// Update exercise state and count repetitions
-  void _updateState(ExerciseState targetState, DateTime timestamp) {
+  void _updateState(ExerciseState targetState, PoseDetectionResult poseResult, Map<String, double> probabilities) {
     // Check if the target state has changed
     if (_targetState != targetState) {
       _targetState = targetState;
@@ -237,6 +223,8 @@ class RepsCounter {
 
     // Target state is the same as before, increment counter
     _stableFrameCount++;
+
+    final timestamp = poseResult.timestamp;
 
     // Check if target state is different from current state and we have enough stable frames
     if (targetState != _currentState && _stableFrameCount >= _config.stateStabilityFrames) {
@@ -252,7 +240,7 @@ class RepsCounter {
 
       // Count rep when transitioning from down to up (completing a full cycle)
       if (previousState == ExerciseState.down && _currentState == ExerciseState.up) {
-        _completeRepetition(timestamp);
+        _completeRepetition(timestamp, poseResult, probabilities);
       } else if (previousState == ExerciseState.up && _currentState == ExerciseState.down) {
         // Starting a new rep cycle
         _transitionStartTime = timestamp;
@@ -261,24 +249,38 @@ class RepsCounter {
   }
 
   /// Complete a repetition and calculate quality metrics
-  void _completeRepetition(DateTime timestamp) {
+  void _completeRepetition(DateTime timestamp, PoseDetectionResult poseResult, Map<String, double> probabilities) {
     _totalReps++;
 
     final duration = _transitionStartTime != null
         ? timestamp.difference(_transitionStartTime!).inMilliseconds.toDouble()
         : 0.0;
 
-    final formScore = _calculateFormScore(_currentFormMetrics); // Use current form score for this specific rep
-    final quality = _determineRepQuality(formScore, _currentConfidence);
+    final upProbability = probabilities['up'] ?? 0.5;
+    final downProbability = probabilities['down'] ?? 0.5;
+
+    // Confidence represents certainty: 0.0 (uncertain) to 1.0 (very certain)
+    // Convert from probability space to confidence space
+    final confidence = (max(upProbability, downProbability) - 0.5) * 2;
+
+    // Calculate form metrics
+    final formMetrics = _classifier.calculateFormMetrics(
+      worldLandmarks: poseResult.worldLandmarks,
+      imageLandmarks: poseResult.landmarks,
+      position: _currentState == ExerciseState.up ? 'up' : 'down',
+    );
+
+    final formScore = _calculateFormScore(formMetrics); // Use current form score for this specific rep
+    final quality = _determineRepQuality(formScore, confidence);
 
     final repData = RepetitionData(
       repNumber: _totalReps,
       timestamp: timestamp,
       duration: duration,
       quality: quality,
-      confidence: _currentConfidence,
+      confidence: confidence,
       formScore: formScore,
-      formMetrics: Map.from(_currentFormMetrics), // Use the current form metrics
+      formMetrics: Map.from(formMetrics), // Use the current form metrics
     );
 
     _repetitions.add(repData);
@@ -286,14 +288,6 @@ class RepsCounter {
 
     // Emit the new rep
     _repController.add(repData);
-  }
-
-  /// Calculate form metrics based on pose landmarks
-  Map<String, dynamic> _calculateFormMetrics(PoseDetectionResult poseResult) {
-    return _classifier.calculateFormMetrics(
-      worldLandmarks: poseResult.worldLandmarks,
-      imageLandmarks: poseResult.landmarks,
-    );
   }
 
   /// Calculate overall form score from individual metrics
@@ -308,7 +302,7 @@ class RepsCounter {
 
   /// Determine rep quality based on form score and confidence
   RepQuality _determineRepQuality(double formScore, double confidence) {
-    final combinedScore = (formScore * 0.4 + confidence * 0.7);
+    final combinedScore = formScore * 0.3 + confidence * 0.7;
 
     if (combinedScore >= 0.9) return RepQuality.excellent;
     if (combinedScore >= 0.75) return RepQuality.good;
