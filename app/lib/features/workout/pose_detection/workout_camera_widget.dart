@@ -180,43 +180,40 @@ class _RepCounterOverlay extends StatelessWidget {
     final lastQuality = repCountingState.lastRep?.formScore ?? 0.0;
 
     return Positioned(
-      top: 24,
-      right: 16,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.black.withOpacity(0.5), Colors.black.withOpacity(0.3)],
+      top: 8,
+      right: 5,
+      child: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.green, width: 1),
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.green, width: 1),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _RepCountDisplay(totalReps: repCountingState.totalReps, repScaleAnimation: repScaleAnimation),
-            const SizedBox(height: 4),
-            Text(
-              'REPS',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.8),
-                letterSpacing: 1.5,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _RepCountDisplay(totalReps: repCountingState.totalReps, repScaleAnimation: repScaleAnimation),
+              const SizedBox(height: 4),
+              Text(
+                'REPS',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(0.8),
+                  letterSpacing: 1.3,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            _QualityIndicator(quality: lastQuality),
-            const SizedBox(height: 8),
-            _PositionIndicator(isUp: isUp),
-            if (repCountingState.lastRep != null) ...[
-              const SizedBox(height: 8),
-              _LastRepQualityIndicator(repData: repCountingState.lastRep!),
+              const SizedBox(height: 6),
+              _QualityIndicator(quality: lastQuality),
+              const SizedBox(height: 6),
+              _PositionIndicator(isUp: isUp),
+              if (repCountingState.lastRep != null) ...[
+                const SizedBox(height: 6),
+                _LastRepQualityIndicator(repData: repCountingState.lastRep!),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -246,7 +243,7 @@ class _RepCountDisplay extends StatelessWidget {
           child: Text(
             totalReps.toString(),
             style: TextStyle(
-              fontSize: 30,
+              fontSize: 26,
               fontWeight: FontWeight.bold,
               color: _getRepCountColor(),
               shadows: [Shadow(color: Colors.black.withOpacity(0.5), offset: const Offset(2, 2), blurRadius: 4)],
@@ -280,18 +277,18 @@ class _QualityIndicator extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.star_rounded, size: 14, color: qualityColor),
+            Icon(Icons.star_rounded, size: 13, color: qualityColor),
             const SizedBox(width: 4),
             Text(
               '$qualityPercentage%',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: qualityColor),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: qualityColor),
             ),
           ],
         ),
         const SizedBox(height: 4),
         Container(
-          width: 80,
-          height: 4,
+          width: 70,
+          height: 2,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: Colors.white.withOpacity(0.2)),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
@@ -316,14 +313,14 @@ class _PositionIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isUp ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+        color: isUp ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isUp ? Colors.green : Colors.orange, width: 1),
+        border: Border.all(color: isUp ? Colors.green : Colors.orange, width: 0.8),
       ),
       child: Text(
         isUp ? 'UP' : 'DOWN',
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.bold,
           color: isUp ? Colors.green : Colors.orange,
           letterSpacing: 1,
@@ -365,7 +362,7 @@ class _LastRepQualityIndicator extends StatelessWidget {
       ),
       child: Text(
         qualityLabel,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: qualityColor, letterSpacing: 0.8),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: qualityColor, letterSpacing: 0.8),
       ),
     );
   }

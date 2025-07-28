@@ -181,6 +181,7 @@ class MockPoseClassifier extends PoseClassifier {
   Map<String, double> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     return {'overall_visibility': 0.9, 'test_metric': 0.8};
   }

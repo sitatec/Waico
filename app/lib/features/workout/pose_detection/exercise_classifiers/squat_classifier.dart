@@ -49,80 +49,67 @@ class SquatClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
     try {
       final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
       final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
-      final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
-      final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
       final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
       final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
 
-      // Knee tracking (knees should track over toes)
-      final kneeAnkleDistance = sqrt(pow(leftKnee.x - leftAnkle.x, 2) + pow(rightKnee.x - rightAnkle.x, 2));
-      final kneeTrackingScore = 1.0 - (kneeAnkleDistance * 10).clamp(0.0, 1.0);
-      metrics['knee_tracking'] = kneeTrackingScore;
+      // Note: Knee tracking metrics removed for regular squats due to sideways camera orientation
+      // X-axis measurements like (leftKnee.x - leftAnkle.x) are unreliable when user faces sideways
 
-      // Depth (hip should go below knee level in a proper squat)
+      // Position-aware depth assessment
       final hipKneeDiff = (leftHip.y + rightHip.y) / 2 - (leftKnee.y + rightKnee.y) / 2;
-      final depthScore = hipKneeDiff > 0 ? 1.0 : 0.5;
+      double depthScore;
+      if (position == 'down') {
+        // In DOWN position, depth is critical - expect hips below knees
+        depthScore = hipKneeDiff > 0 ? 1.0 : 0.5 + (hipKneeDiff.abs() * 0.5).clamp(0.0, 0.5);
+      } else if (position == 'up') {
+        // In UP position, being above knee level is expected and acceptable
+        depthScore = hipKneeDiff < 0 ? 1.0 : 0.8 - (hipKneeDiff * 0.3).clamp(0.0, 0.3);
+      } else {
+        // Position-agnostic (fallback)
+        depthScore = hipKneeDiff > 0 ? 1.0 : 0.7 + (hipKneeDiff.abs() * 0.3).clamp(0.0, 0.3);
+      }
       metrics['squat_depth'] = depthScore;
 
-      // Stance width (feet should be shoulder-width apart)
-      final footWidth = (leftAnkle.x - rightAnkle.x).abs();
-      final shoulderWidth =
-          (worldLandmarks[PoseLandmarkType.leftShoulder].x - worldLandmarks[PoseLandmarkType.rightShoulder].x).abs();
-      final stanceRatio = shoulderWidth > 0 ? footWidth / shoulderWidth : 0.0;
-      final stanceScore = 1.0 - (stanceRatio - 1.1).abs().clamp(0.0, 1.0);
-      metrics['stance_width'] = stanceScore;
+      // Note: Stance width metrics removed for regular squats due to sideways camera orientation
+      // These measurements are unreliable when user is facing sideways
     } catch (e) {
       // Fallback values on error
-      metrics['knee_tracking'] = 0.5;
       metrics['squat_depth'] = 0.5;
-      metrics['stance_width'] = 0.5;
     }
 
     // Add overall visibility
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return _generateFeedbackMessages(formMetrics: metrics);
+    return _generateFeedbackMessages(formMetrics: metrics, position: position);
   }
 
-  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics, String? position}) {
     final feedback = <String, dynamic>{};
 
-    // Knee tracking feedback
-    if (formMetrics['knee_tracking'] != null) {
-      final kneeTracking = formMetrics['knee_tracking']!;
-      feedback['knee_tracking'] = <String, dynamic>{'score': kneeTracking};
-      if (kneeTracking < 0.6) {
-        feedback['knee_tracking']['message'] =
-            'Should keep the knees aligned over the toes, not allowing them to cave inward';
-      }
-    }
+    // Note: Knee tracking feedback removed for regular squats due to sideways camera orientation
+    // These measurements are unreliable when user is facing sideways
 
     // Squat depth feedback
     if (formMetrics['squat_depth'] != null) {
       final depth = formMetrics['squat_depth']!;
       feedback['squat_depth'] = <String, dynamic>{'score': depth};
-      if (depth < 0.7) {
+      if (depth < 0.5) {
+        // Lowered threshold from 0.7 to 0.5
         feedback['squat_depth']['message'] =
             'Should squat deeper, lowering the hips below knee level for a full range of motion';
       }
     }
 
-    // Stance width feedback
-    if (formMetrics['stance_width'] != null) {
-      final stanceWidth = formMetrics['stance_width']!;
-      feedback['stance_width'] = <String, dynamic>{'score': stanceWidth};
-      if (stanceWidth < 0.6) {
-        feedback['stance_width']['message'] =
-            'Should adjust the feet to be about shoulder-width apart for optimal stability';
-      }
-    }
+    // Note: Stance width feedback removed for regular squats due to sideways camera orientation
+    // These measurements are unreliable when user is facing sideways
 
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {
@@ -185,6 +172,7 @@ class SumoSquatClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
@@ -199,54 +187,37 @@ class SumoSquatClassifier extends PoseClassifier {
       // Knee tracking (both knees should track over toes)
       final leftKneeAnkleDistance = sqrt(pow(leftKnee.x - leftAnkle.x, 2));
       final rightKneeAnkleDistance = sqrt(pow(rightKnee.x - rightAnkle.x, 2));
-      final avgKneeTrackingScore = 1.0 - ((leftKneeAnkleDistance + rightKneeAnkleDistance) / 2 * 10).clamp(0.0, 1.0);
+      // Reduced sensitivity: was * 10, now * 5
+      final avgKneeTrackingScore = 1.0 - ((leftKneeAnkleDistance + rightKneeAnkleDistance) / 2 * 5).clamp(0.0, 1.0);
       metrics['knee_tracking'] = avgKneeTrackingScore;
-
-      // Stance width (should be wider than regular squat)
-      final footWidth = (leftAnkle.x - rightAnkle.x).abs();
-      final shoulderWidth =
-          (worldLandmarks[PoseLandmarkType.leftShoulder].x - worldLandmarks[PoseLandmarkType.rightShoulder].x).abs();
-      final stanceRatio = shoulderWidth > 0 ? footWidth / shoulderWidth : 0.0;
-      // Sumo squats should have wider stance (1.3-1.8)
-      final stanceScore = 1.0 - (stanceRatio - 1.55).abs().clamp(0.0, 1.0);
-      metrics['sumo_stance_width'] = stanceScore;
 
       // Depth
       final hipKneeDiff = (leftHip.y + rightHip.y) / 2 - (leftKnee.y + rightKnee.y) / 2;
-      final depthScore = hipKneeDiff > 0 ? 1.0 : 0.5;
+      // More gradual scoring instead of binary
+      final depthScore = hipKneeDiff > 0 ? 1.0 : 0.7 + (hipKneeDiff.abs() * 0.3).clamp(0.0, 0.3);
       metrics['squat_depth'] = depthScore;
     } catch (e) {
       metrics['knee_tracking'] = 0.5;
-      metrics['sumo_stance_width'] = 0.5;
       metrics['squat_depth'] = 0.5;
     }
 
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return _generateFeedbackMessages(formMetrics: metrics);
+    return _generateFeedbackMessages(formMetrics: metrics, position: position);
   }
 
-  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics, String? position}) {
     final feedback = <String, dynamic>{};
 
     // Knee tracking feedback
     if (formMetrics['knee_tracking'] != null) {
       final kneeTracking = formMetrics['knee_tracking']!;
       feedback['knee_tracking'] = <String, dynamic>{'score': kneeTracking};
-      if (kneeTracking < 0.6) {
+      if (kneeTracking < 0.4) {
+        // Lowered threshold from 0.6 to 0.4
         feedback['knee_tracking']['message'] =
             'Should keep both knees aligned over the toes and avoid letting them cave inward';
-      }
-    }
-
-    // Sumo stance width feedback
-    if (formMetrics['sumo_stance_width'] != null) {
-      final stanceWidth = formMetrics['sumo_stance_width']!;
-      feedback['sumo_stance_width'] = <String, dynamic>{'score': stanceWidth};
-      if (stanceWidth < 0.7) {
-        feedback['sumo_stance_width']['message'] =
-            'Should position the feet wider than shoulder-width with toes pointed outward';
       }
     }
 
@@ -254,7 +225,8 @@ class SumoSquatClassifier extends PoseClassifier {
     if (formMetrics['squat_depth'] != null) {
       final depth = formMetrics['squat_depth']!;
       feedback['squat_depth'] = <String, dynamic>{'score': depth};
-      if (depth < 0.7) {
+      if (depth < 0.5) {
+        // Lowered threshold from 0.7 to 0.5
         feedback['squat_depth']['message'] =
             'Should squat deeper, lowering the hips below knee level for a full range of motion';
       }
@@ -321,6 +293,7 @@ class SplitSquatClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
@@ -329,54 +302,64 @@ class SplitSquatClassifier extends PoseClassifier {
       final frontKneeIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftKnee : PoseLandmarkType.rightKnee;
       final frontAnkleIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.leftAnkle : PoseLandmarkType.rightAnkle;
 
-      // Front leg knee tracking
+      final frontHip = worldLandmarks[frontHipIdx];
       final frontKnee = worldLandmarks[frontKneeIdx];
       final frontAnkle = worldLandmarks[frontAnkleIdx];
-      final frontKneeTrackingDistance = (frontKnee.x - frontAnkle.x).abs();
-      final frontKneeTrackingScore = 1.0 - (frontKneeTrackingDistance * 15).clamp(0.0, 1.0);
-      metrics['front_knee_tracking'] = frontKneeTrackingScore;
 
-      // Stance length (appropriate distance between feet)
-      final backAnkleIdx = frontLeg == SplitSquatSide.left ? PoseLandmarkType.rightAnkle : PoseLandmarkType.leftAnkle;
-      final backAnkle = worldLandmarks[backAnkleIdx];
-      final stanceLength = sqrt(pow(frontAnkle.x - backAnkle.x, 2) + pow(frontAnkle.y - backAnkle.y, 2));
-      // Normalize stance length relative to leg length
-      final frontHip = worldLandmarks[frontHipIdx];
-      final legLength = sqrt(pow(frontHip.x - frontAnkle.x, 2) + pow(frontHip.y - frontAnkle.y, 2));
-      final stanceRatio = legLength > 0 ? stanceLength / legLength : 0.0;
-      final stanceScore = 1.0 - (stanceRatio - 0.8).abs().clamp(0.0, 1.0);
-      metrics['stance_length'] = stanceScore;
+      // Front knee tracking using angle-based algorithm
+      if (position == 'down') {
+        // Down position: use front knee angle, target ~90°
+        final frontKneeAngle = PoseUtilities.getAngle(frontHip, frontKnee, frontAnkle);
+        final deviationFromTarget = (frontKneeAngle - 90.0).abs();
+        // Score based on how close to 90° (allow ±15° tolerance)
+        final kneeTrackingScore = 1.0 - (deviationFromTarget / 30.0).clamp(0.0, 1.0);
+        metrics['front_knee_tracking'] = kneeTrackingScore;
+      } else if (position == 'up') {
+        // Up position: use left ankle, hip, right ankle angle, target ~60°
+        final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
+        final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
+        final hip = worldLandmarks[PoseLandmarkType.leftHip]; // Use left hip as reference
+
+        final ankleHipAnkleAngle = PoseUtilities.getAngle(leftAnkle, hip, rightAnkle);
+        final deviationFromTarget = (ankleHipAnkleAngle - 60.0).abs();
+        // Score based on how close to 60° (allow ±20° tolerance)
+        final kneeTrackingScore = 1.0 - (deviationFromTarget / 40.0).clamp(0.0, 1.0);
+        metrics['front_knee_tracking'] = kneeTrackingScore;
+      } else {
+        // Position-agnostic (fallback): use front knee angle
+        final frontKneeAngle = PoseUtilities.getAngle(frontHip, frontKnee, frontAnkle);
+        final deviationFromTarget = (frontKneeAngle - 120.0).abs(); // Mid-range target
+        final kneeTrackingScore = 1.0 - (deviationFromTarget / 60.0).clamp(0.0, 1.0);
+        metrics['front_knee_tracking'] = kneeTrackingScore;
+      }
     } catch (e) {
       metrics['front_knee_tracking'] = 0.5;
-      metrics['stance_length'] = 0.5;
     }
 
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return _generateFeedbackMessages(formMetrics: metrics);
+    return _generateFeedbackMessages(formMetrics: metrics, position: position);
   }
 
-  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics, String? position}) {
     final feedback = <String, dynamic>{};
 
     // Front knee tracking feedback
     if (formMetrics['front_knee_tracking'] != null) {
-      final frontKneeTracking = formMetrics['front_knee_tracking']!;
-      feedback['front_knee_tracking'] = <String, dynamic>{'score': frontKneeTracking};
-      if (frontKneeTracking < 0.65) {
-        feedback['front_knee_tracking']['message'] =
-            'Should keep the front knee aligned over the ankle and avoid letting it drift inward';
-      }
-    }
-
-    // Stance length feedback
-    if (formMetrics['stance_length'] != null) {
-      final stanceLength = formMetrics['stance_length']!;
-      feedback['stance_length'] = <String, dynamic>{'score': stanceLength};
-      if (stanceLength < 0.7) {
-        feedback['stance_length']['message'] =
-            'Should adjust the stance to have an appropriate distance between their front and back foot for stability';
+      final kneeTracking = formMetrics['front_knee_tracking']!;
+      feedback['front_knee_tracking'] = <String, dynamic>{'score': kneeTracking};
+      if (kneeTracking < 0.6) {
+        if (position == 'down') {
+          feedback['front_knee_tracking']['message'] =
+              'Should aim for approximately 90° front knee angle in the down position';
+        } else if (position == 'up') {
+          feedback['front_knee_tracking']['message'] =
+              'Should maintain proper leg positioning with approximately 60° angle between ankles and hip in the up position';
+        } else {
+          feedback['front_knee_tracking']['message'] =
+              'Should maintain proper front knee alignment throughout the movement';
+        }
       }
     }
 

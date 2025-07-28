@@ -54,58 +54,76 @@ class CrunchClassifier extends PoseClassifier {
       return _neutralResult();
     }
 
-    final nose = worldLandmarks[PoseLandmarkType.nose];
-    final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
-    // Calculate torso flexion angle
-    final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
+    final shoulderCenter3D = PoseUtilities.getMidpoint(
+      worldLandmarks[PoseLandmarkType.leftShoulder],
+      worldLandmarks[PoseLandmarkType.rightShoulder],
+    );
+    final hipCenter3D = PoseUtilities.getMidpoint(
+      worldLandmarks[PoseLandmarkType.leftHip],
+      worldLandmarks[PoseLandmarkType.rightHip],
+    );
+    final kneeCenter3D = PoseUtilities.getMidpoint(
+      worldLandmarks[PoseLandmarkType.leftKnee],
+      worldLandmarks[PoseLandmarkType.rightKnee],
+    );
 
-    // Use nose-to-shoulder vector vs shoulder-to-hip vector
-    final torsoAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
+    final shoulderCenter2D = PoseUtilities.getMidpoint(
+      imageLandmarks[PoseLandmarkType.leftShoulder],
+      imageLandmarks[PoseLandmarkType.rightShoulder],
+    );
+    final hipCenter2D = PoseUtilities.getMidpoint(
+      imageLandmarks[PoseLandmarkType.leftHip],
+      imageLandmarks[PoseLandmarkType.rightHip],
+    );
 
-    // In a crunch, the torso flexes forward, reducing this angle
-    // DOWN (extended): ~160-180°, UP (crunched): ~120-140°
-    final downProb = PoseUtilities.normalize(torsoAngle, 120.0, 180.0);
+    // Signal 1: Torso Angle (Primary)
+    final torsoAngle = PoseUtilities.getAngle(shoulderCenter3D, hipCenter3D, kneeCenter3D);
+    // UP: ~117.9°, DOWN: ~130.7° - smaller angle means more crunched (up)
+    final angleProb = 1.0 - PoseUtilities.normalize(torsoAngle, 110.0, 140.0);
 
-    return {'up': 1 - downProb, 'down': downProb};
+    // Signal 2: Shoulder Elevation (Secondary)
+    final shoulderElevation = PoseUtilities.getVerticalDistance(hipCenter2D, shoulderCenter2D);
+    final torsoLength = Vector2(
+      shoulderCenter2D.x,
+      shoulderCenter2D.y,
+    ).distanceTo(Vector2(hipCenter2D.x, hipCenter2D.y));
+    if (torsoLength < 0.01) return _neutralResult();
+
+    final normalizedElevation = shoulderElevation / torsoLength;
+    // DOWN: ~0.117, UP: ~0.639 - higher elevation means more crunched (up)
+    final elevationProb = PoseUtilities.normalize(normalizedElevation, 0.05, 0.8);
+
+    // Combine with emphasis on both signals
+    final upProbability = (angleProb * 0.6 + elevationProb * 0.4);
+    return {'up': upProbability, 'down': 1.0 - upProbability};
   }
 
   @override
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
     try {
-      final nose = worldLandmarks[PoseLandmarkType.nose];
-      final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
-      final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
       final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
       final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
       final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
       final rightKnee = worldLandmarks[PoseLandmarkType.rightKnee];
 
-      // Neck alignment (head should move with torso, not independently)
-      final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
-      final neckAngle = PoseUtilities.getAngle(nose, shoulderMid, PoseUtilities.getMidpoint(leftHip, rightHip));
-      final neckAlignmentScore = PoseUtilities.normalize(neckAngle, 140.0, 180.0);
-      metrics['neck_alignment'] = neckAlignmentScore;
-
-      // Knee stability (knees should stay bent and stable)
+      // Knee stability (position-independent - should always be stable)
       final leftKneeAngle = PoseUtilities.getAngle(leftHip, leftKnee, worldLandmarks[PoseLandmarkType.leftAnkle]);
       final rightKneeAngle = PoseUtilities.getAngle(rightHip, rightKnee, worldLandmarks[PoseLandmarkType.rightAnkle]);
       final avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
-      // Knees should be bent (~90-120 degrees)
-      final kneeStabilityScore = 1.0 - (avgKneeAngle - 105.0).abs() / 45.0;
+      final kneeStabilityScore = 1.0 - (avgKneeAngle - 105.0).abs() / 60.0;
       metrics['knee_stability'] = kneeStabilityScore.clamp(0.0, 1.0);
 
-      // Hip stability (hips should remain relatively level)
+      // Hip stability (hips should remain relatively level) - position-independent
       final hipLevelDiff = (leftHip.y - rightHip.y).abs();
-      final hipStabilityScore = 1.0 - (hipLevelDiff * 20).clamp(0.0, 1.0);
+      final hipStabilityScore = 1.0 - (hipLevelDiff * 10).clamp(0.0, 1.0);
       metrics['hip_stability'] = hipStabilityScore;
     } catch (e) {
-      metrics['neck_alignment'] = 0.5;
       metrics['knee_stability'] = 0.5;
       metrics['hip_stability'] = 0.5;
     }
@@ -116,26 +134,18 @@ class CrunchClassifier extends PoseClassifier {
         requiredLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return _generateFeedbackMessages(formMetrics: metrics);
+    return _generateFeedbackMessages(formMetrics: metrics, position: position);
   }
 
-  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics, String? position}) {
     final feedback = <String, dynamic>{};
-
-    // Neck alignment feedback
-    if (formMetrics['neck_alignment'] != null) {
-      final neckAlignment = formMetrics['neck_alignment']!;
-      feedback['neck_alignment'] = <String, dynamic>{'score': neckAlignment};
-      if (neckAlignment < 0.4) {
-        feedback['neck_alignment']['message'] = 'Head should move with torso, not independently';
-      }
-    }
 
     // Knee stability feedback
     if (formMetrics['knee_stability'] != null) {
       final kneeStability = formMetrics['knee_stability']!;
       feedback['knee_stability'] = <String, dynamic>{'score': kneeStability};
-      if (kneeStability < 0.55) {
+      if (kneeStability < 0.3) {
+        // Adjusted threshold based on average: 0.358, set to 0.3
         feedback['knee_stability']['message'] =
             'Should keep the knees bent at about 90 degrees and stable throughout the movement';
       }
@@ -145,7 +155,8 @@ class CrunchClassifier extends PoseClassifier {
     if (formMetrics['hip_stability'] != null) {
       final hipStability = formMetrics['hip_stability']!;
       feedback['hip_stability'] = <String, dynamic>{'score': hipStability};
-      if (hipStability < 0.65) {
+      if (hipStability < 0.4) {
+        // Adjusted threshold based on average: 0.469, set to 0.4
         feedback['hip_stability']['message'] = 'Should keep the hips level and avoid lifting them';
       }
     }
@@ -200,6 +211,7 @@ class ReverseCrunchClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
@@ -311,6 +323,7 @@ class DoubleCrunchClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 

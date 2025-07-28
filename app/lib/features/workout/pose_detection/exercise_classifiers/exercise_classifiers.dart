@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'package:waico/features/workout/pose_detection/exercise_classifiers/utils.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 part 'pushup_classifier.dart';
 part 'squat_classifier.dart';
@@ -36,9 +37,11 @@ abstract class PoseClassifier {
 
   /// Calculate exercise-specific form metrics
   /// Returns a map of metric names to scores (0.0 - 1.0)
+  /// [position] indicates the current exercise position ('up', 'down', or null for position-agnostic)
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     // Default implementation returns overall visibility
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;

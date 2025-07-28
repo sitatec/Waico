@@ -124,17 +124,15 @@ class PushUpClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
     try {
       // Check which side of the body is facing the camera
-      // This allows us to adapt our landmark requirements and calculations
-      // to prioritize the more visible side, improving accuracy
       final isLeftVisible = PoseUtilities.isLeftBodyVisible(worldLandmarks);
 
       // Check landmark availability first - adapt based on visible side
-      // We only require high visibility for landmarks on the primary (more visible) side
       const double minVisibility = 0.6;
       final requiredLandmarks = _getRequiredLandmarks(isLeftVisible);
 
@@ -152,14 +150,11 @@ class PushUpClassifier extends PoseClassifier {
       final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
       final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
 
-      // Different alignment calculations based on push-up type
-      _calculateBodyAlignment(metrics, shoulderMid, hipMid, worldLandmarks, isLeftVisible);
+      // Position-aware body alignment calculations based on push-up type
+      _calculateBodyAlignment(metrics, shoulderMid, hipMid, worldLandmarks, isLeftVisible, position);
 
-      // Hand width evaluation (variation-specific)
-      _calculateHandWidth(metrics, imageLandmarks, isLeftVisible);
-
-      // Wrist positioning (should be roughly under shoulders for most variations)
-      _calculateWristPositioning(metrics, imageLandmarks, isLeftVisible);
+      // Note: Hand width and wrist positioning metrics removed due to sideways camera orientation
+      // These measurements are unreliable when user is facing sideways
     } catch (e) {
       // More intelligent fallback values based on push-up type
       return _getDefaultMetrics();
@@ -169,16 +164,17 @@ class PushUpClassifier extends PoseClassifier {
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return _generateFeedbackMessages(formMetrics: metrics);
+    return _generateFeedbackMessages(formMetrics: metrics, position: position);
   }
 
-  /// Calculate body alignment metrics based on push-up type
+  /// Calculate body alignment metrics based on push-up type and position
   void _calculateBodyAlignment(
     Map<String, double> metrics,
     PoseLandmark shoulderMid,
     PoseLandmark hipMid,
     List<PoseLandmark> worldLandmarks,
     bool isLeftVisible,
+    String? position,
   ) {
     switch (type) {
       case PushUpType.knee:
@@ -282,92 +278,9 @@ class PushUpClassifier extends PoseClassifier {
     }
   }
 
-  /// Calculate hand width metrics
-  void _calculateHandWidth(Map<String, double> metrics, List<PoseLandmark> imageLandmarks, bool isLeftVisible) {
-    final leftWrist = imageLandmarks[PoseLandmarkType.leftWrist];
-    final rightWrist = imageLandmarks[PoseLandmarkType.rightWrist];
-    final leftShoulderImg = imageLandmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulderImg = imageLandmarks[PoseLandmarkType.rightShoulder];
-
-    final handWidth = (leftWrist.x - rightWrist.x).abs();
-    final shoulderWidth = (leftShoulderImg.x - rightShoulderImg.x).abs();
-
-    if (shoulderWidth <= 0.0) {
-      metrics['hand_width'] = 0.5; // Fallback if shoulder width can't be determined
-      return;
-    }
-
-    final widthRatio = handWidth / shoulderWidth;
-
-    double widthScore;
-    switch (type) {
-      case PushUpType.diamond:
-        // Diamond push-ups: hands should be close together (ratio < 0.5)
-        final idealRatio = 0.3;
-        final deviation = (widthRatio - idealRatio).abs();
-        widthScore = (1.0 - deviation).clamp(0.0, 1.0);
-        break;
-      case PushUpType.wide:
-        // Wide push-ups: hands should be wider than shoulders (ratio > 1.5)
-        final idealRatio = 1.8;
-        final deviation = (widthRatio - idealRatio).abs();
-        widthScore = (1.0 - deviation).clamp(0.0, 1.0);
-        break;
-      default:
-        // Standard, knee, wall, incline, decline: hands slightly wider than shoulders
-        final idealRatio = 1.25;
-        final deviation = (widthRatio - idealRatio).abs();
-        widthScore = (1.0 - deviation).clamp(0.0, 1.0);
-    }
-    metrics['hand_width'] = widthScore;
-  }
-
-  /// Calculate wrist positioning metrics
-  void _calculateWristPositioning(Map<String, double> metrics, List<PoseLandmark> imageLandmarks, bool isLeftVisible) {
-    final leftWrist = imageLandmarks[PoseLandmarkType.leftWrist];
-    final rightWrist = imageLandmarks[PoseLandmarkType.rightWrist];
-    final leftShoulderImg = imageLandmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulderImg = imageLandmarks[PoseLandmarkType.rightShoulder];
-
-    // Check visibility of wrist landmarks
-    const double minWristVisibility = 0.5;
-    final leftWristVisible = leftWrist.visibility >= minWristVisibility;
-    final rightWristVisible = rightWrist.visibility >= minWristVisibility;
-
-    if (leftWristVisible && rightWristVisible) {
-      // Both wrists visible - calculate average
-      final leftWristShoulderDistance = sqrt(
-        pow(leftWrist.x - leftShoulderImg.x, 2) + pow(leftWrist.y - leftShoulderImg.y, 2),
-      );
-      final rightWristShoulderDistance = sqrt(
-        pow(rightWrist.x - rightShoulderImg.x, 2) + pow(rightWrist.y - rightShoulderImg.y, 2),
-      );
-      final avgWristShoulderDistance = (leftWristShoulderDistance + rightWristShoulderDistance) / 2;
-      final wristScore = (1.0 - (avgWristShoulderDistance * 2.5)).clamp(0.0, 1.0);
-      metrics['wrist_positioning'] = wristScore;
-    } else if (isLeftVisible && leftWristVisible) {
-      // Use left wrist when left side is more visible
-      final leftWristShoulderDistance = sqrt(
-        pow(leftWrist.x - leftShoulderImg.x, 2) + pow(leftWrist.y - leftShoulderImg.y, 2),
-      );
-      final wristScore = (1.0 - (leftWristShoulderDistance * 2.5)).clamp(0.0, 1.0);
-      metrics['wrist_positioning'] = wristScore;
-    } else if (!isLeftVisible && rightWristVisible) {
-      // Use right wrist when right side is more visible
-      final rightWristShoulderDistance = sqrt(
-        pow(rightWrist.x - rightShoulderImg.x, 2) + pow(rightWrist.y - rightShoulderImg.y, 2),
-      );
-      final wristScore = (1.0 - (rightWristShoulderDistance * 2.5)).clamp(0.0, 1.0);
-      metrics['wrist_positioning'] = wristScore;
-    } else {
-      // Fallback when no wrists are sufficiently visible
-      metrics['wrist_positioning'] = 0.5;
-    }
-  }
-
   /// Get default metrics when calculation fails or landmarks are not visible
   Map<String, double> _getDefaultMetrics() {
-    return {'body_alignment': 0.5, 'wrist_positioning': 0.5, 'hand_width': 0.5, 'overall_visibility': 0.5};
+    return {'body_alignment': 0.5, 'overall_visibility': 0.5};
   }
 
   /// Get required landmarks based on which side of the body is visible
@@ -391,14 +304,15 @@ class PushUpClassifier extends PoseClassifier {
     }
   }
 
-  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics, String? position}) {
     final feedback = <String, dynamic>{};
 
     // Body alignment feedback
     if (formMetrics['body_alignment'] != null) {
       final alignment = formMetrics['body_alignment']!;
       feedback['body_alignment'] = <String, dynamic>{'score': alignment};
-      if (alignment < 0.7) {
+      if (alignment < 0.5) {
+        // Lowered threshold from 0.7 to 0.5
         if (type == PushUpType.knee) {
           feedback['body_alignment']['message'] =
               'Should maintain a straight line from shoulders to knees, avoiding sagging hips';
@@ -409,34 +323,8 @@ class PushUpClassifier extends PoseClassifier {
       }
     }
 
-    // Hand width feedback
-    if (formMetrics['hand_width'] != null) {
-      final handWidth = formMetrics['hand_width']!;
-      feedback['hand_width'] = <String, dynamic>{'score': handWidth};
-      if (handWidth < 0.6) {
-        switch (type) {
-          case PushUpType.diamond:
-            feedback['hand_width']['message'] = 'Should bring the hands closer together to form a diamond shape';
-            break;
-          case PushUpType.wide:
-            feedback['hand_width']['message'] = 'Should place the hands wider than shoulder-width apart';
-            break;
-          default:
-            feedback['hand_width']['message'] =
-                'Should adjust their hand placement to be slightly wider than shoulder-width';
-        }
-      }
-    }
-
-    // Wrist positioning feedback
-    if (formMetrics['wrist_positioning'] != null) {
-      final wristPos = formMetrics['wrist_positioning']!;
-      feedback['wrist_positioning'] = <String, dynamic>{'score': wristPos};
-      if (wristPos < 0.5) {
-        feedback['wrist_positioning']['message'] =
-            'Should position wrists directly under shoulders for better stability';
-      }
-    }
+    // Note: Hand width and wrist positioning feedback removed due to sideways camera orientation
+    // These measurements are unreliable when user is facing sideways
 
     // Overall visibility feedback
     if (formMetrics['overall_visibility'] != null) {

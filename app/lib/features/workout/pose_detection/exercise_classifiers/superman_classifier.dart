@@ -6,39 +6,61 @@ class SupermanClassifier extends PoseClassifier {
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
-    final nose = worldLandmarks[PoseLandmarkType.nose];
-    final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
-    final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
-    final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
-    final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
+    final shoulderCenter = PoseUtilities.getMidpoint(
+      imageLandmarks[PoseLandmarkType.leftShoulder],
+      imageLandmarks[PoseLandmarkType.rightShoulder],
+    );
+    final hipCenter = PoseUtilities.getMidpoint(
+      imageLandmarks[PoseLandmarkType.leftHip],
+      imageLandmarks[PoseLandmarkType.rightHip],
+    );
+    final ankleCenter = PoseUtilities.getMidpoint(
+      imageLandmarks[PoseLandmarkType.leftAnkle],
+      imageLandmarks[PoseLandmarkType.rightAnkle],
+    );
 
-    if (nose.visibility < 0.6 || leftShoulder.visibility < 0.7 || rightShoulder.visibility < 0.7) {
+    if (shoulderCenter.visibility < 0.6 || hipCenter.visibility < 0.6) {
       return _neutralResult();
     }
 
-    final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
-    final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
+    // --- Improved data-driven Algorithm ---
+    // UP state: chest_elev median=0.339, leg_elev median=0.586
+    // DOWN state: chest_elev median=0.176, leg_elev median=0.001
+    // Leg elevation shows better separation, so weight it more heavily
 
-    // Back extension angle (opposite of crunch)
-    final backAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
+    final bodyLengthProxy = (Vector2(hipCenter.x, hipCenter.y).distanceTo(Vector2(ankleCenter.x, ankleCenter.y))).abs();
+    if (bodyLengthProxy < 0.01) return _neutralResult();
 
-    // In superman, back extends, increasing this angle
-    // DOWN (lying flat): ~160-180°, UP (extended): ~180-200° (but clamped)
-    // We look for extension beyond neutral
-    final extensionProb = backAngle > 170.0 ? PoseUtilities.normalize(backAngle, 170.0, 200.0) : 0.0;
+    // Signal 1: Chest Elevation (less reliable due to noise)
+    final chestElevation = hipCenter.y - shoulderCenter.y; // Positive when chest is up
+    final normalizedChestElevation = chestElevation / bodyLengthProxy;
+    // Use robust range that handles outliers better
+    final chestUpProb = PoseUtilities.normalize(normalizedChestElevation, -0.2, 0.8);
 
-    return {'up': extensionProb, 'down': 1.0 - extensionProb};
+    // Signal 2: Leg Elevation (more reliable, weight heavily)
+    double legUpProb = 0.5; // Neutral if ankles aren't visible
+    if (ankleCenter.visibility > 0.6) {
+      final legElevation = hipCenter.y - ankleCenter.y; // Positive when legs are up
+      final normalizedLegElevation = legElevation / bodyLengthProxy;
+      // Use tighter range based on actual data for better discrimination
+      // DOWN: median=0.001, UP: median=0.586
+      legUpProb = PoseUtilities.normalize(normalizedLegElevation, -0.3, 0.9);
+    }
+
+    // Weight leg elevation much more heavily since it's more reliable
+    final upProbability = (chestUpProb * 0.2 + legUpProb * 0.8);
+    return {'up': upProbability, 'down': 1.0 - upProbability};
   }
 
   @override
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
     try {
-      final nose = worldLandmarks[PoseLandmarkType.nose];
       final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
       final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
       final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
@@ -48,33 +70,47 @@ class SupermanClassifier extends PoseClassifier {
       final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
       final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
 
-      // Spinal alignment (head, shoulders, hips should form smooth curve)
       final shoulderMid = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
       final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
-      final spinalAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
-      final spinalAlignmentScore = PoseUtilities.normalize(spinalAngle, 170.0, 200.0);
-      metrics['spinal_alignment'] = spinalAlignmentScore;
-
-      // Arm extension (arms should be extended forward)
       final wristMid = PoseUtilities.getMidpoint(leftWrist, rightWrist);
+      final ankleMid = PoseUtilities.getMidpoint(leftAnkle, rightAnkle);
+
+      // Position-aware arm extension
       final armExtensionDistance = sqrt(pow(shoulderMid.x - wristMid.x, 2) + pow(shoulderMid.y - wristMid.y, 2));
-      // Normalize based on typical arm span
-      final armExtensionScore = PoseUtilities.normalize(armExtensionDistance, 0.3, 0.8);
+      double armExtensionScore;
+      if (position == 'up') {
+        // In UP position, expect more forward extension
+        armExtensionScore = PoseUtilities.normalize(armExtensionDistance, 0.2, 0.6);
+      } else if (position == 'down') {
+        // In DOWN position, arms may be closer to body
+        armExtensionScore = PoseUtilities.normalize(armExtensionDistance, 0.1, 0.5);
+      } else {
+        // Position-agnostic (fallback)
+        armExtensionScore = PoseUtilities.normalize(armExtensionDistance, 0.1, 0.6);
+      }
       metrics['arm_extension'] = armExtensionScore;
 
-      // Leg extension (legs should be extended backward and lifted)
-      final ankleMid = PoseUtilities.getMidpoint(leftAnkle, rightAnkle);
+      // Position-aware leg extension
       final legExtensionDistance = sqrt(pow(hipMid.x - ankleMid.x, 2) + pow(hipMid.y - ankleMid.y, 2));
-      final legExtensionScore = PoseUtilities.normalize(legExtensionDistance, 0.4, 1.0);
+      double legExtensionScore;
+      if (position == 'up') {
+        // In UP position, expect significant leg lift
+        legExtensionScore = PoseUtilities.normalize(legExtensionDistance, 0.3, 0.8);
+      } else if (position == 'down') {
+        // In DOWN position, legs may be on ground or minimally lifted
+        legExtensionScore = PoseUtilities.normalize(legExtensionDistance, 0.2, 0.6);
+      } else {
+        // Position-agnostic (fallback)
+        legExtensionScore = PoseUtilities.normalize(legExtensionDistance, 0.2, 0.8);
+      }
       metrics['leg_extension'] = legExtensionScore;
 
-      // Bilateral symmetry (both sides should lift evenly)
+      // Bilateral symmetry (position-independent)
       final leftArmAngle = PoseUtilities.getAngle(leftShoulder, leftShoulder, leftWrist);
       final rightArmAngle = PoseUtilities.getAngle(rightShoulder, rightShoulder, rightWrist);
-      final armSymmetryScore = 1.0 - (leftArmAngle - rightArmAngle).abs() / 180.0;
+      final armSymmetryScore = 1.0 - (leftArmAngle - rightArmAngle).abs() / 45.0;
       metrics['bilateral_symmetry'] = armSymmetryScore.clamp(0.0, 1.0);
     } catch (e) {
-      metrics['spinal_alignment'] = 0.5;
       metrics['arm_extension'] = 0.5;
       metrics['leg_extension'] = 0.5;
       metrics['bilateral_symmetry'] = 0.5;
@@ -83,26 +119,18 @@ class SupermanClassifier extends PoseClassifier {
     final visibilityScore = worldLandmarks.map((l) => l.visibility).reduce((a, b) => a + b) / worldLandmarks.length;
     metrics['overall_visibility'] = visibilityScore;
 
-    return _generateFeedbackMessages(formMetrics: metrics);
+    return _generateFeedbackMessages(formMetrics: metrics, position: position);
   }
 
-  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics}) {
+  Map<String, dynamic> _generateFeedbackMessages({required Map<String, double> formMetrics, String? position}) {
     final feedback = <String, dynamic>{};
-
-    // Spinal alignment feedback
-    if (formMetrics['spinal_alignment'] != null) {
-      final spinalAlignment = formMetrics['spinal_alignment']!;
-      feedback['spinal_alignment'] = <String, dynamic>{'score': spinalAlignment};
-      if (spinalAlignment < 0.6) {
-        feedback['spinal_alignment']['message'] = 'Should lift the chest higher and extend the back more';
-      }
-    }
 
     // Arm extension feedback
     if (formMetrics['arm_extension'] != null) {
       final armExtension = formMetrics['arm_extension']!;
       feedback['arm_extension'] = <String, dynamic>{'score': armExtension};
       if (armExtension < 0.6) {
+        // Adjusted threshold based on average: 0.667, set to 0.6
         feedback['arm_extension']['message'] = 'Should extend the arms further forward and lift them higher';
       }
     }
@@ -111,7 +139,8 @@ class SupermanClassifier extends PoseClassifier {
     if (formMetrics['leg_extension'] != null) {
       final legExtension = formMetrics['leg_extension']!;
       feedback['leg_extension'] = <String, dynamic>{'score': legExtension};
-      if (legExtension < 0.6) {
+      if (legExtension < 0.8) {
+        // Adjusted threshold based on average: 0.848, set to 0.8
         feedback['leg_extension']['message'] = 'Should lift the legs higher and extend them further back';
       }
     }
@@ -120,7 +149,8 @@ class SupermanClassifier extends PoseClassifier {
     if (formMetrics['bilateral_symmetry'] != null) {
       final symmetry = formMetrics['bilateral_symmetry']!;
       feedback['bilateral_symmetry'] = <String, dynamic>{'score': symmetry};
-      if (symmetry < 0.6) {
+      if (symmetry < 0.9) {
+        // Adjusted threshold based on average: 1.000, set to 0.9 (very high standard)
         feedback['bilateral_symmetry']['message'] = 'Should ensure both arms and legs lift evenly';
       }
     }

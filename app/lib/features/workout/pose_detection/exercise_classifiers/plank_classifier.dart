@@ -78,6 +78,7 @@ class PlankClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
@@ -88,10 +89,6 @@ class PlankClassifier extends PoseClassifier {
       final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
       final leftAnkle = worldLandmarks[PoseLandmarkType.leftAnkle];
       final rightAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
-      final leftElbow = worldLandmarks[PoseLandmarkType.leftElbow];
-      final rightElbow = worldLandmarks[PoseLandmarkType.rightElbow];
-      final leftWrist = worldLandmarks[PoseLandmarkType.leftWrist];
-      final rightWrist = worldLandmarks[PoseLandmarkType.rightWrist];
 
       // Body alignment score
       final shoulderMidpoint = PoseUtilities.getMidpoint(leftShoulder, rightShoulder);
@@ -124,41 +121,16 @@ class PlankClassifier extends PoseClassifier {
         metrics['hip_stability'] = 0.5;
       }
 
-      // Arm positioning score
-      if (leftWrist.visibility > 0.7 && rightWrist.visibility > 0.7) {
-        // Check if wrists are positioned under shoulders
-        final leftWristShoulderDistance = (leftWrist.x - leftShoulder.x).abs();
-        final rightWristShoulderDistance = (rightWrist.x - rightShoulder.x).abs();
-        final avgWristDistance = (leftWristShoulderDistance + rightWristShoulderDistance) / 2;
-
-        final shoulderWidth = (leftShoulder.x - rightShoulder.x).abs();
-        if (shoulderWidth > 0.01) {
-          final wristPositionScore = 1.0 - PoseUtilities.normalize(avgWristDistance / shoulderWidth, 0.0, 0.5);
-          metrics['arm_positioning'] = wristPositionScore;
-        } else {
-          metrics['arm_positioning'] = 0.5;
-        }
-
-        // Arm straightness
-        final leftArmAngle = PoseUtilities.getAngle(leftShoulder, leftElbow, leftWrist);
-        final rightArmAngle = PoseUtilities.getAngle(rightShoulder, rightElbow, rightWrist);
-        final avgArmAngle = (leftArmAngle + rightArmAngle) / 2;
-        final armStraightnessScore = PoseUtilities.normalize(avgArmAngle, 140.0, 180.0);
-        metrics['arm_straightness'] = armStraightnessScore;
-      } else {
-        metrics['arm_positioning'] = 0.5;
-        metrics['arm_straightness'] = 0.5;
-      }
+      // Note: Arm positioning metrics removed due to sideways camera orientation
+      // These measurements are unreliable when user is facing sideways
 
       // Core engagement (derived from body stability)
-      final coreEngagementScore = (metrics['body_alignment']! + metrics['hip_stability']!) / 2;
+      final coreEngagementScore = metrics['body_alignment']! * metrics['hip_stability']!;
       metrics['core_engagement'] = coreEngagementScore;
     } catch (e) {
       // Fallback values on error
       metrics['body_alignment'] = 0.5;
       metrics['hip_stability'] = 0.5;
-      metrics['arm_positioning'] = 0.5;
-      metrics['arm_straightness'] = 0.5;
       metrics['core_engagement'] = 0.5;
     }
 
@@ -191,24 +163,8 @@ class PlankClassifier extends PoseClassifier {
       }
     }
 
-    // Arm positioning feedback
-    if (formMetrics['arm_positioning'] != null) {
-      final armPositioning = formMetrics['arm_positioning']!;
-      feedback['arm_positioning'] = <String, dynamic>{'score': armPositioning};
-      if (armPositioning < 0.7) {
-        feedback['arm_positioning']['message'] = 'Should position hands directly under shoulders for optimal support';
-      }
-    }
-
-    // Arm straightness feedback
-    if (formMetrics['arm_straightness'] != null) {
-      final armStraightness = formMetrics['arm_straightness']!;
-      feedback['arm_straightness'] = <String, dynamic>{'score': armStraightness};
-      if (armStraightness < 0.7) {
-        feedback['arm_straightness']['message'] =
-            'Should keep arms relatively straight and strong to support body weight';
-      }
-    }
+    // Note: Arm positioning and arm straightness feedback removed due to sideways camera orientation
+    // These measurements are unreliable when user is facing sideways
 
     // Core engagement feedback
     if (formMetrics['core_engagement'] != null) {
@@ -325,6 +281,7 @@ class SidePlankClassifier extends PoseClassifier {
   Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
+    String? position,
   }) {
     final metrics = <String, double>{};
 
@@ -366,21 +323,12 @@ class SidePlankClassifier extends PoseClassifier {
         final supportArmAngle = PoseUtilities.getAngle(supportingShoulder, supportingElbow, supportingWrist);
         final armStabilityScore = PoseUtilities.normalize(supportArmAngle, 120.0, 180.0);
         metrics['supporting_arm_stability'] = armStabilityScore;
-
-        // Wrist-shoulder alignment (wrist should be under shoulder)
-        final wristShoulderDistance = (supportingWrist.x - supportingShoulder.x).abs();
-        final shoulderWidth =
-            (worldLandmarks[PoseLandmarkType.leftShoulder].x - worldLandmarks[PoseLandmarkType.rightShoulder].x).abs();
-        if (shoulderWidth > 0.01) {
-          final alignmentScore = 1.0 - PoseUtilities.normalize(wristShoulderDistance / shoulderWidth, 0.0, 0.5);
-          metrics['arm_positioning'] = alignmentScore;
-        } else {
-          metrics['arm_positioning'] = 0.5;
-        }
       } else {
         metrics['supporting_arm_stability'] = 0.5;
-        metrics['arm_positioning'] = 0.5;
       }
+
+      // Note: Arm positioning metrics removed due to sideways camera orientation
+      // These measurements are unreliable when user is facing sideways
 
       // Shoulder stacking (top shoulder should be over bottom shoulder)
       final shoulderStackingDistance = (topShoulder.x - supportingShoulder.x).abs();
@@ -403,7 +351,6 @@ class SidePlankClassifier extends PoseClassifier {
       metrics['body_alignment'] = 0.5;
       metrics['hip_elevation'] = 0.5;
       metrics['supporting_arm_stability'] = 0.5;
-      metrics['arm_positioning'] = 0.5;
       metrics['shoulder_stacking'] = 0.5;
       metrics['hip_stacking'] = 0.5;
       metrics['core_stability'] = 0.5;
@@ -448,15 +395,8 @@ class SidePlankClassifier extends PoseClassifier {
       }
     }
 
-    // Arm positioning feedback
-    if (formMetrics['arm_positioning'] != null) {
-      final armPositioning = formMetrics['arm_positioning']!;
-      feedback['arm_positioning'] = <String, dynamic>{'score': armPositioning};
-      if (armPositioning < 0.7) {
-        feedback['arm_positioning']['message'] =
-            'Should position the $sideText hand directly under the shoulder for optimal support';
-      }
-    }
+    // Note: Arm positioning feedback removed due to sideways camera orientation
+    // These measurements are unreliable when user is facing sideways
 
     // Shoulder stacking feedback
     if (formMetrics['shoulder_stacking'] != null) {
