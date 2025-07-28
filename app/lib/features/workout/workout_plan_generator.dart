@@ -54,9 +54,35 @@ REST: [rest duration in seconds]
 [Repeat SESSION_NAME block for each session in the week]
 
 IMPORTANT RULES:
-- **ALLOWED EXERCISES (use ONLY these exercises):** Push-Up, Knee Push-Up, Wall Push-Up, Incline Push-Up, Decline Push-Up, Diamond Push-Up, Wide Push-Up, Squat, Sumo Squat, Split Squat (Right), Split Squat (Left), Crunch, Reverse Crunch, Double Crunch, Superman, Superman Pulse, Y Superman, Wall Sit, Plank, Side Plank (Right), Side Plank (Left), Jumping Jacks, High Knees, Mountain Climbers
-- "Split Squat (Right)" and "Split Squat (Left)" must always follow each other - they should not be used separately or have another exercise in between them.
 - No equipment available, use only bodyweight exercises from the allowed exercises list
+- For exercises with (Left) and (Right) variants, the 2 sides must always follow each other - they should not be used separately or have another exercise in between them. E.g Side Plank (Right) must always be followed by Side Plank (Left).
+- **ALLOWED EXERCISES (use ONLY these exercises):** 
+  - Reps-based exercises:
+    - Push-Up
+    - Knee Push-Up
+    - Wall Push-Up
+    - Incline Push-Up
+    - Decline Push-Up
+    - Diamond Push-Up
+    - Wide Push-Up
+    - Squat
+    - Split Squat (Right)
+    - Split Squat (Left)
+    - Sumo Squat
+    - Crunch
+    - Reverse Crunch
+    - Double Crunch
+    - Superman
+    - Superman Pulse
+
+  - Duration-based exercises:
+    - Wall Sit
+    - Plank
+    - Side Plank (Right)
+    - Side Plank (Left)
+    - Jumping Jacks
+    - High Knees
+    - Mountain Climbers
 
 **EXAMPLE 1:**
 PLAN_NAME: Full Body Strength Builder
@@ -82,6 +108,13 @@ DURATION: 30
 SETS: 3
 REST: 45
 
+EXERCISE: Superman
+TARGET_MUSCLES: back, glutes
+LOAD_TYPE: reps
+REPS: 15
+SETS: 2
+REST: 60
+
 SESSION_NAME: Wednesday - Lower Body
 SESSION_TYPE: strength
 DURATION: 25
@@ -92,6 +125,20 @@ LOAD_TYPE: reps
 REPS: 15
 SETS: 3
 REST: 60
+
+EXERCISE: Split Squat (Right)
+TARGET_MUSCLES: quadriceps, glutes
+LOAD_TYPE: reps
+REPS: 10
+SETS: 2
+REST: 30
+
+EXERCISE: Split Squat (Left)
+TARGET_MUSCLES: quadriceps, glutes
+LOAD_TYPE: reps
+REPS: 10
+SETS: 2
+REST: 30
 ''';
 
   WorkoutPlanGenerator() {
@@ -289,7 +336,6 @@ REST: 60
 
     for (final line in lines) {
       if (line.isEmpty) continue;
-      log('Processing line: $line | LINE STARTS WITH DURATION: ${line.startsWith('DURATION:')}');
 
       if (line.startsWith('PLAN_NAME:')) {
         result['planName'] = line.substring(10).trim();
@@ -362,11 +408,9 @@ REST: 60
               currentExercise['load'] = load;
             }
           } else if (line.startsWith('DURATION:')) {
-            log('Processing duration line: $line');
             final durationText = line.substring(9);
             // Remove any non-numeric characters (e.g., "seconds")
             final cleanDurationText = _cleanNumber(durationText).trim();
-            log('Clean duration text: $cleanDurationText, original line: $line');
             if (cleanDurationText.isNotEmpty) {
               final duration = int.tryParse(cleanDurationText) ?? 30;
               final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
@@ -400,8 +444,20 @@ REST: 60
         for (final exercise in exercises) {
           final exerciseName = exercise['name'] as String? ?? '';
           final guide = _getExerciseGuide(exerciseName);
-          exercise['image'] = guide?['image'];
-          exercise['instruction'] = guide?['instruction'];
+          if (guide != null) {
+            exercise.addAll(guide);
+          }
+          final exerciseNameLower = exerciseName.toLowerCase();
+          if (exerciseNameLower.contains('lunges') || exerciseNameLower.contains('lunge ')) {
+            // Lunges and Split Squats are similar exercises, so sometimes the E2B variants
+            // of Gemma3n will generate Lunges instead of Split Squats, although the prompt
+            // only listed Split Squats in the allowed exercises.
+            if (exerciseNameLower.contains('right')) {
+              exercise['name'] = 'Split Squat (Right)';
+            } else if (exerciseNameLower.contains('left')) {
+              exercise['name'] = 'Split Squat (Left)';
+            }
+          }
         }
       }
     }
@@ -524,6 +580,7 @@ class _WorkoutProgressTracker {
                     restDuration: exerciseMap['restDuration'] as int? ?? 60,
                     image: guide?['image'],
                     instruction: guide?['instruction'],
+                    optimalView: guide?['optimalView'],
                   );
                 } catch (e) {
                   // Return a default exercise if parsing fails
@@ -535,6 +592,7 @@ class _WorkoutProgressTracker {
                     restDuration: 60,
                     image: guide?['image'],
                     instruction: guide?['instruction'],
+                    optimalView: guide?['optimalView'],
                   );
                 }
               }).toList(),
@@ -632,6 +690,7 @@ class _WorkoutProgressTracker {
                 restDuration: exerciseMap['restDuration'] as int? ?? 60,
                 image: guide?['image'],
                 instruction: guide?['instruction'],
+                optimalView: guide?['optimalView'],
               );
             } catch (e) {
               // Return a default exercise if parsing fails
@@ -643,6 +702,7 @@ class _WorkoutProgressTracker {
                 restDuration: 60,
                 image: guide?['image'],
                 instruction: guide?['instruction'],
+                optimalView: guide?['optimalView'],
               );
             }
           }).toList(),
@@ -770,96 +830,115 @@ Map<String, String>? _getExerciseGuide(String exerciseName) {
 Map<String, Map<String, String>> _getExerciseGuideMap() => {
   "close_push_up": {
     "image": "assets/images/exercises/close_puch_up.gif",
+    "optimalView": "side",
     "instruction":
         "Start in a plank with hands close together under your chest. Lower your body, keeping elbows tucked. Push back up, keeping your core tight and body in a straight line.",
   },
   "crunch": {
     "image": "assets/images/exercises/crunch.gif",
+    "optimalView": "side",
     "instruction":
         "Lie on your back with knees bent and feet flat. Place hands behind your head or across your chest. Engage your abs to lift your shoulders, then slowly return.",
   },
   "decline_push_up": {
     "image": "assets/images/exercises/decline_push_up.gif",
+    "optimalView": "side",
     "instruction":
         "Place your feet on an elevated surface, hands on the floor slightly wider than shoulders. Lower your chest with control, then push back up, keeping a straight body.",
   },
   "double_crunch": {
     "image": "assets/images/exercises/duble_crunch.gif",
+    "optimalView": "side",
     "instruction":
         "Lie on your back, hands behind your head. Simultaneously lift your shoulders and knees toward each other, engaging your entire core. Slowly return to start.",
   },
   "high_knee": {
     "image": "assets/images/exercises/high_knee.gif",
+    "optimalView": "side",
     "instruction":
         "Stand tall and jog in place, driving your knees up toward your chest quickly. Swing your arms naturally to keep the rhythm and intensity up.",
   },
   "incline_push_up": {
     "image": "assets/images/exercises/incline_push_up.gif",
+    "optimalView": "side",
     "instruction":
         "Place your hands on a sturdy elevated surface. Step your feet back into a straight plank. Lower your chest until elbows reach 90°, then press up to start.",
   },
   "jumping_jacks": {
     "image": "assets/images/exercises/jumping_jacks.gif",
+    "optimalView": "front",
     "instruction":
         "Begin standing tall with arms at sides. Jump while spreading legs and raising arms overhead. Jump again to return to start. Maintain a steady rhythm.",
   },
   "knee_push_up": {
     "image": "assets/images/exercises/knee_push_up.gif",
+    "optimalView": "side",
     "instruction":
         "Start in a modified plank with knees on the floor and hands under shoulders. Lower your chest while keeping your hips aligned, then press back up.",
   },
   "mountain_climbers": {
     "image": "assets/images/exercises/mountain_climbers.webp",
+    "optimalView": "side",
     "instruction":
         "In a high plank position, drive one knee toward your chest, then quickly switch. Alternate legs at a brisk pace while keeping your core stable.",
   },
   "plank": {
     "image": "assets/images/exercises/plank.webp",
+    "optimalView": "side",
     "instruction":
         "Support your body on forearms and toes, keeping your spine straight and hips level. Engage your abs and hold this steady position without sagging.",
   },
   "push_up": {
     "image": "assets/images/exercises/push_up.gif",
+    "optimalView": "side",
     "instruction":
         "Begin in a plank with hands under shoulders. Lower your body until your chest nearly touches the ground, then push back up in one fluid motion.",
   },
   "reverse_crunch": {
     "image": "assets/images/exercises/reverse_crunch.gif",
+    "optimalView": "side",
     "instruction":
         "Lie flat with legs bent and feet lifted. Curl your hips off the ground toward your chest using your lower abs, then slowly lower back down.",
   },
   "side_plank": {
     "image": "assets/images/exercises/side_plank.png",
+    "optimalView": "side",
     "instruction":
         "Lie on one side, stack your feet, and lift your hips off the ground using your forearm. Keep your body aligned and hold, engaging your obliques.",
   },
   "split_squat": {
     "image": "assets/images/exercises/split_squat.gif",
+    "optimalView": "side",
     "instruction":
         "Stand in a staggered stance with one foot forward. Lower your back knee toward the floor, keeping your torso upright, then push through the front heel to rise.",
   },
   "squat": {
     "image": "assets/images/exercises/squat.gif",
+    "optimalView": "side",
     "instruction":
         "Stand with feet shoulder-width apart. Push your hips back and bend your knees to lower down, keeping chest up. Press through heels to stand.",
   },
   "sumo_squat": {
     "image": "assets/images/exercises/sumo_squat.gif",
+    "optimalView": "front",
     "instruction":
         "Take a wide stance with toes turned out. Lower your hips straight down until thighs are parallel to the ground. Keep your chest up and core engaged.",
   },
   "superman": {
     "image": "assets/images/exercises/superman.gif",
+    "optimalView": "side",
     "instruction":
         "Lie face down with arms extended forward. Lift your arms, chest, and legs off the ground at once, hold briefly, then lower with control.",
   },
   "wall_pushup": {
     "image": "assets/images/exercises/wall_pushup.webp",
+    "optimalView": "side",
     "instruction":
         "Stand a few feet from a wall and place hands at shoulder height. Bend elbows to bring your chest toward the wall, then push back to the start position.",
   },
   "wall_sit": {
     "image": "assets/images/exercises/wall_sit.jpg.webp",
+    "optimalView": "side",
     "instruction":
         "Lean against a wall and slide down until your thighs are parallel to the ground. Hold this seated position, keeping your back flat and core braced.",
   },

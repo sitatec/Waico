@@ -454,6 +454,24 @@ class InstructionsView extends StatelessWidget {
                         style: TextStyle(color: Colors.grey.shade800, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.blue.withOpacity(0.1),
+                            ),
+                            child: Text(
+                              exercise.optimalView == 'front'
+                                  ? 'Face the camera for this exercise.'
+                                  : 'Turn sideways to the camera for this exercise.',
+                              style: TextStyle(color: Colors.blue, fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         exercise.instruction!.length > 120
                             ? '${exercise.instruction!.substring(0, 120)}...'

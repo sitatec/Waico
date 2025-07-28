@@ -162,9 +162,16 @@ class Exercise {
   final String name;
   final List<String> targetMuscles;
   final ExerciseLoad load;
-  final int restDuration; // in seconds
-  final String? image; // Path to exercise demonstration image/gif
-  final String? instruction; // Exercise instruction text
+
+  /// in seconds
+  final int restDuration;
+
+  /// Path to exercise demonstration image/gif
+  final String? image;
+  final String? instruction;
+
+  /// Where should the user face for an accurate reps counting and form checking by the AI.
+  final String? optimalView;
 
   const Exercise({
     required this.name,
@@ -173,6 +180,7 @@ class Exercise {
     required this.restDuration,
     this.image,
     this.instruction,
+    this.optimalView,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
@@ -183,6 +191,7 @@ class Exercise {
       restDuration: json['restDuration'] as int,
       image: json['image'] as String?,
       instruction: json['instruction'] as String?,
+      optimalView: json['optimalView'] as String?,
     );
   }
 
@@ -194,6 +203,7 @@ class Exercise {
       'restDuration': restDuration,
       'image': image,
       'instruction': instruction,
+      'optimalView': optimalView,
     };
   }
 
@@ -207,7 +217,8 @@ class Exercise {
         other.load == load &&
         other.restDuration == restDuration &&
         other.image == image &&
-        other.instruction == instruction;
+        other.instruction == instruction &&
+        other.optimalView == optimalView;
   }
 
   @override
@@ -217,7 +228,8 @@ class Exercise {
         load.hashCode ^
         restDuration.hashCode ^
         image.hashCode ^
-        instruction.hashCode;
+        instruction.hashCode ^
+        optimalView.hashCode;
   }
 }
 

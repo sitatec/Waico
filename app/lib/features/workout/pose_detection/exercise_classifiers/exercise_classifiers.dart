@@ -7,12 +7,15 @@ part 'pushup_classifier.dart';
 part 'squat_classifier.dart';
 part 'crunch_classifier.dart';
 part 'superman_classifier.dart';
+part 'plank_classifier.dart';
 
 abstract class PoseClassifier {
   final int smoothingWindow;
   final Queue<Map<String, double>> _history = Queue();
 
   PoseClassifier({this.smoothingWindow = 5});
+
+  bool get isDurationBased => false;
 
   Map<String, double> classify({
     required List<PoseLandmark> worldLandmarks,
