@@ -44,6 +44,7 @@ dependencies:
   shared_preferences: ^2.5.3
   flutter_native_splash: ^2.4.6
   flutter_launcher_icons: ^0.14.4
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -75,11 +76,10 @@ objectbox:
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/images/logo-with-slogan.png
-
+  image: assets/images/logo_with_slogan.png
   android_12:
     color: "#FFFFFF"
-    image: assets/images/logo-with-slogan-android12.png
+    image: assets/images/logo_with_slogan.png
   
 flutter_launcher_icons:
   android: true
@@ -87,3 +87,4 @@ flutter_launcher_icons:
   image_path: "assets/images/mascot.png"
   min_sdk_android: 27
   remove_alpha_ios: true
+  adaptive_icon_foreground_inset: 4
