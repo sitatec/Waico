@@ -1,80 +1,82 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Waico</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>Waico</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>en</string>
-	</array>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>To enable the AI to hear you, we need access to the microphone.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>We need access to the camera to enable the AI to see your workout sessions and guide you.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>We need access to your calendar to schedule you sessions (workout, mediation, counseling...)</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>We need access to your calendar to schedule you sessions (workout, mediation, counseling...)</string>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>We will sync your data with the Apple Health app to give you better insights into your wellness journey</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>We will sync your data with the Apple Health app to give you better insights into your wellness journey</string>
-	<key>NSAppTransportSecurity</key>
 	<dict>
+		<key>CADisableMinimumFrameDurationOnPhone</key>
+		<true/>
+		<key>CFBundleDevelopmentRegion</key>
+		<string>$(DEVELOPMENT_LANGUAGE)</string>
+		<key>CFBundleDisplayName</key>
+		<string>Waico</string>
+		<key>CFBundleExecutable</key>
+		<string>$(EXECUTABLE_NAME)</string>
+		<key>CFBundleIdentifier</key>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<key>CFBundleInfoDictionaryVersion</key>
+		<string>6.0</string>
+		<key>CFBundleName</key>
+		<string>Waico</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>CFBundleShortVersionString</key>
+		<string>$(FLUTTER_BUILD_NAME)</string>
+		<key>CFBundleSignature</key>
+		<string>????</string>
+		<key>CFBundleVersion</key>
+		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>CFBundleLocalizations</key>
+		<array>
+			<string>en</string>
+		</array>
+		<key>LSRequiresIPhoneOS</key>
+		<true/>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>To enable the AI to hear you, we need access to the microphone.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>We need access to the camera to enable the AI to see your workout sessions and guide you.</string>
+		<key>NSCalendarsUsageDescription</key>
+		<string>We need access to your calendar to schedule you sessions (workout, mediation, counseling...)</string>
+		<key>NSCalendarsFullAccessUsageDescription</key>
+		<string>We need access to your calendar to schedule you sessions (workout, mediation, counseling...)</string>
+		<key>UIApplicationSupportsIndirectInputEvents</key>
+		<true/>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>fetch</string>
+		</array>
+		<key>UIFileSharingEnabled</key>
+		<true/>
+		<key>UILaunchStoryboardName</key>
+		<string>LaunchScreen</string>
+		<key>UIMainStoryboardFile</key>
+		<string>Main</string>
+		<key>UISupportedInterfaceOrientations</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<key>UISupportedInterfaceOrientations~ipad</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationPortraitUpsideDown</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<key>NSHealthShareUsageDescription</key>
+		<string>We will sync your data with the Apple Health app to give you better insights into your wellness journey</string>
+		<key>NSHealthUpdateUsageDescription</key>
+		<string>We will sync your data with the Apple Health app to give you better insights into your wellness journey</string>
+		<key>NSAppTransportSecurity</key>
+		<dict>
 			<key>NSAllowsArbitraryLoads</key>
 			<true/>
+		</dict>
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>tel</string>
+		</array>
+		<key>UIStatusBarHidden</key>
+		<false/>
 	</dict>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>tel</string>
-	</array>
-</dict>
 </plist>
