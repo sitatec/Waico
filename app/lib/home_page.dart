@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/counselor/counselor_page.dart';
 import 'package:waico/features/workout/pages/workout_router_page.dart';
+import 'package:waico/features/meditation/pages/meditation_page.dart';
 import 'package:waico/core/widgets/health_dashboard.dart';
 import 'package:waico/core/widgets/upcoming_event_card.dart';
 import 'package:waico/generated/locale_keys.g.dart';
@@ -75,6 +76,8 @@ class HomePage extends StatelessWidget {
                   onTap: () {
                     if (feature['title'] == LocaleKeys.home_features_workout) {
                       context.navigateTo(const WorkoutRouterPage());
+                    } else if (feature['title'] == LocaleKeys.home_features_meditation) {
+                      context.navigateTo(const MeditationPage());
                     }
                   },
                 );

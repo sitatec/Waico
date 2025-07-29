@@ -119,9 +119,63 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "4:2907517368197004077",
+      "lastPropertyId": "9:7115588888439512280",
+      "name": "MeditationGuide",
+      "properties": [
+        {
+          "id": "1:516678667953570628",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:950710071722786416",
+          "name": "title",
+          "type": 9
+        },
+        {
+          "id": "3:7198088111558181103",
+          "name": "type",
+          "type": 9
+        },
+        {
+          "id": "4:6169450128230088092",
+          "name": "description",
+          "type": 9
+        },
+        {
+          "id": "5:7609776571188671615",
+          "name": "durationMinutes",
+          "type": 6
+        },
+        {
+          "id": "6:3398622800216475628",
+          "name": "script",
+          "type": 9
+        },
+        {
+          "id": "7:7424964048795772755",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "8:8342361849064129083",
+          "name": "updatedAt",
+          "type": 10
+        },
+        {
+          "id": "9:7115588888439512280",
+          "name": "isCompleted",
+          "type": 1
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "3:8823447173051830056",
+  "lastEntityId": "4:2907517368197004077",
   "lastIndexId": "3:4852819179156216796",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",

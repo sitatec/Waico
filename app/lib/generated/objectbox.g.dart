@@ -17,6 +17,7 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 import '../core/entities/conversation.dart';
 import '../core/entities/conversation_memory.dart';
 import '../core/entities/user.dart';
+import '../features/meditation/models/meditation_guide.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -167,6 +168,70 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(4, 2907517368197004077),
+    name: 'MeditationGuide',
+    lastPropertyId: const obx_int.IdUid(9, 7115588888439512280),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 516678667953570628),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 950710071722786416),
+        name: 'title',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 7198088111558181103),
+        name: 'type',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 6169450128230088092),
+        name: 'description',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 7609776571188671615),
+        name: 'durationMinutes',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 3398622800216475628),
+        name: 'script',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 7424964048795772755),
+        name: 'createdAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 8342361849064129083),
+        name: 'updatedAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 7115588888439512280),
+        name: 'isCompleted',
+        type: 1,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -207,7 +272,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(3, 8823447173051830056),
+    lastEntityId: const obx_int.IdUid(4, 2907517368197004077),
     lastIndexId: const obx_int.IdUid(3, 4852819179156216796),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -411,6 +476,86 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    MeditationGuide: obx_int.EntityDefinition<MeditationGuide>(
+      model: _entities[3],
+      toOneRelations: (MeditationGuide object) => [],
+      toManyRelations: (MeditationGuide object) => {},
+      getId: (MeditationGuide object) => object.id,
+      setId: (MeditationGuide object, int id) {
+        object.id = id;
+      },
+      objectToFB: (MeditationGuide object, fb.Builder fbb) {
+        final titleOffset = fbb.writeString(object.title);
+        final typeOffset = fbb.writeString(object.type);
+        final descriptionOffset = fbb.writeString(object.description);
+        final scriptOffset = fbb.writeString(object.script);
+        fbb.startTable(10);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, titleOffset);
+        fbb.addOffset(2, typeOffset);
+        fbb.addOffset(3, descriptionOffset);
+        fbb.addInt64(4, object.durationMinutes);
+        fbb.addOffset(5, scriptOffset);
+        fbb.addInt64(6, object.createdAt.millisecondsSinceEpoch);
+        fbb.addInt64(7, object.updatedAt.millisecondsSinceEpoch);
+        fbb.addBool(8, object.isCompleted);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final titleParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final typeParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final descriptionParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final durationMinutesParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final scriptParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 16, 0),
+        );
+        final updatedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 18, 0),
+        );
+        final isCompletedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          false,
+        );
+        final object = MeditationGuide(
+          id: idParam,
+          title: titleParam,
+          type: typeParam,
+          description: descriptionParam,
+          durationMinutes: durationMinutesParam,
+          script: scriptParam,
+          createdAt: createdAtParam,
+          updatedAt: updatedAtParam,
+          isCompleted: isCompletedParam,
+        );
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -512,5 +657,53 @@ class User_ {
   /// See [User.dbWorkoutProgress].
   static final dbWorkoutProgress = obx.QueryStringProperty<User>(
     _entities[2].properties[7],
+  );
+}
+
+/// [MeditationGuide] entity fields to define ObjectBox queries.
+class MeditationGuide_ {
+  /// See [MeditationGuide.id].
+  static final id = obx.QueryIntegerProperty<MeditationGuide>(
+    _entities[3].properties[0],
+  );
+
+  /// See [MeditationGuide.title].
+  static final title = obx.QueryStringProperty<MeditationGuide>(
+    _entities[3].properties[1],
+  );
+
+  /// See [MeditationGuide.type].
+  static final type = obx.QueryStringProperty<MeditationGuide>(
+    _entities[3].properties[2],
+  );
+
+  /// See [MeditationGuide.description].
+  static final description = obx.QueryStringProperty<MeditationGuide>(
+    _entities[3].properties[3],
+  );
+
+  /// See [MeditationGuide.durationMinutes].
+  static final durationMinutes = obx.QueryIntegerProperty<MeditationGuide>(
+    _entities[3].properties[4],
+  );
+
+  /// See [MeditationGuide.script].
+  static final script = obx.QueryStringProperty<MeditationGuide>(
+    _entities[3].properties[5],
+  );
+
+  /// See [MeditationGuide.createdAt].
+  static final createdAt = obx.QueryDateProperty<MeditationGuide>(
+    _entities[3].properties[6],
+  );
+
+  /// See [MeditationGuide.updatedAt].
+  static final updatedAt = obx.QueryDateProperty<MeditationGuide>(
+    _entities[3].properties[7],
+  );
+
+  /// See [MeditationGuide.isCompleted].
+  static final isCompleted = obx.QueryBooleanProperty<MeditationGuide>(
+    _entities[3].properties[8],
   );
 }

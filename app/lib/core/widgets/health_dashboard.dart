@@ -57,13 +57,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
     final theme = Theme.of(context);
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.blue.shade400, theme.colorScheme.primary],
-        ),
-      ),
+      decoration: BoxDecoration(color: theme.colorScheme.primary),
       padding: const EdgeInsets.all(16),
       child: SafeArea(child: _buildContent(theme)),
     );
