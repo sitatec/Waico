@@ -43,6 +43,7 @@ dependencies:
   vector_math: ^2.1.4
   shared_preferences: ^2.5.3
   flutter_native_splash: ^2.4.6
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -80,3 +81,9 @@ flutter_native_splash:
     color: "#FFFFFF"
     image: assets/images/logo-with-slogan-android12.png
   
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/mascot.png"
+  min_sdk_android: 27
+  remove_alpha_ios: true
