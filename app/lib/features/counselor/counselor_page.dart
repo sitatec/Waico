@@ -46,9 +46,15 @@ class _CounselorPageState extends State<CounselorPage> {
     await _agent!.initialize();
     // ignore: use_build_context_synchronously
     _voiceChat = VoiceChatPipeline(agent: _agent!);
-    setState(() {
-      _initialized = true;
-    });
+    if (mounted) {
+      setState(() {
+        _initialized = true;
+      });
+    } else {
+      // If the user exits the page while the agent is initializing (which can take a while),
+      _voiceChat?.dispose();
+      _agent?.chatModel.dispose();
+    }
   }
 
   @override

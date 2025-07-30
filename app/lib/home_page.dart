@@ -57,7 +57,7 @@ class HomePage extends StatelessWidget {
             sliver: SliverToBoxAdapter(child: UpcomingEventCard()),
           ),
           SliverPadding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20),
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 100),
             sliver: SliverGrid.builder(
               itemCount: features.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

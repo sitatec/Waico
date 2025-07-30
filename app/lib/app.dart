@@ -60,7 +60,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
         appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),
       ),
-      home: true
+      home: false
           ? HomePage()
           : Builder(
               // Using a Builder to ensure we get the correct context from material app for navigation

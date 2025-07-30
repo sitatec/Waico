@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:waico/core/ai_agent/conversation_processor.dart';
 import 'package:waico/core/ai_agent/tool_parser.dart';
@@ -150,6 +151,9 @@ class AiAgent {
 
       final result = await tool(toolCall.arguments);
       log('Tool executed successfully: ${toolCall.toolName}');
+      if (kDebugMode) {
+        log('Tool result:\n\n###################\n\n$result\n\n###################\n\n');
+      }
       return ToolOutput(toolName: toolCall.toolName, result: result, success: true);
     } catch (e, stackTrace) {
       log('Error executing tool ${toolCall.toolName}', error: e, stackTrace: stackTrace);
@@ -170,7 +174,7 @@ class AiAgent {
     ///
     if (output.isEmpty) return '';
     return '```tool_output\n'
-        '${output.map((output) => 'From ${output.toolName}:\n${output.result}').join('\n---\n')}\n'
+        '${output.map((output) => 'From ${output.toolName}:\n${output.result}').join('\n\n')}\n'
         '```';
   }
 }

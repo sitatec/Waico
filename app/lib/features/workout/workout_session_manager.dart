@@ -362,7 +362,8 @@ ${isFormFeedback ? '''
       // And at least 4 reps have been completed in the current set. This is to prevent sending
       // too many feedback in a short time.
       final shouldSend =
-          repData.repNumber >= 3 && _lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 4;
+          repData.repNumber >= 3 &&
+          (_lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 4);
       if (shouldSend) {
         if (await _sendRepDataToAI(repData, isFormFeedback: false)) {
           _lastExcellentRepSent = repData.repNumber;

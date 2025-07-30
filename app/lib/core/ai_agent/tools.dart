@@ -33,6 +33,7 @@ class PhoneCallTool extends Tool {
       'User: My therapist phone number is +1234567890, can you call him?\n'
       'Assistant: Sure, I will call your therapist now.'
       '\n```tool_call\nmake_phone_call(phone_number="+1234567890")\n```\n\n'
+      'User:```tool_output\nFrom make_phone_call:\nPhone call initiated successfully.\n```\n\n'
       "If you don't know the phone number, ask the user to provide it:\n"
       'User: Can you call my gym coach?\n'
       'Assistant: Sure, please provide me with your coach phone number so I can call them for you.';
@@ -59,15 +60,14 @@ class ReportTool extends Tool {
 
   @override
   String get definition =>
-      'send_report_to(required String recipient_email):\nSend a report generated based on observations from previous conversations. This can be sent to a health or wellbeing professional trusted by the user.';
+      'send_report_to(required String recipient_email):\nSend a report generated based on observations from previous conversations. This can be sent to a health or wellbeing professional trusted by the user. If you don\'t know the recipient email, ask the user to provide it.';
 
   @override
   String get usageExample =>
       'System: The user doctor email is alex@example.com\n'
       'User: Can you send a report of my wellbeing to my doctor?\n'
       "Assistant: Okay, one moment please, I'm sending the report."
-      '```tool_call\nsend_report_to(recipient_email="alex@example.com")\n```\n\n'
-      "If you don't know the recipient email, ask the user to provide it.";
+      '```tool_call\nsend_report_to(recipient_email="alex@example.com")\n```\n';
 
   @override
   Future<String> call(Map<String, dynamic> arguments) async {
@@ -126,8 +126,13 @@ class SearchMemoryTool extends Tool {
   String get usageExample =>
       'User: That day when we talked about my issues with my girlfriend, it helped me a lot.\n'
       'Assistant: \n```tool_call\nsearch_memory(query="last vacation")\n```\n'
-      'ToolResponse: The user mentioned trust issues with their girlfriend during their last vacation. It...\n'
-      'Assistant: Ah, yes, I remember. The trust issues during your vacation, right?';
+      'User: ```tool_output\nFrom search_memory:\nThe user mentioned trust issues with their girlfriend during their last vacation. It...\n```\n'
+      'Assistant: Ah, yes, I remember. The trust issues during your vacation, right?\n\n'
+      "If you don't remember, let the user know:"
+      'User: Do you remember the time I went to a the wrong restaurant for an important meeting?\n'
+      'Assistant: Hmm, let me think. ```tool_call\nsearch_memory(query="The user went to the wrong restaurant for an important meeting")\n```\n'
+      'User: ```tool_output\nFrom search_memory:\nNo relevant memories found for the query: The user went to the wrong restaurant for an important meeting\n```\n'
+      'Assistant: Sorry, I don\'t remember that incident. Could you please remind me about it?';
 
   @override
   Future<String> call(Map<String, dynamic> arguments) async {
@@ -142,7 +147,7 @@ class SearchMemoryTool extends Tool {
       final memories = await _conversationMemoryRepository.searchMemories(queryVector: queryVector);
 
       if (memories.isEmpty) {
-        return 'No relevant memories found for the query: $query';
+        return 'No relevant memories found for the query: ${query.substring(0, 50)}...';
       }
 
       return memories.first.content; // The memories are sorted by most relevant, so we return the first one
