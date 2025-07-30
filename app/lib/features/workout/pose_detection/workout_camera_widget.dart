@@ -8,8 +8,18 @@ import 'package:waico/features/workout/pose_detection/reps_counter.dart';
 class WorkoutCameraWidget extends StatefulWidget {
   final RepsCounter? repsCounter;
   final bool showRepCounter;
+  final int? exerciseTimerValue;
+  final int? originalDuration;
+  final bool showDurationTimer;
 
-  const WorkoutCameraWidget({super.key, this.repsCounter, this.showRepCounter = true});
+  const WorkoutCameraWidget({
+    super.key,
+    this.repsCounter,
+    this.showRepCounter = true,
+    this.exerciseTimerValue,
+    this.originalDuration,
+    this.showDurationTimer = false,
+  });
 
   @override
   State<WorkoutCameraWidget> createState() => _WorkoutCameraWidgetState();
@@ -118,6 +128,8 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget> with TickerPr
           _NativeCameraPreview(hasPermission: _hasPermission, isInitialized: _isInitialized),
           if (widget.showRepCounter && widget.repsCounter != null && _isInitialized && _repCountingState != null)
             _RepCounterOverlay(repCountingState: _repCountingState!, repScaleAnimation: _repScaleAnimation),
+          if (widget.showDurationTimer && widget.exerciseTimerValue != null && _isInitialized)
+            _DurationTimerOverlay(timerValue: widget.exerciseTimerValue!, originalDuration: widget.originalDuration),
           if (_errorMessage != null)
             _ErrorOverlay(errorMessage: _errorMessage!, onDismiss: () => setState(() => _errorMessage = null)),
         ],
@@ -363,6 +375,157 @@ class _LastRepQualityIndicator extends StatelessWidget {
       child: Text(
         qualityLabel,
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: qualityColor, letterSpacing: 0.8),
+      ),
+    );
+  }
+}
+
+class _DurationTimerOverlay extends StatefulWidget {
+  final int timerValue;
+  final int? originalDuration;
+
+  const _DurationTimerOverlay({required this.timerValue, this.originalDuration});
+
+  @override
+  State<_DurationTimerOverlay> createState() => _DurationTimerOverlayState();
+}
+
+class _DurationTimerOverlayState extends State<_DurationTimerOverlay> with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.15,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didUpdateWidget(_DurationTimerOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Start pulsing when under 10 seconds
+    if (widget.timerValue <= 10 && widget.timerValue > 0) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = (widget.timerValue / 60).floor();
+    final seconds = widget.timerValue % 60;
+    final timeString = minutes > 0
+        ? '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}'
+        : seconds.toString().padLeft(2, '0');
+
+    // Determine color based on remaining time
+    Color timerColor = Colors.blue;
+    if (widget.timerValue <= 10) {
+      timerColor = Colors.red;
+    } else if (widget.timerValue <= 30) {
+      timerColor = Colors.orange;
+    }
+
+    return Positioned(
+      top: 8,
+      right: 5,
+      child: SafeArea(
+        child: AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: widget.timerValue <= 10 ? _pulseAnimation.value : 1.0,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: timerColor, width: 1),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.timer, size: 24, color: timerColor),
+                    const SizedBox(height: 4),
+                    Text(
+                      timeString,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: timerColor,
+                        shadows: [Shadow(color: Colors.black54, offset: Offset(2, 2), blurRadius: 4)],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'TIME',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withOpacity(0.8),
+                        letterSpacing: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _buildProgressIndicator(widget.timerValue, timerColor),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressIndicator(int currentTime, Color color) {
+    if (widget.originalDuration == null || widget.originalDuration! <= 0) {
+      // Fallback: Use estimated progress for visual feedback
+      final maxTime = currentTime > 60 ? 120 : 60;
+      final progress = currentTime / maxTime;
+
+      return Container(
+        width: 70,
+        height: 4,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: Colors.white.withOpacity(0.2)),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: progress.clamp(0.0, 1.0),
+          child: Container(
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: color),
+          ),
+        ),
+      );
+    }
+
+    // Accurate progress calculation
+    final progress = (widget.originalDuration! - currentTime) / widget.originalDuration!;
+
+    return Container(
+      width: 70,
+      height: 4,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: Colors.white.withOpacity(0.2)),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: progress.clamp(0.0, 1.0),
+        child: Container(
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(2), color: color),
+        ),
       ),
     );
   }

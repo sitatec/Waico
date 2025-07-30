@@ -355,6 +355,25 @@ class InstructionsView extends StatelessWidget {
                   ),
                 ),
               ),
+              if (exercise.optimalView != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.withOpacity(0.1)),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  ),
+                  child: Text(
+                    'Make sure you are ${exercise.optimalView == 'front' ? 'facing the camera' : 'turned sideways to the camera'} for optimal tracking.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               if (exercise.instruction != null)
                 Container(
@@ -456,6 +475,11 @@ class WorkoutView extends StatelessWidget {
       repsCounter: state.repsCounter,
       showRepCounter:
           state.currentExercise.load.type == ExerciseLoadType.reps && state.currentPhase == WorkoutPhaseType.exercising,
+      exerciseTimerValue: state.exerciseTimerValue,
+      originalDuration: state.currentExercise.load.duration,
+      showDurationTimer:
+          state.currentExercise.load.type == ExerciseLoadType.duration &&
+          state.currentPhase == WorkoutPhaseType.exercising,
     );
   }
 }
