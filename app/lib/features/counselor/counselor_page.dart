@@ -5,7 +5,7 @@ import 'package:waico/features/counselor/counselor_agent.dart';
 import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
-import 'package:waico/core/widgets/chart_widget.dart' show ChartDataPoint;
+import 'package:waico/core/widgets/chart_widget.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
 import 'package:waico/core/widgets/voice_chat_view.dart';
 import 'package:waico/generated/locale_keys.g.dart';
@@ -80,6 +80,7 @@ class _CounselorPageState extends State<CounselorPage> {
       child: Stack(
         children: [
           Scaffold(
+            backgroundColor: Colors.white,
             appBar: AppBar(
               toolbarHeight: 50,
               titleSpacing: 8,
@@ -120,11 +121,29 @@ class _CounselorPageState extends State<CounselorPage> {
             ),
             body: _initialized
                 ? _isSpeechMode
-                      ? VoiceChatView(voiceChatPipeline: _voiceChat!)
+                      ? VoiceChatView(voiceChatPipeline: _voiceChat!, voice: 'af_heart')
                       : LlmChatView(
                           enableVoiceNotes: false,
                           provider: _agent!.chatModel,
                           messageSender: _agent!.sendMessage,
+                          style: LlmChatViewStyle(
+                            addButtonStyle: ActionButtonStyle(iconColor: theme.colorScheme.primary),
+                            submitButtonStyle: ActionButtonStyle(
+                              iconColor: Colors.white,
+                              iconDecoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            disabledButtonStyle: ActionButtonStyle(
+                              iconColor: theme.colorScheme.primary,
+                              iconDecoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            llmMessageStyle: LlmMessageStyle(iconColor: theme.colorScheme.primary),
+                          ),
                         )
                 : null,
           ),
@@ -134,8 +153,17 @@ class _CounselorPageState extends State<CounselorPage> {
     );
   }
 
-  void _displayHealthData(List<ChartDataPoint> healthData) {
-    throw UnimplementedError("Display health data is not implemented yet.");
+  void _displayHealthData(List<ChartGroupedDataPoint> healthData) {
+    // TODO: Implement proper display that integrates well with both chat types (speech and text)
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isDismissible: true,
+      scrollControlDisabledMaxHeightRatio: 0.65,
+      builder: (context) {
+        return ChartWidget(data: healthData, totalLabel: LocaleKeys.common_total.tr(), title: "Health Data");
+      },
+    );
   }
 
   Future<void> _showChatEndConfirmationBottomSheet() {

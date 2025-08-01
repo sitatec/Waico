@@ -16,6 +16,7 @@ class VoiceChatPipeline {
   final TtsModel _tts;
   final List<XFile> _pendingImages = [];
   String? voice;
+  double? speechSpeed;
   final AudioStreamPlayer _audioStreamPlayer;
   StreamSubscription? _userSpeechStreamSubscription;
   bool _hasChatEnded = false;
@@ -39,11 +40,12 @@ class VoiceChatPipeline {
        _audioStreamPlayer = audioStreamPlayer ?? AudioStreamPlayer(),
        _userSpeechToTextListener = userSpeechToTextListener ?? UserSpeechListener.withTranscription();
 
-  Future<void> startChat({required String voice}) async {
+  Future<void> startChat({required String voice, double speechSpeed = 1.0}) async {
     // TODO: Add interruption support (user can interrupt ai). On android cancelling generation is supported by mediapipe
     // But not in flutter yet. On IOS we interrupt but with delay, model generation is generally faster then the synthesized
     // audio, so we can cancel the speech as soon as the model finish generation until IOS support cancelling generation.
     this.voice = voice;
+    this.speechSpeed = speechSpeed;
     _hasChatEnded = false;
     await _userSpeechToTextListener.initialize();
     _userSpeechStreamSubscription = _userSpeechToTextListener.listen(_onMessageReceived);
@@ -160,7 +162,7 @@ class VoiceChatPipeline {
   Future<void> _generateSpeech(String text, {bool isLastInCurrentTurn = false}) async {
     await _asyncLock.synchronized(() async {
       final start = DateTime.now();
-      final ttsResult = await _tts.generateSpeech(text: text, voice: voice, speed: 1.0);
+      final ttsResult = await _tts.generateSpeech(text: text, voice: voice, speed: speechSpeed ?? 1.0);
       await _audioStreamPlayer.append(ttsResult.toWav(), caption: text);
       log("TTS took: ${DateTime.now().difference(start).inMilliseconds / 1000} seconds");
     });

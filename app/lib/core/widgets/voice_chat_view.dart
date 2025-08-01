@@ -9,8 +9,10 @@ import 'package:wakelock_plus/wakelock_plus.dart' show WakelockPlus;
 
 class VoiceChatView extends StatefulWidget {
   final VoiceChatPipeline voiceChatPipeline;
+  final String voice;
+  final double speechSpeed;
 
-  const VoiceChatView({super.key, required this.voiceChatPipeline});
+  const VoiceChatView({super.key, required this.voiceChatPipeline, this.voice = "af_heart", this.speechSpeed = 1.0});
 
   @override
   State<VoiceChatView> createState() => _VoiceChatViewState();
@@ -27,7 +29,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   @override
   void initState() {
     super.initState();
-    widget.voiceChatPipeline.startChat(voice: "af_heart").then((_) {
+    widget.voiceChatPipeline.startChat(voice: widget.voice).then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
           _chatStarted = true;
@@ -84,6 +86,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                   ..._displayHistory,
                   Card(
                     clipBehavior: Clip.hardEdge,
+                    color: Colors.white,
                     child: InkWell(
                       onTap: () async {
                         final image = await _pickImage();
@@ -94,7 +97,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_a_photo, size: 48, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.add_a_photo, size: 40, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(height: 16),
                           Text(
                             "Show an image to Waico",

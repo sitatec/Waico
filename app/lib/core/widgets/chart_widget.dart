@@ -51,6 +51,14 @@ class ChartDataHelper {
 enum ChartType { line, bar }
 
 /// A chart widget that can display line or bar charts with a total value display.
+///
+/// Features:
+/// - Support for both line and bar charts with grouped data
+/// - Interactive type visibility: Click on legend items to show/hide specific data types
+/// - All types are visible by default
+/// - Disabled types appear grayed out with a line-through effect
+/// - Total values are calculated from all data, not just visible types
+/// - Smooth transitions when toggling visibility
 class ChartWidget extends StatefulWidget {
   /// List of grouped data points to display in the chart
   final List<ChartGroupedDataPoint> data;
@@ -114,11 +122,43 @@ class ChartWidget extends StatefulWidget {
 
 class _ChartWidgetState extends State<ChartWidget> {
   late ChartType _currentChartType;
+  late Set<String> _visibleTypes;
 
   @override
   void initState() {
     super.initState();
     _currentChartType = widget.initialChartType;
+    _initializeVisibleTypes();
+  }
+
+  @override
+  void didUpdateWidget(ChartWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data != widget.data) {
+      _initializeVisibleTypes();
+    }
+  }
+
+  /// Initialize visible types - by default all types are visible
+  void _initializeVisibleTypes() {
+    _visibleTypes = <String>{};
+    for (final group in widget.data) {
+      for (final bar in group.bars) {
+        final label = bar.label ?? 'Unlabeled';
+        _visibleTypes.add(label);
+      }
+    }
+  }
+
+  /// Toggle visibility of a specific type
+  void _toggleTypeVisibility(String type) {
+    setState(() {
+      if (_visibleTypes.contains(type)) {
+        _visibleTypes.remove(type);
+      } else {
+        _visibleTypes.add(type);
+      }
+    });
   }
 
   @override
@@ -184,7 +224,16 @@ class _ChartWidgetState extends State<ChartWidget> {
           ),
 
           // Legend
-          if (widget.showLegend) _buildLegend(context),
+          if (widget.showLegend) ...[
+            _buildLegend(context),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "Hint: You can tap legend items to toggle their visibility. This makes it easier to focus on data types with similar value ranges.",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -221,9 +270,26 @@ class _ChartWidgetState extends State<ChartWidget> {
     }
   }
 
+  /// Gets filtered data based on visible types
+  List<ChartGroupedDataPoint> _getFilteredData() {
+    return widget.data
+        .map((group) {
+          final filteredBars = group.bars.where((bar) {
+            final label = bar.label ?? 'Unlabeled';
+            return _visibleTypes.contains(label);
+          }).toList();
+
+          return ChartGroupedDataPoint(groupLabel: group.groupLabel, bars: filteredBars);
+        })
+        .where((group) => group.bars.isNotEmpty)
+        .toList();
+  }
+
   /// Builds the appropriate chart based on current type
   Widget _buildChart(BuildContext context) {
-    if (widget.data.isEmpty) {
+    final filteredData = _getFilteredData();
+
+    if (filteredData.isEmpty) {
       return Center(
         child: Text(
           'No data available',
@@ -235,7 +301,7 @@ class _ChartWidgetState extends State<ChartWidget> {
     // Calculate width based on number of groups and chart type
     final double itemWidth = _currentChartType == ChartType.bar ? 80.0 : 60.0; // Bar charts need more space
     const double minWidth = 300.0; // Minimum chart width
-    final double calculatedWidth = (widget.data.length * itemWidth).clamp(minWidth, double.infinity);
+    final double calculatedWidth = (filteredData.length * itemWidth).clamp(minWidth, double.infinity);
 
     Widget chart;
     switch (_currentChartType) {
@@ -256,8 +322,10 @@ class _ChartWidgetState extends State<ChartWidget> {
 
   /// Builds a line chart
   Widget _buildLineChart(BuildContext context) {
-    // Get all data points from grouped data
-    final allDataPoints = widget.data.expand((group) => group.bars).toList();
+    final filteredData = _getFilteredData();
+
+    // Get all data points from filtered grouped data
+    final allDataPoints = filteredData.expand((group) => group.bars).toList();
 
     if (allDataPoints.isEmpty) {
       return const Center(child: Text('No data available for line chart'));
@@ -266,9 +334,9 @@ class _ChartWidgetState extends State<ChartWidget> {
     // Create multiple lines for different labels
     final lineBarsData = _buildMultipleLineChartBars(context);
 
-    // For line charts, x-axis should range from 0 to number of groups - 1
+    // For line charts, x-axis should range from 0 to number of filtered groups - 1
     final minX = 0.0;
-    final maxX = (widget.data.length - 1).toDouble();
+    final maxX = filteredData.isEmpty ? 0.0 : (filteredData.length - 1).toDouble();
     final maxY = allDataPoints.map((e) => e.y).reduce((a, b) => a > b ? a : b);
 
     return LineChart(
@@ -290,14 +358,15 @@ class _ChartWidgetState extends State<ChartWidget> {
     );
   }
 
-  /// Builds a bar chart
   /// Builds a grouped bar chart
   Widget _buildGroupedBarChart(BuildContext context) {
-    if (widget.data.isEmpty) {
+    final filteredData = _getFilteredData();
+
+    if (filteredData.isEmpty) {
       return const Center(child: Text('No grouped data available'));
     }
 
-    final barGroups = widget.data.asMap().entries.map((entry) {
+    final barGroups = filteredData.asMap().entries.map((entry) {
       final groupIndex = entry.key;
       final group = entry.value;
 
@@ -341,7 +410,7 @@ class _ChartWidgetState extends State<ChartWidget> {
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => Colors.blueGrey,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final groupData = widget.data[groupIndex];
+              final groupData = filteredData[groupIndex];
               final barData = groupData.bars[rodIndex];
               return BarTooltipItem(
                 '${barData.label ?? 'Value'}\n${barData.y.toStringAsFixed(1)}',
@@ -363,19 +432,21 @@ class _ChartWidgetState extends State<ChartWidget> {
     );
   }
 
-  /// Gets the maximum Y value from grouped data
+  /// Gets the maximum Y value from filtered grouped data
   double _getMaxYValue() {
-    return widget.data.expand((group) => group.bars).map((bar) => bar.y).reduce((a, b) => a > b ? a : b);
+    final filteredData = _getFilteredData();
+    if (filteredData.isEmpty) return 0;
+    return filteredData.expand((group) => group.bars).map((bar) => bar.y).reduce((a, b) => a > b ? a : b);
   }
 
-  /// Gets all data points from grouped data
-  /// Builds multiple line chart bars for grouped data
+  /// Builds multiple line chart bars for filtered grouped data
   List<LineChartBarData> _buildMultipleLineChartBars(BuildContext context) {
+    final filteredData = _getFilteredData();
     final Map<String, List<MapEntry<int, ChartDataPoint>>> dataByLabel = {};
 
     // Group all data points by their labels, keeping track of group indices
-    for (int groupIndex = 0; groupIndex < widget.data.length; groupIndex++) {
-      final group = widget.data[groupIndex];
+    for (int groupIndex = 0; groupIndex < filteredData.length; groupIndex++) {
+      final group = filteredData[groupIndex];
       for (final bar in group.bars) {
         final label = bar.label ?? 'Unlabeled';
         dataByLabel.putIfAbsent(label, () => []).add(MapEntry(groupIndex, bar));
@@ -423,6 +494,8 @@ class _ChartWidgetState extends State<ChartWidget> {
 
   /// Builds titles data for line chart
   FlTitlesData _buildTitlesData() {
+    final filteredData = _getFilteredData();
+
     return FlTitlesData(
       show: true,
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -435,14 +508,16 @@ class _ChartWidgetState extends State<ChartWidget> {
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             // Only show labels for exact integer values that correspond to our data indices
-            if (value == index.toDouble() && index >= 0 && index < widget.data.length) {
-              final groupLabel = widget.data[index].groupLabel;
-              return Transform.rotate(
-                angle: -0.9, // Rotate by approximately 50 degrees (in radians)
-                child: Text(
-                  groupLabel,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  textAlign: TextAlign.center,
+            if (value == index.toDouble() && index >= 0 && index < filteredData.length) {
+              final groupLabel = filteredData[index].groupLabel;
+              return Center(
+                child: Transform.rotate(
+                  angle: -0.7,
+                  child: Text(
+                    groupLabel,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               );
             }
@@ -468,9 +543,10 @@ class _ChartWidgetState extends State<ChartWidget> {
     );
   }
 
-  /// Builds titles data for bar chart
   /// Builds titles data for grouped bar chart
   FlTitlesData _buildGroupedBarTitlesData() {
+    final filteredData = _getFilteredData();
+
     return FlTitlesData(
       show: true,
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -483,14 +559,16 @@ class _ChartWidgetState extends State<ChartWidget> {
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             // Only show labels for exact integer values that correspond to our data indices
-            if (value == index.toDouble() && index >= 0 && index < widget.data.length) {
-              final groupLabel = widget.data[index].groupLabel;
-              return Transform.rotate(
-                angle: -0.9, // Rotate by approximately 50 degrees (in radians)
-                child: Text(
-                  groupLabel,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  textAlign: TextAlign.center,
+            if (value == index.toDouble() && index >= 0 && index < filteredData.length) {
+              final groupLabel = filteredData[index].groupLabel;
+              return Center(
+                child: Transform.rotate(
+                  angle: -0.7,
+                  child: Text(
+                    groupLabel,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               );
             }
@@ -520,7 +598,7 @@ class _ChartWidgetState extends State<ChartWidget> {
   Widget _buildLegend(BuildContext context) {
     List<_LegendItem> legendItems = [];
 
-    // Calculate totals by label/type for display in legend
+    // Calculate totals by label/type for display in legend (using all data, not filtered)
     final Map<String, double> totalsByType = {};
     for (final group in widget.data) {
       for (final bar in group.bars) {
@@ -563,7 +641,8 @@ class _ChartWidgetState extends State<ChartWidget> {
       legendItems = labelColorMap.entries.map((entry) {
         final total = totalsByType[entry.key] ?? 0;
         final labelWithTotal = '${entry.key} (${total.toStringAsFixed(widget.totalDecimalPlaces)})';
-        return _LegendItem(color: entry.value, label: labelWithTotal);
+        final isVisible = _visibleTypes.contains(entry.key);
+        return _LegendItem(color: entry.value, label: labelWithTotal, type: entry.key, isVisible: isVisible);
       }).toList();
     } else {
       // For bar charts with grouped data, show legend for bars within groups
@@ -594,7 +673,8 @@ class _ChartWidgetState extends State<ChartWidget> {
       legendItems = uniqueLabels.map((label) {
         final total = totalsByType[label] ?? 0;
         final labelWithTotal = '$label (${total.toStringAsFixed(widget.totalDecimalPlaces)})';
-        return _LegendItem(color: labelColorMap[label]!, label: labelWithTotal);
+        final isVisible = _visibleTypes.contains(label);
+        return _LegendItem(color: labelColorMap[label]!, label: labelWithTotal, type: label, isVisible: isVisible);
       }).toList();
     }
 
@@ -618,24 +698,35 @@ class _ChartWidgetState extends State<ChartWidget> {
           const SizedBox(height: 8),
           // Legend items with totals
           Wrap(
-            spacing: 16,
-            runSpacing: 8,
             children: legendItems
                 .map(
-                  (item) => Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: item.color,
-                          borderRadius: BorderRadius.circular(_currentChartType == ChartType.line ? 6 : 2),
-                        ),
+                  (item) => SizedBox(
+                    height: 32,
+                    child: IconButton(
+                      onPressed: () => _toggleTypeVisibility(item.type),
+                      icon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: item.isVisible ? item.color : item.color.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(_currentChartType == ChartType.line ? 6 : 2),
+                              border: item.isVisible ? null : Border.all(color: item.color.withOpacity(0.5), width: 1),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            item.label,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: item.isVisible ? Colors.grey[700] : Colors.grey[400],
+                              decoration: item.isVisible ? null : TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Text(item.label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700])),
-                    ],
+                    ),
                   ),
                 )
                 .toList(),
@@ -650,6 +741,8 @@ class _ChartWidgetState extends State<ChartWidget> {
 class _LegendItem {
   final Color color;
   final String label;
+  final String type;
+  final bool isVisible;
 
-  const _LegendItem({required this.color, required this.label});
+  const _LegendItem({required this.color, required this.label, required this.type, required this.isVisible});
 }

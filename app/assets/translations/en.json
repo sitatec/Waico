@@ -223,6 +223,7 @@
     "retry": "Retry",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "unknown_error": "Something went wrong"
+    "unknown_error": "Something went wrong",
+    "total": "Total"
   }
 }

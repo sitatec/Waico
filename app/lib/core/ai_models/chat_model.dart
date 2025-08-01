@@ -22,7 +22,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
     await FlutterGemmaPlugin.instance.modelManager.setModelPath(modelPath);
     _model ??= await FlutterGemmaPlugin.instance.createModel(
       modelType: ModelType.gemmaIt,
-      preferredBackend: PreferredBackend.gpu,
+      preferredBackend: PreferredBackend.cpu,
       maxTokens: _maxTokenCount,
       supportImage: supportImageInput,
     );

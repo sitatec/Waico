@@ -56,7 +56,7 @@ class WorkoutSessionManager {
 
   /// Initialize the workout session manager
   Future<void> initialize() async {
-    await voiceChatPipeline.startChat(voice: 'am_santa');
+    await voiceChatPipeline.startChat(voice: 'am_fenrir');
     // We only start listening when the exercise starts
     await voiceChatPipeline.stopListeningToUser();
     await _initializeCurrentExercise();

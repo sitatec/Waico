@@ -10,7 +10,7 @@ import 'package:waico/core/repositories/conversation_repository.dart';
 import 'package:waico/core/services/calendar_service.dart';
 import 'package:waico/core/services/communication_service.dart';
 import 'package:waico/core/services/health_service.dart' show HealthService;
-import 'package:waico/core/widgets/chart_widget.dart' show ChartDataPoint;
+import 'package:waico/core/widgets/chart_widget.dart' show ChartGroupedDataPoint, ChartDataPoint;
 
 abstract class Tool {
   String get name;
@@ -50,7 +50,7 @@ class PhoneCallTool extends Tool {
 
 class ReportTool extends Tool {
   final ConversationRepository _conversationRepository;
-  final dateFormatter = DateFormat('EEEE, MMMM d, y – HH:mm');
+  final dateFormatter = DateFormat('EEEE, MMMM d, y');
 
   ReportTool({ConversationRepository? conversationRepository})
     : _conversationRepository = conversationRepository ?? ConversationRepository();
@@ -252,7 +252,7 @@ class GetHealthDataTool extends Tool {
 
 class DisplayUserProgressTool extends Tool {
   final HealthService healthService;
-  final void Function(List<ChartDataPoint>) displayHealthData;
+  final void Function(List<ChartGroupedDataPoint>) displayHealthData;
   DisplayUserProgressTool({required this.healthService, required this.displayHealthData});
 
   @override
@@ -319,7 +319,11 @@ class DisplayUserProgressTool extends Tool {
   }
 
   /// Process health data into daily chart data points
-  List<ChartDataPoint> _processHealthDataToChartPoints(List<HealthDataPoint> healthData, int days, DateTime endTime) {
+  List<ChartGroupedDataPoint> _processHealthDataToChartPoints(
+    List<HealthDataPoint> healthData,
+    int days,
+    DateTime endTime,
+  ) {
     // Create maps to store daily aggregates for each health type
     final Map<String, Map<HealthDataType, double>> dailyData = {};
 
@@ -372,31 +376,37 @@ class DisplayUserProgressTool extends Tool {
       }
     }
 
-    // Convert to ChartDataPoint list - combine all metrics into a single value per day
-    // For demonstration, we'll use steps as the primary metric
-    final List<ChartDataPoint> chartPoints = [];
+    // Convert to ChartGroupedDataPoint list - group all metrics by day
+    final List<ChartGroupedDataPoint> chartGroups = [];
     int dayIndex = 0;
 
     for (int i = days - 1; i >= 0; i--) {
       final date = endTime.subtract(Duration(days: i));
       final dateKey = DateFormat('MM-dd').format(date);
 
-      // Use steps as the primary metric for the chart display
-      final metricValue = dailyData[dateKey]![HealthDataType.STEPS] ?? 0.0;
+      // Create bars for each health metric for this day
+      final List<ChartDataPoint> barsForDay = [];
+      for (final data in dailyData[dateKey]!.entries) {
+        // Only add bars with meaningful values (skip 0 values except for steps)
+        if (data.value > 0 || data.key == HealthDataType.STEPS) {
+          barsForDay.add(
+            ChartDataPoint(
+              x: dayIndex.toDouble(),
+              y: data.value,
+              label: _getHealthTypeLabel(data.key),
+              color: _getColorForHealthType(data.key),
+            ),
+          );
+        }
+      }
 
-      chartPoints.add(
-        ChartDataPoint(
-          x: dayIndex.toDouble(),
-          y: metricValue,
-          label: dateKey,
-          color: _getColorForHealthType(HealthDataType.STEPS),
-        ),
-      );
+      // Create a group for this day
+      chartGroups.add(ChartGroupedDataPoint(groupLabel: dateKey, bars: barsForDay));
 
       dayIndex++;
     }
 
-    return chartPoints;
+    return chartGroups;
   }
 
   /// Calculate totals for all health data types for the given period
@@ -487,6 +497,24 @@ class DisplayUserProgressTool extends Tool {
       HealthDataType.WEIGHT => Colors.red,
       _ => Colors.grey,
     };
+  }
+
+  /// Helper method to get readable labels for health types
+  String _getHealthTypeLabel(HealthDataType type) {
+    switch (type) {
+      case HealthDataType.STEPS:
+        return 'Steps';
+      case HealthDataType.ACTIVE_ENERGY_BURNED:
+        return 'Calories (kcal)';
+      case HealthDataType.SLEEP_ASLEEP:
+        return 'Sleep (hours)';
+      case HealthDataType.WATER:
+        return 'Water (L)';
+      case HealthDataType.WEIGHT:
+        return 'Weight (kg)';
+      default:
+        return type.toString();
+    }
   }
 }
 

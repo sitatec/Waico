@@ -200,6 +200,7 @@ abstract class  LocaleKeys {
   static const common_today = 'common.today';
   static const common_tomorrow = 'common.tomorrow';
   static const common_unknown_error = 'common.unknown_error';
+  static const common_total = 'common.total';
   static const common = 'common';
 
 }

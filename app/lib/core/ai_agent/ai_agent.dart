@@ -70,7 +70,9 @@ class AiAgent {
           '$systemPrompt\n\n'
           'USER INFO:\n'
           '$userInfo\n\n'
-          'Use this information to better assist the user. And interact with them as if you know them personally.';
+          'Use this information in a meaningful way and interact with them like you know them personally.'
+          'But don\'t DO NOT assume an issue in the information provided is the reason the user is reaching out. '
+          'Ask how they are feeling first and go from there, it may or may not be related to an issue in the information provided.';
     }
 
     return systemPrompt;

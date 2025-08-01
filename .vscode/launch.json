@@ -35,7 +35,20 @@
       "cwd": "app",
       "toolArgs": [
         "--dart-define",
-        "ENV=profile"
+        "ENV=profile",
+      ]
+    },
+    {
+      "name": "Profile mode - Physical Device",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "cwd": "app",
+      "toolArgs": [
+        "--dart-define",
+        "ENV=profile",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=http://10.97.59.170:8011", // Use your own  IP
       ]
     },
     {
