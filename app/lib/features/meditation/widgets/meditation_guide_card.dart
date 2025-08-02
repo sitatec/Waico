@@ -37,24 +37,6 @@ class MeditationGuideCard extends StatelessWidget {
             child: Row(
               children: [
                 // Type icon and completion status
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: guide.isCompleted
-                        ? Theme.of(context).colorScheme.primary
-                        : _getTypeColor(context).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    guide.isCompleted ? Icons.check : _getTypeIcon(),
-                    color: guide.isCompleted ? Colors.white : _getTypeColor(context),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // Guide details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +44,7 @@ class MeditationGuideCard extends StatelessWidget {
                       Text(
                         guide.title,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: guide.isCompleted ? Colors.grey.shade600 : Colors.black87,
                           decoration: guide.isCompleted ? TextDecoration.lineThrough : null,
@@ -111,17 +93,19 @@ class MeditationGuideCard extends StatelessWidget {
                     IconButton(
                       onPressed: onToggleCompletion,
                       icon: Container(
-                        width: 24,
-                        height: 24,
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
-                          color: guide.isCompleted ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                          border: Border.all(
-                            color: guide.isCompleted ? Theme.of(context).colorScheme.primary : Colors.grey.shade400,
-                            width: 2,
-                          ),
+                          color: guide.isCompleted
+                              ? Theme.of(context).colorScheme.primary
+                              : _getTypeColor(context).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: guide.isCompleted ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                        child: Icon(
+                          guide.isCompleted ? Icons.check : _getTypeIcon(),
+                          color: guide.isCompleted ? Colors.white : _getTypeColor(context),
+                          size: 22,
+                        ),
                       ),
                     ),
                     if (onDelete != null)

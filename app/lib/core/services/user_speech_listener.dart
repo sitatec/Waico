@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDi
 import 'package:record/record.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart';
+import 'package:waico/core/utils/list_utils.dart';
 
 import '../ai_models/stt_model.dart';
 
@@ -193,7 +194,7 @@ class UserSpeechListener {
       if (_speechBuffer.length == 1) {
         _speechController.add(_speechBuffer.first);
       } else {
-        _speechController.add(_mergeFloat32Lists(_speechBuffer));
+        _speechController.add(mergeFloat32Lists(_speechBuffer));
       }
       _speechBuffer.clear();
     }
@@ -296,7 +297,7 @@ class UserSpeechToTextListener {
       await _transcribeAndBuffer(audioData);
 
       while (_speechBuffer.isNotEmpty && !_isPaused) {
-        final speech = _speechBuffer.length == 1 ? _speechBuffer.first : _mergeFloat32Lists(_speechBuffer);
+        final speech = _speechBuffer.length == 1 ? _speechBuffer.first : mergeFloat32Lists(_speechBuffer);
         _speechBuffer.clear();
         await _transcribeAndBuffer(speech);
       }
@@ -352,21 +353,4 @@ class UserSpeechToTextListener {
     _textBuffer.clear();
     await _textController.close();
   }
-}
-
-Float32List _mergeFloat32Lists(List<Float32List> lists) {
-  // Compute total length
-  final totalLength = lists.fold(0, (sum, currentList) => sum + currentList.length);
-
-  // Allocate one big buffer
-  final merged = Float32List(totalLength);
-
-  // Copy each list into the merged buffer
-  int offset = 0;
-  for (final list in lists) {
-    merged.setRange(offset, offset + list.length, list);
-    offset += list.length;
-  }
-
-  return merged;
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:waico/features/meditation/background_sound_manager.dart';
 import 'package:waico/features/meditation/models/meditation_guide.dart';
 import 'package:waico/features/meditation/widgets/meditation_type_card.dart';
+import 'package:waico/features/meditation/widgets/background_sound_selector.dart';
 
 class MeditationTypeSelectionPage extends StatelessWidget {
-  final Function(MeditationType, int, String?) onTypeSelected;
+  final Function(MeditationType, int, String?, String?) onTypeSelected;
 
   const MeditationTypeSelectionPage({super.key, required this.onTypeSelected});
 
@@ -95,11 +97,12 @@ class MeditationTypeSelectionPage extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => DurationSelectionModal(
         type: type,
-        onDurationSelected: (duration, customTitle) {
+        onDurationSelected: (duration, customTitle, backgroundSound) {
           Navigator.of(context).pop(); // Close duration modal
-          onTypeSelected(type, duration, customTitle);
+          onTypeSelected(type, duration, customTitle, backgroundSound);
         },
       ),
     );
@@ -108,7 +111,7 @@ class MeditationTypeSelectionPage extends StatelessWidget {
 
 class DurationSelectionModal extends StatefulWidget {
   final MeditationType type;
-  final Function(int, String?) onDurationSelected;
+  final Function(int, String?, String?) onDurationSelected;
 
   const DurationSelectionModal({super.key, required this.type, required this.onDurationSelected});
 
@@ -118,7 +121,7 @@ class DurationSelectionModal extends StatefulWidget {
 
 class _DurationSelectionModalState extends State<DurationSelectionModal> {
   final TextEditingController _titleController = TextEditingController();
-  bool _useCustomTitle = false;
+  String? _selectedBackgroundSound = BackgroundSoundManager.availableSounds.first;
 
   @override
   void dispose() {
@@ -128,104 +131,120 @@ class _DurationSelectionModalState extends State<DurationSelectionModal> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     const durations = [5, 10, 15, 20, 25, 30];
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Choose Duration',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'How long would you like your ${widget.type.title.toLowerCase()} to be?',
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                ),
-              ],
+    return SingleChildScrollView(
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
             ),
-          ),
 
-          // Custom title section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _useCustomTitle,
-                      onChanged: (value) {
-                        setState(() {
-                          _useCustomTitle = value ?? false;
-                          if (!_useCustomTitle) {
-                            _titleController.clear();
-                          }
-                        });
-                      },
-                    ),
-                    const Text('Use custom title (optional)', style: TextStyle(fontSize: 16)),
-                  ],
-                ),
-                if (_useCustomTitle) ...[
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'Personalize Your Meditation',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Custom title section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Meditation title (optional)', style: TextStyle(fontSize: 15, color: Colors.black54)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _titleController,
                     decoration: InputDecoration(
-                      hintText: 'Enter custom meditation title...',
+                      hintText: 'Enter meditation title...',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                 ],
+              ),
+            ),
+
+            // Background sound selection
+            ExpansionTile(
+              title: Row(
+                children: [
+                  Icon(Icons.music_note_outlined, color: theme.colorScheme.primary, size: 21),
+                  const SizedBox(width: 8),
+                  Text('Background Sound', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
+                ],
+              ),
+              maintainState: true,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              children: [
+                BackgroundSoundSelector(
+                  onSoundSelected: (sound) {
+                    setState(() {
+                      _selectedBackgroundSound = sound;
+                    });
+                  },
+                  selectedSound: _selectedBackgroundSound,
+                ),
               ],
             ),
-          ),
 
-          // Duration options
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: durations.map((duration) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: DurationCard(
-                    duration: duration,
-                    onTap: () {
-                      final customTitle = _useCustomTitle && _titleController.text.trim().isNotEmpty
-                          ? _titleController.text.trim()
-                          : null;
-                      widget.onDurationSelected(duration, customTitle);
-                    },
+            const SizedBox(height: 16),
+
+            // Duration options
+            ExpansionTile(
+              initiallyExpanded: true,
+              title: Row(
+                children: [
+                  Icon(Icons.access_time, color: theme.colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Select Duration', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
+                ],
+              ),
+              maintainState: true,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: durations.map((duration) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: DurationCard(
+                          duration: duration,
+                          onTap: () {
+                            final customTitle = _titleController.text.trim().isNotEmpty
+                                ? _titleController.text.trim()
+                                : null;
+                            widget.onDurationSelected(duration, customTitle, _selectedBackgroundSound);
+                          },
+                        ),
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
-          ),
 
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

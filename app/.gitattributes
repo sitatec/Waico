@@ -5,7 +5,6 @@ android/app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-cxx-api.so filter=lfs diff
 android/app/src/main/jniLibs/armeabi-v7a/libonnxruntime.so filter=lfs diff=lfs merge=lfs -text
 android/app/src/main/jniLibs/armeabi-v7a/libsherpa-onnx-c-api.so filter=lfs diff=lfs merge=lfs -text
 android/app/src/main/jniLibs/armeabi-v7a/libsherpa-onnx-cxx-api.so filter=lfs diff=lfs merge=lfs -text
-
 # Workout Exercise animations and images
 assets/images/exercises/decline_push_up.gif filter=lfs diff=lfs merge=lfs -text
 assets/images/exercises/incline_push_up.gif filter=lfs diff=lfs merge=lfs -text
@@ -26,7 +25,10 @@ assets/images/exercises/squat.gif filter=lfs diff=lfs merge=lfs -text
 assets/images/exercises/wall_sit.jpg.webp filter=lfs diff=lfs merge=lfs -text
 assets/images/exercises/knee_push_up.gif filter=lfs diff=lfs merge=lfs -text
 assets/images/exercises/split_squat.gif filter=lfs diff=lfs merge=lfs -text
-
 # MODELS
 android/app/src/main/assets/pose_landmarker_full.task filter=lfs diff=lfs merge=lfs -text
 assets/models/silero_vad_v5.onnx filter=lfs diff=lfs merge=lfs -text
+assets/audio/meditation_bg_1.m4a filter=lfs diff=lfs merge=lfs -text
+assets/audio/meditation_bg_2.m4a filter=lfs diff=lfs merge=lfs -text
+assets/audio/meditation_bg_3.m4a filter=lfs diff=lfs merge=lfs -text
+assets/audio/meditation_bg_4.m4a filter=lfs diff=lfs merge=lfs -text

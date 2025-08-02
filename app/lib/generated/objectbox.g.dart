@@ -171,7 +171,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 2907517368197004077),
     name: 'MeditationGuide',
-    lastPropertyId: const obx_int.IdUid(9, 7115588888439512280),
+    lastPropertyId: const obx_int.IdUid(11, 2946736373629888322),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -226,6 +226,18 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(9, 7115588888439512280),
         name: 'isCompleted',
         type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 5186098228928133968),
+        name: 'audioId',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 2946736373629888322),
+        name: 'backgroundSound',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -489,7 +501,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final typeOffset = fbb.writeString(object.type);
         final descriptionOffset = fbb.writeString(object.description);
         final scriptOffset = fbb.writeString(object.script);
-        fbb.startTable(10);
+        final audioIdOffset = object.audioId == null
+            ? null
+            : fbb.writeString(object.audioId!);
+        final backgroundSoundOffset = object.backgroundSound == null
+            ? null
+            : fbb.writeString(object.backgroundSound!);
+        fbb.startTable(12);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, titleOffset);
         fbb.addOffset(2, typeOffset);
@@ -499,6 +517,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(6, object.createdAt.millisecondsSinceEpoch);
         fbb.addInt64(7, object.updatedAt.millisecondsSinceEpoch);
         fbb.addBool(8, object.isCompleted);
+        fbb.addOffset(9, audioIdOffset);
+        fbb.addOffset(10, backgroundSoundOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -529,6 +549,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final scriptParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 14, '');
+        final audioIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 22);
+        final backgroundSoundParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 24);
         final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 16, 0),
         );
@@ -548,6 +574,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
           description: descriptionParam,
           durationMinutes: durationMinutesParam,
           script: scriptParam,
+          audioId: audioIdParam,
+          backgroundSound: backgroundSoundParam,
           createdAt: createdAtParam,
           updatedAt: updatedAtParam,
           isCompleted: isCompletedParam,
@@ -705,5 +733,15 @@ class MeditationGuide_ {
   /// See [MeditationGuide.isCompleted].
   static final isCompleted = obx.QueryBooleanProperty<MeditationGuide>(
     _entities[3].properties[8],
+  );
+
+  /// See [MeditationGuide.audioId].
+  static final audioId = obx.QueryStringProperty<MeditationGuide>(
+    _entities[3].properties[9],
+  );
+
+  /// See [MeditationGuide.backgroundSound].
+  static final backgroundSound = obx.QueryStringProperty<MeditationGuide>(
+    _entities[3].properties[10],
   );
 }

@@ -11,6 +11,8 @@ class MeditationGuide {
   String description;
   int durationMinutes;
   String script;
+  String? audioId; // ID used for audio files folder
+  String? backgroundSound; // Background sound filename (e.g., "meditation_bg_1.m4a")
   DateTime createdAt;
   DateTime updatedAt;
   bool isCompleted;
@@ -22,6 +24,8 @@ class MeditationGuide {
     required this.description,
     required this.durationMinutes,
     required this.script,
+    this.audioId,
+    this.backgroundSound,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.isCompleted = false,
@@ -35,6 +39,8 @@ class MeditationGuide {
       description: json['description'] as String,
       durationMinutes: json['durationMinutes'] as int,
       script: json['script'] as String,
+      audioId: json['audioId'] as String?,
+      backgroundSound: json['backgroundSound'] as String?,
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
       updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
       isCompleted: json['isCompleted'] as bool? ?? false,
@@ -48,6 +54,8 @@ class MeditationGuide {
       'description': description,
       'durationMinutes': durationMinutes,
       'script': script,
+      'audioId': audioId,
+      'backgroundSound': backgroundSound,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'isCompleted': isCompleted,

@@ -1,8 +1,11 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:waico/features/meditation/models/meditation_guide.dart';
 import 'package:waico/features/meditation/repositories/meditation_repository.dart';
 import 'package:waico/features/meditation/pages/meditation_type_selection_page.dart';
 import 'package:waico/features/meditation/widgets/meditation_guide_card.dart';
+import 'package:waico/features/meditation/widgets/meditation_sound_player.dart';
 import 'package:waico/features/meditation/meditation_guide_generator.dart';
 
 /// Page that displays all user's meditation guides with option to create new ones
@@ -107,7 +110,12 @@ class _MeditationPageState extends State<MeditationPage> {
     );
   }
 
-  Future<void> _generateMeditationGuide(MeditationType type, int durationMinutes, String? customTitle) async {
+  Future<void> _generateMeditationGuide(
+    MeditationType type,
+    int durationMinutes,
+    String? customTitle,
+    String? backgroundSound,
+  ) async {
     Navigator.of(context).pop(); // Close type selection page
 
     setState(() {
@@ -115,8 +123,14 @@ class _MeditationPageState extends State<MeditationPage> {
     });
 
     try {
-      final guide = await MeditationGuideGenerator.generateGuide(type, durationMinutes, customTitle: customTitle);
+      final guide = await MeditationGuideGenerator.generateGuide(
+        type,
+        durationMinutes,
+        customTitle: customTitle,
+        backgroundSound: backgroundSound,
+      );
       _meditationRepository.save(guide);
+      log("Generated meditation guide: ${guide.title} (${guide.type}) $guide");
 
       await _loadMeditationGuides();
 
@@ -177,7 +191,7 @@ class _MeditationPageState extends State<MeditationPage> {
                       children: [
                         Text(
                           'Your Meditations',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
                         ),
                         if (_meditationGuides.isNotEmpty)
                           TextButton.icon(
@@ -189,6 +203,20 @@ class _MeditationPageState extends State<MeditationPage> {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    if (_isGenerating)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200, width: 1.5),
+                        ),
+                        child: Text(
+                          'Generation can take 30 seconds to a few minutes depending on the duration and your device performance. Please bear with us!',
+                          style: TextStyle(color: Colors.blue.shade700, fontSize: 14, height: 1.4),
+                        ),
+                      ),
                     const SizedBox(height: 16),
 
                     if (_meditationGuides.isEmpty)
@@ -254,7 +282,7 @@ class _MeditationPageState extends State<MeditationPage> {
           const SizedBox(height: 12),
           const Text(
             'Meditation Journey',
-            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Row(
@@ -265,7 +293,7 @@ class _MeditationPageState extends State<MeditationPage> {
                   children: [
                     Text(
                       '$totalCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     Text('Total Meditations', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
                   ],
@@ -277,7 +305,7 @@ class _MeditationPageState extends State<MeditationPage> {
                   children: [
                     Text(
                       '$completedCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     Text('Completed', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
                   ],
@@ -315,7 +343,7 @@ class _MeditationPageState extends State<MeditationPage> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: _showCreateMeditation,
+            onPressed: _isGenerating ? null : _showCreateMeditation,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
@@ -401,11 +429,11 @@ class MeditationGuideViewer extends StatelessWidget {
 
           const Divider(height: 1),
 
-          // Script content
+          // Content
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: Text(guide.script, style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87)),
+              child: MeditationSoundPlayer(guide: guide),
             ),
           ),
         ],

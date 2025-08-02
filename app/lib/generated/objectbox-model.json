@@ -122,7 +122,7 @@
     },
     {
       "id": "4:2907517368197004077",
-      "lastPropertyId": "9:7115588888439512280",
+      "lastPropertyId": "11:2946736373629888322",
       "name": "MeditationGuide",
       "properties": [
         {
@@ -170,6 +170,16 @@
           "id": "9:7115588888439512280",
           "name": "isCompleted",
           "type": 1
+        },
+        {
+          "id": "10:5186098228928133968",
+          "name": "audioId",
+          "type": 9
+        },
+        {
+          "id": "11:2946736373629888322",
+          "name": "backgroundSound",
+          "type": 9
         }
       ],
       "relations": []
