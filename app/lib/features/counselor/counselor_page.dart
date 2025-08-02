@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'package:waico/core/entities/user.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/features/counselor/counselor_agent.dart';
 import 'package:waico/core/services/health_service.dart';
@@ -37,11 +40,12 @@ class _CounselorPageState extends State<CounselorPage> {
   Future<void> init() async {
     final healthService = HealthService();
     await healthService.initialize();
-    final user = await UserRepository().getUser();
+    User? user = await UserRepository().getUser();
+    user ??= await _showUserCreationDialog();
     _agent = CounselorAgent(
       healthService: healthService,
       displayHealthData: _displayHealthData,
-      userInfo: user!.userInfo,
+      userInfo: user.userInfo,
     );
     await _agent!.initialize();
     // ignore: use_build_context_synchronously
@@ -164,6 +168,58 @@ class _CounselorPageState extends State<CounselorPage> {
         return ChartWidget(data: healthData, totalLabel: LocaleKeys.common_total.tr(), title: "Health Data");
       },
     );
+  }
+
+  Future<User> _showUserCreationDialog() async {
+    final completer = Completer<User>();
+    // Make sure the dialog is shown when the page is fully built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog<User>(
+        barrierDismissible: false,
+        context: context,
+        builder: (context) {
+          final controller = TextEditingController(text: 'User');
+
+          return AlertDialog(
+            title: Text('Preferred name'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('How would you like the counselor to call you?', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Text("It doesn't have to be your real name. You can also use the default, 'User'."),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(labelText: 'Preferred name', border: const OutlineInputBorder()),
+                ),
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () async {
+                  final preferredName = controller.text.trim().isNotEmpty ? controller.text.trim() : 'User';
+                  final user = await UserRepository().saveUser(preferredName);
+                  if (context.mounted) {
+                    context.navBack(user); // Close the dialog
+                  }
+                },
+                child: Text(LocaleKeys.common_save.tr()),
+              ),
+            ],
+          );
+        },
+      ).then((user) {
+        if (user != null) {
+          completer.complete(user);
+        } else {
+          completer.completeError('User creation dialog was dismissed');
+        }
+      });
+    });
+
+    return completer.future;
   }
 
   Future<void> _showChatEndConfirmationBottomSheet() {

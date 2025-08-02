@@ -32,3 +32,4 @@ assets/audio/meditation_bg_1.m4a filter=lfs diff=lfs merge=lfs -text
 assets/audio/meditation_bg_2.m4a filter=lfs diff=lfs merge=lfs -text
 assets/audio/meditation_bg_3.m4a filter=lfs diff=lfs merge=lfs -text
 assets/audio/meditation_bg_4.m4a filter=lfs diff=lfs merge=lfs -text
+assets/models/silero_vad.onnx filter=lfs diff=lfs merge=lfs -text

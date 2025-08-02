@@ -68,7 +68,7 @@ flutter:
     - assets/images/
     - assets/audio/
     - assets/images/exercises/
-    - assets/models/silero_vad_v5.onnx
+    - assets/models/
     - assets/translations/
 
 

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:waico/core/services/health_service.dart';
@@ -6,7 +8,8 @@ import 'package:waico/generated/locale_keys.g.dart';
 
 /// Health dashboard widget that displays wellness metrics
 class HealthDashboard extends StatefulWidget {
-  const HealthDashboard({super.key});
+  final VoidCallback? onReady;
+  const HealthDashboard({super.key, this.onReady});
 
   @override
   State<HealthDashboard> createState() => _HealthDashboardState();
@@ -20,7 +23,18 @@ class _HealthDashboardState extends State<HealthDashboard> {
     super.initState();
     _healthService = HealthService();
     _healthService.addListener(_onHealthServiceUpdate);
-    _healthService.initialize();
+    _healthService
+        .initialize()
+        .then((_) {
+          widget.onReady?.call();
+        })
+        .catchError((error) {
+          log('HealthService initialization failed: $error');
+          // The onReady callback is not an indicator of success state, just a signal that the widget is ready.
+          // This can be used to to indicate to other widgets that require permission that they can now check permissions
+          // since you can't simultaneously request many permissions at once.
+          widget.onReady?.call();
+        });
   }
 
   @override

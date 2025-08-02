@@ -113,9 +113,10 @@ class VoiceChatPipeline {
 
       // Process all but the last, which might be incomplete.
       while (potentialReadableChunks.length > 1) {
-        final sentence = potentialReadableChunks.removeAt(0).removeEmojis().trim();
+        // Remove emojis and "*#" markdown syntax
+        final sentence = potentialReadableChunks.removeAt(0).removeEmojis().replaceAll(RegExp('[*#]'), '').trim();
         if (sentence.isNotEmpty) {
-          log('Detected sentence: $sentence');
+          log('Detected sentence: $sentence | length: ${sentence.length}');
           await _generateSpeech(sentence);
         }
       }
@@ -126,7 +127,7 @@ class VoiceChatPipeline {
 
     // Now the stream is done — process any remaining sentence
     if (sentenceBuffer.isNotEmpty) {
-      log('Remaining sentence: $sentenceBuffer');
+      log('Remaining sentence: $sentenceBuffer | length: ${sentenceBuffer.length}');
       await _generateSpeech(sentenceBuffer, isLastInCurrentTurn: true);
     } else {
       // Use _asyncLock to make sure we start listening to the user after the last tts task is complete.

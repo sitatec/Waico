@@ -24,7 +24,7 @@
         "--dart-define",
         "ENV=test",
         "--dart-define",
-        "MODELS_DOWNLOAD_BASE_URL=http://10.97.59.170:8011", // Use your own  IP
+        "MODELS_DOWNLOAD_BASE_URL=http://10.59.179.170:8011", // Use your own  IP
       ]
     },
     {
@@ -48,7 +48,7 @@
         "--dart-define",
         "ENV=profile",
         "--dart-define",
-        "MODELS_DOWNLOAD_BASE_URL=http://10.97.59.170:8011", // Use your own  IP
+        "MODELS_DOWNLOAD_BASE_URL=http://10.59.179.170:8011", // Use your own  IP
       ]
     },
     {

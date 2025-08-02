@@ -59,6 +59,9 @@ class UserSpeechListener {
 
   final List<Float32List> _speechBuffer = [];
 
+  /// Buffer for raw audio data to accumulate frames before sending to VAD
+  final List<double> _audioBuffer = [];
+
   /// Stream controller for complete speech utterances.
   final StreamController<Float32List> _speechController = StreamController<Float32List>.broadcast();
 
@@ -111,7 +114,7 @@ class UserSpeechListener {
 
   Future<String> _loadVadModelFromAssets() async {
     final dir = await getApplicationDocumentsDirectory();
-    final modelName = 'silero_vad_v5.onnx';
+    final modelName = 'silero_vad.onnx';
     final modelFile = File('${dir.path}/$modelName');
 
     if (!await modelFile.exists()) {
@@ -127,6 +130,8 @@ class UserSpeechListener {
   Future<void> dispose() async {
     _vad.free();
     _isInitialized = false;
+    _speechBuffer.clear();
+    _audioBuffer.clear();
     await _speechController.close();
     await _recordingStreamSubscription?.cancel();
   }
@@ -174,6 +179,7 @@ class UserSpeechListener {
   Future<void> pause() async {
     _isPaused = true;
     _speechBuffer.clear();
+    _audioBuffer.clear();
     await _audioRecorder.pause();
   }
 
@@ -184,13 +190,30 @@ class UserSpeechListener {
 
   /// Process audio data from bytes.
   Future<void> _processAudioData(Uint8List audioBytes) async {
-    _vad.acceptWaveform(_convertPcm16ToFloat32(audioBytes));
+    // Convert PCM16 to Float32 and add to buffer
+    final Float32List audioSamples = _convertPcm16ToFloat32(audioBytes);
+    _audioBuffer.addAll(audioSamples);
 
-    while (!_vad.isEmpty() && !_isPaused) {
-      _speechBuffer.add(_vad.front().samples);
-      _vad.pop();
+    // Process audio in chunks of windowFrameCount
+    while (_audioBuffer.length >= windowFrameCount && !_isPaused) {
+      // Extract a window of audio data
+      final Float32List windowData = Float32List.fromList(_audioBuffer.take(windowFrameCount).toList());
+
+      // Remove processed samples from buffer
+      _audioBuffer.removeRange(0, windowFrameCount);
+
+      // Send window to VAD
+      _vad.acceptWaveform(windowData);
+
+      // Process any speech segments detected by VAD
+      while (!_vad.isEmpty() && !_isPaused) {
+        _speechBuffer.add(_vad.front().samples);
+        _vad.pop();
+      }
     }
-    if (_speechBuffer.isNotEmpty) {
+
+    // Emit speech when buffer is complete and VAD is not currently detecting speech
+    if (_speechBuffer.isNotEmpty && !_vad.isDetected()) {
       if (_speechBuffer.length == 1) {
         _speechController.add(_speechBuffer.first);
       } else {

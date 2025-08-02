@@ -8,7 +8,7 @@ import 'package:waico/core/widgets/health_dashboard.dart';
 import 'package:waico/core/widgets/upcoming_event_card.dart';
 import 'package:waico/generated/locale_keys.g.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   static const features = <Map<String, dynamic>>[
     {
       'title': LocaleKeys.home_features_meditation,
@@ -35,6 +35,13 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool healthDashboardReady = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -48,18 +55,29 @@ class HomePage extends StatelessWidget {
               expandedTitleScale: 1.2,
               background: ClipRRect(
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-                child: const HealthDashboard(),
+                child: HealthDashboard(
+                  onReady: () {
+                    setState(() {
+                      healthDashboardReady = true;
+                    });
+                  },
+                ),
               ),
             ),
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            sliver: SliverToBoxAdapter(child: UpcomingEventCard()),
+            sliver: SliverToBoxAdapter(
+              // Both the HealthDashboard and UpcomingEventCard request permissions, and since only one permission
+              // can be requested at a time, we wait for the HealthDashboard to be ready. May be it would be better to
+              // centralize the permission request logic.
+              child: healthDashboardReady ? UpcomingEventCard() : Center(child: CircularProgressIndicator()),
+            ),
           ),
           SliverPadding(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 100),
             sliver: SliverGrid.builder(
-              itemCount: features.length,
+              itemCount: HomePage.features.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
@@ -67,7 +85,7 @@ class HomePage extends StatelessWidget {
                 childAspectRatio: 1.3,
               ),
               itemBuilder: (context, index) {
-                final feature = features[index];
+                final feature = HomePage.features[index];
                 return FeatureCard(
                   title: (feature['title'] as String).tr(),
                   color: feature['color'] as Color,

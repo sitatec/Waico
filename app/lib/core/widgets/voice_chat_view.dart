@@ -21,7 +21,7 @@ class VoiceChatView extends StatefulWidget {
 class _VoiceChatViewState extends State<VoiceChatView> {
   bool _chatStarted = false;
   final _imagePicker = ImagePicker();
-  final _pageController = PageController(viewportFraction: 0.9);
+  final _pageController = PageController(viewportFraction: 0.85);
 
   /// A history of what the AI has displayed to the user and what the user has sent to the AI.
   final _displayHistory = <Widget>[];
@@ -46,15 +46,19 @@ class _VoiceChatViewState extends State<VoiceChatView> {
     if (lostData.files != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         for (var image in lostData.files!) {
-          displayImage(image);
+          _displayImage(image);
         }
       });
     }
   }
 
-  void displayImage(XFile image) {
+  void _displayImage(XFile image) {
     setState(() {
-      _displayHistory.add(Image.file(File(image.path), fit: BoxFit.contain, width: double.infinity));
+      _displayHistory.add(
+        Card(
+          child: Image.file(File(image.path), fit: BoxFit.contain, width: double.infinity),
+        ),
+      );
       _pageController.animateToPage(
         _displayHistory.length - 1,
         duration: const Duration(milliseconds: 300),
@@ -91,7 +95,8 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                       onTap: () async {
                         final image = await _pickImage();
                         if (image != null) {
-                          displayImage(image);
+                          widget.voiceChatPipeline.addImages([image]);
+                          _displayImage(image);
                         }
                       },
                       child: Column(
