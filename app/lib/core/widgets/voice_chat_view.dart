@@ -22,6 +22,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   bool _chatStarted = false;
   final _imagePicker = ImagePicker();
   final _pageController = PageController(viewportFraction: 0.85);
+  String _aiSpeechState = "Loading";
 
   /// A history of what the AI has displayed to the user and what the user has sent to the AI.
   final _displayHistory = <Widget>[];
@@ -29,6 +30,11 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   @override
   void initState() {
     super.initState();
+    widget.voiceChatPipeline.aiSpeechStateStream.listen((state) {
+      setState(() {
+        _aiSpeechState = state;
+      });
+    });
     widget.voiceChatPipeline.startChat(voice: widget.voice).then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {
@@ -76,6 +82,8 @@ class _VoiceChatViewState extends State<VoiceChatView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Stack(
       children: [
         Column(
@@ -102,12 +110,12 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_a_photo, size: 40, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.add_a_photo, size: 40, color: theme.colorScheme.primary),
                           const SizedBox(height: 16),
                           Text(
                             "Show an image to Waico",
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -119,9 +127,54 @@ class _VoiceChatViewState extends State<VoiceChatView> {
             ),
             Padding(
               padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: 125, maxWidth: 350),
-                child: AIVoiceWaveform(loudnessStream: widget.voiceChatPipeline.aiSpeechLoudnessStream),
+              child: GestureDetector(
+                onLongPressStart: (_) {
+                  widget.voiceChatPipeline.hold();
+                  setState(() {
+                    _aiSpeechState += " (On Hold)";
+                  });
+                },
+                onLongPressEnd: (_) {
+                  widget.voiceChatPipeline.unHold();
+                  setState(() {
+                    _aiSpeechState = _aiSpeechState.replaceAll(" (On Hold)", "");
+                  });
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Stack(
+                        alignment: AlignmentDirectional.bottomCenter,
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: 125, maxWidth: 350),
+                            child: AIVoiceWaveform(loudnessStream: widget.voiceChatPipeline.aiSpeechLoudnessStream),
+                          ),
+
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(8),
+                                topRight: Radius.circular(8),
+                              ),
+                            ),
+                            child: Text(_aiSpeechState, style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Press and hold to speak long messages",
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

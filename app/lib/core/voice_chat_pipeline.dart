@@ -21,11 +21,17 @@ class VoiceChatPipeline {
   StreamSubscription? _userSpeechStreamSubscription;
   bool _hasChatEnded = false;
   bool _isBusy = false;
+  bool _isOnHold = false;
+  String _onHoldBuffer = "";
+  final _aiSpeechState = StreamController<String>.broadcast();
   // Used wait until the current TTS task complete before starting the next one.
   final _asyncLock = Lock();
 
   /// Can be used to animate the AI speech waves widget (value range 0-1)
   Stream<double> get aiSpeechLoudnessStream => _audioStreamPlayer.loudnessStream;
+
+  /// Stream of AI speech state (e.g. "thinking", "speaking", "listening", "Remembering", "Using x tool").
+  Stream<String> get aiSpeechStateStream => _aiSpeechState.stream;
 
   /// `true` if the pipeline is currently busy (typically when processing a message from use or system).
   /// This can be used to prevent conflicts, or overload the AI agent with many messages, and in an unordered manner.
@@ -77,6 +83,21 @@ class VoiceChatPipeline {
     return true;
   }
 
+  /// Enter "on hold" state, which means the AI is waiting for the user to finish their speech.
+  void hold() {
+    _isOnHold = true;
+  }
+
+  /// Exit "on hold" state, which means the AI is ready to process the next user message.
+  Future<void> unHold() async {
+    _isOnHold = false;
+    if (_onHoldBuffer.isNotEmpty) {
+      final userMessage = _onHoldBuffer;
+      _onHoldBuffer = "";
+      await _onMessageReceived(userMessage);
+    }
+  }
+
   Future<void> endChat() async {
     if (_hasChatEnded) return;
     _hasChatEnded = true;
@@ -88,6 +109,10 @@ class VoiceChatPipeline {
     // TODO: Check for interruption and notify the user that interruption is not supported yet, they need to wait for
     // the ai speech to finish
     if (_hasChatEnded) return;
+    if (_isOnHold) {
+      _onHoldBuffer += text;
+      return;
+    }
     _enterBusyState();
 
     final attachments = await _pendingImages.map((imageFile) => ImageFileAttachment.fromFile(imageFile)).wait;
@@ -142,6 +167,7 @@ class VoiceChatPipeline {
   Future<void> startListeningToUser() async {
     await _audioStreamPlayer.pause();
     await _userSpeechToTextListener.resume();
+    _aiSpeechState.add("🦻Listening");
   }
 
   Future<void> stopListeningToUser() async {
@@ -151,12 +177,15 @@ class VoiceChatPipeline {
 
   Future<void> _enterBusyState() async {
     _isBusy = true;
-    await stopListeningToUser(); // Stop listening to the user since interruption is not supported yet.
+    // Stop listening to the user since interruption is not supported yet.
+    await stopListeningToUser();
+    // For now only "Speaking" state is emitted, when the AI is generating.
+    _aiSpeechState.add("🗣️ Speaking");
   }
 
   Future<void> _exitBusyState() async {
     _isBusy = false;
-    await startListeningToUser(); // Start listening again when the last AI speech is done.
+    await startListeningToUser();
   }
 
   /// Generate and queue TTS audio

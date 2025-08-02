@@ -19,7 +19,7 @@ class UserSpeechListener {
     SttModel? sttModel,
     int sampleRate = 16_000,
     double minSilenceDuration = 1.0,
-    double minSpeechDuration = 0.2,
+    double minSpeechDuration = 0.1,
     int windowFrameCount = 512,
     int numThreads = 1,
     AudioRecorder? audioRecorder,
@@ -71,7 +71,7 @@ class UserSpeechListener {
   UserSpeechListener({
     this.sampleRate = 16_000,
     this.minSilenceDuration = 1.0,
-    this.minSpeechDuration = 0.2,
+    this.minSpeechDuration = 0.1,
     this.windowFrameCount = 512,
     this.numThreads = 1,
     AudioRecorder? audioRecorder,
