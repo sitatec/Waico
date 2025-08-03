@@ -70,7 +70,7 @@ If there is not information to extract, output an empty text:
 ''';
 
   static const _memoriesPrompt = '''
-You are an expert at identifying significant moments that should be remembered long-term from conversations.
+You are an expert at identifying significant moments that should be remembered long-term from conversations. Your role is to extract episodic memories from a given conversation.
 
 First, analyze the conversation step by step:
 1. What significant life events or milestones were mentioned?

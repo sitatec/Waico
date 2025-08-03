@@ -33,7 +33,7 @@ class PhoneCallTool extends Tool {
       'User: My therapist phone number is +1234567890, can you call him?\n'
       'Assistant: Sure, I will call your therapist now.'
       '\n```tool_call\nmake_phone_call(phone_number="+1234567890")\n```\n\n'
-      'User:```tool_output\nFrom make_phone_call:\nPhone call initiated successfully.\n```\n\n'
+      'Tool:```tool_output\nFrom make_phone_call:\nPhone call initiated successfully.\n```\n\n'
       "If you don't know the phone number, ask the user to provide it:\n"
       'User: Can you call my gym coach?\n'
       'Assistant: Sure, please provide me with your coach phone number so I can call them for you.';
@@ -67,7 +67,11 @@ class ReportTool extends Tool {
       'System: The user doctor email is alex@example.com\n'
       'User: Can you send a report of my wellbeing to my doctor?\n'
       "Assistant: Okay, one moment please, I'm sending the report."
-      '```tool_call\nsend_report_to(recipient_email="alex@example.com")\n```\n';
+      '```tool_call\nsend_report_to(recipient_email="alex@example.com")\n```\n'
+      'Tool: ```tool_output\nFrom send_report_to:\nReport sent successfully\n```\n\n'
+      'If you don\'t know the recipient email, ask the user to provide it:\n'
+      'User: Can you send a report of my wellbeing to my therapist?\n'
+      'Assistant: Sure, please provide me with your therapist email so I can send the report.\n';
 
   @override
   Future<String> call(Map<String, dynamic> arguments) async {
@@ -126,12 +130,12 @@ class SearchMemoryTool extends Tool {
   String get usageExample =>
       'User: That day when we talked about my issues with my girlfriend, it helped me a lot.\n'
       'Assistant: \n```tool_call\nsearch_memory(query="last vacation")\n```\n'
-      'User: ```tool_output\nFrom search_memory:\nThe user mentioned trust issues with their girlfriend during their last vacation. It...\n```\n'
+      'Tool: ```tool_output\nFrom search_memory:\nThe user mentioned trust issues with their girlfriend during their last vacation. It...\n```\n'
       'Assistant: Ah, yes, I remember. The trust issues during your vacation, right?\n\n'
       "If you don't remember, let the user know:"
       'User: Do you remember the time I went to a the wrong restaurant for an important meeting?\n'
       'Assistant: Hmm, let me think. ```tool_call\nsearch_memory(query="The user went to the wrong restaurant for an important meeting")\n```\n'
-      'User: ```tool_output\nFrom search_memory:\nNo relevant memories found for the query: The user went to the wrong restaurant for an important meeting\n```\n'
+      'Tool: ```tool_output\nFrom search_memory:\nNo relevant memories found for the query: The user went to the wrong restaurant for an important meeting\n```\n'
       'Assistant: Sorry, I don\'t remember that incident. Could you please remind me about it?';
 
   @override
@@ -260,31 +264,46 @@ class DisplayUserProgressTool extends Tool {
 
   @override
   String get definition =>
-      'display_user_progress(required String period):\nDisplay a Line Chart of the user\'s daily data for a given time period, along with the total for that period.\nThe period parameter must be one of: LAST_7_DAYS or LAST_30_DAYS.';
+      'display_user_progress(required int days):\nDisplay a Line Chart of the user\'s daily data for a given number of days, along with the total for that period.\nThe days parameter should be a positive integer representing the number of days to display (e.g., 7 for last 7 days, 30 for last 30 days).';
 
   @override
   String get usageExample =>
       'User: How is my progress in the last 7 days?\n'
       'Assistant: Let me show you your progress chart for the last 7 days.\n'
-      '```tool_call\ndisplay_user_progress(period="LAST_7_DAYS")\n```\n\n';
+      '```tool_call\ndisplay_user_progress(days=7)\n```\n\n'
+      'User: Show me my progress for the last 2 weeks.\n'
+      'Assistant: I\'ll display your progress chart for the last 14 days.\n'
+      '```tool_call\ndisplay_user_progress(days=14)\n```\n\n';
 
   @override
   FutureOr<String> call(Map<String, dynamic> arguments) async {
     try {
       // Validate required parameters and return an error message if any are missing
-      if (!arguments.containsKey("period")) {
-        return 'Error: Missing required parameters for displaying user progress.';
+      if (!arguments.containsKey("days")) {
+        return 'Error: Missing required parameter "days" for displaying user progress.';
       }
 
-      final String period = arguments["period"].toUpperCase();
+      final dynamic daysArg = arguments["days"];
+      int days;
 
-      // Validate period for progress display (different from get_health_data)
-      if (period != 'LAST_7_DAYS' && period != 'LAST_30_DAYS') {
-        return 'Error: Invalid period. Must be either LAST_7_DAYS or LAST_30_DAYS.';
+      // Handle both int and String inputs for days
+      if (daysArg is int) {
+        days = daysArg;
+      } else if (daysArg is String) {
+        try {
+          days = int.parse(daysArg);
+        } catch (e) {
+          return 'Error: "days" parameter must be a valid integer.';
+        }
+      } else {
+        return 'Error: "days" parameter must be an integer.';
       }
+      // Validate that days is a positive number
+      if (days <= 0) return 'Error: "days" parameter must be a positive integer greater than 0.';
+      // Set reasonable limits to prevent performance issues
+      if (days > 365) return 'Error: "days" parameter cannot exceed 365 days.';
 
       final endTime = DateTime.now();
-      final days = period == 'LAST_7_DAYS' ? 7 : 30;
       final startTime = endTime.subtract(Duration(days: days));
 
       // Get health data for the specified range
@@ -310,7 +329,7 @@ class DisplayUserProgressTool extends Tool {
       displayHealthData(chartData);
 
       // Return success message with summary
-      final totalsSummary = _formatTotalsSummary(totals, period);
+      final totalsSummary = _formatTotalsSummary(totals, days);
       return 'Successfully displayed progress chart. $totalsSummary';
     } catch (e, s) {
       log('Error while handling DisplayUserProgressTool.call: $e', error: e, stackTrace: s);
@@ -459,7 +478,7 @@ class DisplayUserProgressTool extends Tool {
   }
 
   /// Format the totals summary for all health data types
-  String _formatTotalsSummary(Map<HealthDataType, double> totals, String period) {
+  String _formatTotalsSummary(Map<HealthDataType, double> totals, int days) {
     final List<String> formattedTotals = [];
 
     if (totals[HealthDataType.STEPS]! > 0) {
@@ -482,9 +501,8 @@ class DisplayUserProgressTool extends Tool {
       return 'No data available for this period.';
     }
 
-    // E.g: LAST_7_DAYS => the last 7 days
-    period = "the ${period.toLowerCase().replaceAll('_', ' ')}";
-    return 'Totals for $period:\n${formattedTotals.join('\n')}.';
+    final periodText = days == 1 ? "the last day" : "the last $days days";
+    return 'Totals for $periodText:\n${formattedTotals.join('\n')}.';
   }
 
   /// Get appropriate color for different health data types
