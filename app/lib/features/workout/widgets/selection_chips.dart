@@ -1,4 +1,6 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class SelectionChips extends StatelessWidget {
   final List<String> options;
@@ -24,7 +26,7 @@ class SelectionChips extends StatelessWidget {
 
     if (options.isEmpty) {
       return Text(
-        emptyMessage ?? 'No options available',
+        emptyMessage ?? LocaleKeys.common_no_options_available.tr(),
         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
       );
     }

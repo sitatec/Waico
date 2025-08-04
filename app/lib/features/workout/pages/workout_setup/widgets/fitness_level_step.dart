@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/setup_card.dart';
 import 'package:waico/features/workout/widgets/selection_chips.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class FitnessLevelStep extends StatefulWidget {
   final WorkoutSetupData data;
@@ -14,17 +16,30 @@ class FitnessLevelStep extends StatefulWidget {
 }
 
 class _FitnessLevelStepState extends State<FitnessLevelStep> {
-  final List<String> _fitnessLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-
-  final List<String> _experienceLevels = [
-    'Never exercised regularly',
-    'Exercise occasionally',
-    'Exercise regularly (1-2 years)',
-    'Exercise regularly (3+ years)',
-    'Professional athlete',
+  final List<String> _fitnessLevels = [
+    LocaleKeys.workout_setup_fitness_level_beginner.tr(),
+    LocaleKeys.workout_setup_fitness_level_intermediate.tr(),
+    LocaleKeys.workout_setup_fitness_level_advanced.tr(),
+    LocaleKeys.workout_setup_fitness_level_expert.tr(),
   ];
 
-  final List<String> _weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  final List<String> _experienceLevels = [
+    LocaleKeys.workout_setup_fitness_level_never_exercised.tr(),
+    LocaleKeys.workout_setup_fitness_level_exercise_occasionally.tr(),
+    LocaleKeys.workout_setup_fitness_level_exercise_1_2_years.tr(),
+    LocaleKeys.workout_setup_fitness_level_exercise_3_plus_years.tr(),
+    LocaleKeys.workout_setup_fitness_level_professional_athlete.tr(),
+  ];
+
+  final List<String> _weekDays = [
+    LocaleKeys.workout_setup_fitness_level_monday.tr(),
+    LocaleKeys.workout_setup_fitness_level_tuesday.tr(),
+    LocaleKeys.workout_setup_fitness_level_wednesday.tr(),
+    LocaleKeys.workout_setup_fitness_level_thursday.tr(),
+    LocaleKeys.workout_setup_fitness_level_friday.tr(),
+    LocaleKeys.workout_setup_fitness_level_saturday.tr(),
+    LocaleKeys.workout_setup_fitness_level_sunday.tr(),
+  ];
 
   List<String> get _selectedWeekDays => widget.data.selectedWeekDays;
 
@@ -46,12 +61,17 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
 
     if (selectedDays <= 2) return '';
 
-    if ((experience == 'Never exercised regularly' || experience == 'Exercise occasionally') && selectedDays >= 4) {
-      return 'For your selected experience, we recommend starting with 2-3 days per week to avoid overtraining.';
-    } else if (experience == 'Exercise regularly (1-2 years)' && selectedDays >= 5) {
-      return 'Make sure to include enough rest days for recovery.';
-    } else if (experience == 'Exercise regularly (3+ years)' && selectedDays == 7) {
-      return 'Daily workouts require careful planning. Make sure to vary intensity and include recovery activities.';
+    final neverExercised = LocaleKeys.workout_setup_fitness_level_never_exercised.tr();
+    final exerciseOccasionally = LocaleKeys.workout_setup_fitness_level_exercise_occasionally.tr();
+    final exercise1to2Years = LocaleKeys.workout_setup_fitness_level_exercise_1_2_years.tr();
+    final exercise3PlusYears = LocaleKeys.workout_setup_fitness_level_exercise_3_plus_years.tr();
+
+    if ((experience == neverExercised || experience == exerciseOccasionally) && selectedDays >= 4) {
+      return LocaleKeys.workout_setup_fitness_level_warning_beginner_overtraining.tr();
+    } else if (experience == exercise1to2Years && selectedDays >= 5) {
+      return LocaleKeys.workout_setup_fitness_level_warning_intermediate_recovery.tr();
+    } else if (experience == exercise3PlusYears && selectedDays == 7) {
+      return LocaleKeys.workout_setup_fitness_level_warning_advanced_daily.tr();
     }
 
     return '';
@@ -67,7 +87,7 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tell us about your fitness level',
+            LocaleKeys.workout_setup_fitness_level_title.tr(),
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -77,7 +97,7 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
           const SizedBox(height: 8),
 
           Text(
-            'This helps us recommend the right intensity and type of workouts.',
+            LocaleKeys.workout_setup_fitness_level_description.tr(),
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
 
@@ -85,13 +105,13 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
 
           // Current Fitness Level
           SetupCard(
-            title: 'Current Fitness Level',
+            title: LocaleKeys.workout_setup_fitness_level_current_fitness_level.tr(),
             icon: Icons.fitness_center,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How would you rate your current fitness?',
+                  LocaleKeys.workout_setup_fitness_level_current_fitness_question.tr(),
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
@@ -110,13 +130,13 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
 
           // Experience Level
           SetupCard(
-            title: 'Exercise Experience',
+            title: LocaleKeys.workout_setup_fitness_level_exercise_experience.tr(),
             icon: Icons.history,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'What\'s your exercise background?',
+                  LocaleKeys.workout_setup_fitness_level_exercise_background_question.tr(),
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
@@ -135,13 +155,13 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
 
           // Workout Days
           SetupCard(
-            title: 'Workout Days',
+            title: LocaleKeys.workout_setup_fitness_level_workout_days.tr(),
             icon: Icons.calendar_today,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Which days would you like to work out?',
+                  LocaleKeys.workout_setup_fitness_level_workout_days_question.tr(),
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
@@ -168,7 +188,12 @@ class _FitnessLevelStepState extends State<FitnessLevelStep> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${_selectedWeekDays.length} day${_selectedWeekDays.length == 1 ? '' : 's'} selected',
+                            LocaleKeys.workout_setup_fitness_level_days_selected.tr(
+                              namedArgs: {
+                                'count': _selectedWeekDays.length.toString(),
+                                'plural': _selectedWeekDays.length == 1 ? '' : 's',
+                              },
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
                           ),
                         ),

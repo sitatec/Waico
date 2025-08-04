@@ -41,14 +41,26 @@
       "all_exercises_completed": "All exercises completed! Great job!",
       "week_nav_title": "Week",
       "weeks_count": "{count} weeks",
-      "workouts_per_week_count": "{count}x/week"
+      "workouts_per_week_count": "{count}x/week",
+      "confirm_deletion_title": "Confirm Deletion",
+      "confirm_deletion_message": "Are you sure you want to delete this workout plan? This action cannot be undone.\n\nYou can always generate a new plan.",
+      "session_duration": "{duration} min"
     },
     "setup": {
+      "title": "Workout Setup",
+      "step_titles": {
+        "physical_stats": "Physical Stats",
+        "fitness_level": "Fitness Level",
+        "goals": "Your Goals",
+        "preferences": "Preferences"
+      },
       "complete_title": "Setup Complete!",
       "complete_message": "Your workout profile has been saved successfully!",
       "failed_save": "Failed to save workout setup: {error}",
       "continue": "Continue",
       "previous": "Previous",
+      "next": "Next",
+      "finish": "Finish",
       "generate_plan": "Generate My Workout Plan",
       "start_training": "Start Training",
       "update_profile": "Update Workout Profile",
@@ -56,7 +68,104 @@
       "fitness_level_label": "Fitness Level: {level}",
       "frequency_label": "Frequency: {frequency}x/week",
       "duration_label": "Duration: {duration} minutes",
-      "estimated_duration": "{duration} min"
+      "estimated_duration": "{duration} min",
+      "your_bmi": "Your BMI: {bmi}",
+      "data_saved_message": "Your data has been saved locally and synchronized with Health Connect.",
+      "physical_stats": {
+        "title": "Let's start with your basic info",
+        "description": "This information helps us create a personalized workout plan for you.",
+        "physical_measurements": "Physical Measurements",
+        "weight": "Weight",
+        "height": "Height",
+        "age": "Age",
+        "prefer_not_to_say": "Prefer not to say",
+        "bmi_label": "BMI: {bmi}"
+      },
+      "fitness_level": {
+        "title": "Tell us about your fitness level",
+        "description": "This helps us recommend the right intensity and type of workouts.",
+        "current_fitness_level": "Current Fitness Level",
+        "current_fitness_question": "How would you rate your current fitness?",
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced",
+        "expert": "Expert",
+        "exercise_experience": "Exercise Experience",
+        "exercise_background_question": "What's your exercise background?",
+        "never_exercised": "Never exercised regularly",
+        "exercise_occasionally": "Exercise occasionally",
+        "exercise_1_2_years": "Exercise regularly (1-2 years)",
+        "exercise_3_plus_years": "Exercise regularly (3+ years)",
+        "professional_athlete": "Professional athlete",
+        "workout_days": "Workout Days",
+        "workout_days_question": "Which days would you like to work out?",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday",
+        "days_selected": "{count} day{plural} selected",
+        "warning_beginner_overtraining": "For your selected experience, we recommend starting with 2-3 days per week to avoid overtraining.",
+        "warning_intermediate_recovery": "Make sure to include enough rest days for recovery.",
+        "warning_advanced_daily": "Daily workouts require careful planning. Make sure to vary intensity and include recovery activities."
+      },
+      "goals": {
+        "title": "What are your fitness goals?",
+        "description": "Setting clear goals helps us create a plan that motivates and guides you.",
+        "primary_goal": "Primary Goal",
+        "popular_goals": "Popular goals",
+        "main_fitness_goal": "Your main fitness goal",
+        "main_fitness_goal_hint": "What do you want to achieve?",
+        "target_weight": "Target Weight",
+        "target_weight_optional": "Target weight (optional)",
+        "target_weight_hint": "Enter your target weight",
+        "additional_goals": "Additional Goals",
+        "additional_goals_description": "What else would you like to improve? (Optional)",
+        "goals_selected": "{count} additional goal{plural} selected",
+        "goal_lose": "Goal: Lose {weight} kg",
+        "goal_gain": "Goal: Gain {weight} kg",
+        "lose_weight": "Lose weight",
+        "build_muscle": "Build muscle",
+        "improve_fitness": "Improve fitness",
+        "increase_strength": "Increase strength",
+        "better_health": "Better health",
+        "train_for_event": "Train for event",
+        "stay_active": "Stay active",
+        "stress_relief": "Stress relief",
+        "lose_body_fat": "Lose body fat",
+        "build_lean_muscle": "Build lean muscle",
+        "improve_cardiovascular": "Improve cardiovascular health",
+        "increase_flexibility": "Increase flexibility",
+        "better_posture": "Better posture",
+        "more_energy": "More energy",
+        "better_sleep": "Better sleep",
+        "reduce_stress": "Reduce stress",
+        "improve_mood": "Improve mood",
+        "build_confidence": "Build confidence",
+        "train_for_marathon": "Train for marathon",
+        "prepare_for_competition": "Prepare for competition"
+      },
+      "preferences": {
+        "title": "Let's customize your experience",
+        "description": "These preferences help us recommend workouts that fit your lifestyle.",
+        "workout_duration": "Workout Duration",
+        "workout_duration_question": "How long would you prefer your workouts to be?",
+        "15_min": "15 min",
+        "1_hours": "1 hours",
+        "setup_summary": "Setup Summary",
+        "physical_stats": "Physical Stats",
+        "fitness_level": "Fitness Level",
+        "workout_frequency": "Workout Frequency",
+        "primary_goal": "Primary Goal",
+        "preferred_duration": "Preferred Duration",
+        "not_completed": "Not completed",
+        "not_selected": "Not selected",
+        "not_specified": "Not specified",
+        "frequency_per_week": "{count}x per week: {days}",
+        "weight_height_format": "{weight} kg, {height} cm"
+      }
     },
     "session": {
       "exercise_count": "{count} Exercises",
@@ -82,13 +191,158 @@
         "other": "{count} sessions"
       },
       "generating_sessions": "Generating sessions...",
-      "raw_text_title": "Raw Text Generation"
+      "raw_text_title": "Raw Text Generation",
+      "exercises": "Exercises: {exercises}",
+      "failed_to_parse": "Failed to parse workout plan structured text response",
+      "failed_to_generate": "Failed to generate workout plan: {error}",
+      "base_prompt": "Create a personalized workout plan based on the following user data:",
+      "physical_profile": "Physical Profile:",
+      "age_label": "Age: {age} years",
+      "gender_label": "Gender: {gender}",
+      "weight_label": "Weight: {weight} kg",
+      "height_label": "Height: {height} cm",
+      "bmi_label": "BMI: {bmi}",
+      "fitness_background": "Fitness Background:",
+      "current_fitness_level": "Current fitness level: {level}",
+      "exercise_experience": "Exercise experience: {experience}",
+      "weekly_workout_frequency": "Weekly workout frequency: {days} ({count} sessions per week)",
+      "preferred_workout_duration": "Preferred workout duration: {duration} minutes",
+      "goals_and_preferences": "Goals and Preferences:",
+      "primary_goal": "Primary goal: {goal}",
+      "target_weight": "Target weight: {weight}",
+      "specific_goals": "Specific goals: {goals}",
+      "plan_requirements_intro": "Please generate a comprehensive workout plan that:",
+      "plan_requirement_1": "1. Matches the user's fitness level and experience",
+      "plan_requirement_2": "2. Aligns with their specific goals and preferences",
+      "plan_requirement_3": "3. Fits within their time constraints",
+      "plan_requirement_4": "4. Uses ONLY the allowed exercises above",
+      "plan_requirement_5": "4. Uses the structured text format specified above",
+      "system_prompt": "You are an expert personal trainer and exercise physiologist with over 15 years of experience designing customized workout programs. You specialize in creating safe, effective, and sustainable bodyweight workout plans tailored to individual goals, and workout experience levels.\\n\\nYour expertise includes:\\n- Exercise physiology and biomechanics\\n- Adaptation strategies for different fitness levels (beginner, intermediate, advanced)\\n- Providing rest periods appropriate for exercise intensity\\n\\n\\n**STRUCTURED TEXT FORMAT (use EXACTLY this format):**\\n\\nPLAN_NAME: [Short, motivating name for the workout plan]\\nDESCRIPTION: [Brief overview of the plan's approach and benefits (1-2 sentences)]\\nDIFFICULTY: [Beginner/Intermediate/Advanced]\\nFOCUS: [Main focus for this week]\\n\\nSESSION_NAME: [Day - Body part, e.g: Monday - Full Body]\\nSESSION_TYPE: [cardio/strength/endurance]\\nDURATION: [Duration in minutes]\\n\\nEXERCISE: [Exercise name from allowed list]\\nTARGET_MUSCLES: [muscle1, muscle2, muscle3]\\nLOAD_TYPE: [reps/duration]\\nSETS: [number]\\nREPS: [number, only for reps-based exercises]\\nDURATION: [seconds, only for duration-based exercises]\\nREST: [rest duration in seconds]\\n\\n[Repeat EXERCISE block for each exercise in the session]\\n[Repeat SESSION_NAME block for each session in the week]\\n\\nIMPORTANT RULES:\\n- No equipment available, use only bodyweight exercises from the allowed exercises list\\n- For exercises with (Left) and (Right) variants, the 2 sides must always follow each other - they should not be used separately or have another exercise in between them. E.g Side Plank (Right) must always be followed by Side Plank (Left).\\n- **ALLOWED EXERCISES (use ONLY these exercises):** \\n  - Reps-based exercises:\\n    - Push-Up\\n    - Knee Push-Up\\n    - Wall Push-Up\\n    - Incline Push-Up\\n    - Decline Push-Up\\n    - Diamond Push-Up\\n    - Wide Push-Up\\n    - Squat\\n    - Split Squat (Right)\\n    - Split Squat (Left)\\n    - Sumo Squat\\n    - Crunch\\n    - Reverse Crunch\\n    - Double Crunch\\n    - Superman\\n    - Superman Pulse\\n\\n  - Duration-based exercises:\\n    - Wall Sit\\n    - Plank\\n    - Side Plank (Right)\\n    - Side Plank (Left)\\n    - Jumping Jacks\\n    - High Knees\\n    - Mountain Climbers\\n\\n**EXAMPLE 1:**\\nPLAN_NAME: Full Body Strength Builder\\nDESCRIPTION: A comprehensive bodyweight program focusing on building strength across all major muscle groups. Perfect for developing functional fitness and muscle endurance.\\nDIFFICULTY: Intermediate\\nFOCUS: Foundation building and strength development\\n\\nSESSION_NAME: Monday - Upper Body\\nSESSION_TYPE: strength\\nDURATION: 30\\n\\nEXERCISE: Push-Up\\nTARGET_MUSCLES: chest, shoulders, triceps\\nLOAD_TYPE: reps\\nREPS: 12\\nSETS: 3\\nREST: 60\\n\\nEXERCISE: Plank\\nTARGET_MUSCLES: core, shoulders\\nLOAD_TYPE: duration\\nDURATION: 30\\nSETS: 3\\nREST: 45\\n\\nEXERCISE: Superman\\nTARGET_MUSCLES: back, glutes\\nLOAD_TYPE: reps\\nREPS: 15\\nSETS: 2\\nREST: 60\\n\\nSESSION_NAME: Wednesday - Lower Body\\nSESSION_TYPE: strength\\nDURATION: 25\\n\\nEXERCISE: Squat\\nTARGET_MUSCLES: quadriceps, glutes\\nLOAD_TYPE: reps\\nREPS: 15\\nSETS: 3\\nREST: 60\\n\\nEXERCISE: Split Squat (Right)\\nTARGET_MUSCLES: quadriceps, glutes\\nLOAD_TYPE: reps\\nREPS: 10\\nSETS: 2\\nREST: 30\\n\\nEXERCISE: Split Squat (Left)\\nTARGET_MUSCLES: quadriceps, glutes\\nLOAD_TYPE: reps\\nREPS: 10\\nSETS: 2\\nREST: 30",
+      "keywords": {
+        "plan_name": "PLAN_NAME:",
+        "description": "DESCRIPTION:",
+        "difficulty": "DIFFICULTY:",
+        "focus": "FOCUS:",
+        "session_name": "SESSION_NAME:",
+        "session_type": "SESSION_TYPE:",
+        "duration": "DURATION:",
+        "exercise": "EXERCISE:",
+        "target_muscles": "TARGET_MUSCLES:",
+        "load_type": "LOAD_TYPE:",
+        "sets": "SETS:",
+        "reps": "REPS:",
+        "rest": "REST:"
+      },
+      "exercise_instructions": {
+        "close_push_up": "Start in a plank with hands close together under your chest. Lower your body, keeping elbows tucked. Push back up, keeping your core tight and body in a straight line.",
+        "crunch": "Lie on your back with knees bent and feet flat. Place hands behind your head or across your chest. Engage your abs to lift your shoulders, then slowly return.",
+        "decline_push_up": "Place your feet on an elevated surface, hands on the floor slightly wider than shoulders. Lower your chest with control, then push back up, keeping a straight body.",
+        "double_crunch": "Lie on your back, hands behind your head. Simultaneously lift your shoulders and knees toward each other, engaging your entire core. Slowly return to start.",
+        "high_knee": "Stand tall and jog in place, driving your knees up toward your chest quickly. Swing your arms naturally to keep the rhythm and intensity up.",
+        "incline_push_up": "Place your hands on a sturdy elevated surface. Step your feet back into a straight plank. Lower your chest until elbows reach 90°, then press up to start.",
+        "jumping_jacks": "Begin standing tall with arms at sides. Jump while spreading legs and raising arms overhead. Jump again to return to start. Maintain a steady rhythm.",
+        "knee_push_up": "Start in a modified plank with knees on the floor and hands under shoulders. Lower your chest while keeping your hips aligned, then press back up.",
+        "mountain_climbers": "In a high plank position, drive one knee toward your chest, then quickly switch. Alternate legs at a brisk pace while keeping your core stable.",
+        "plank": "Support your body on forearms and toes, keeping your spine straight and hips level. Engage your abs and hold this steady position without sagging.",
+        "push_up": "Begin in a plank with hands under shoulders. Lower your body until your chest nearly touches the ground, then push back up in one fluid motion.",
+        "reverse_crunch": "Lie flat with legs bent and feet lifted. Curl your hips off the ground toward your chest using your lower abs, then slowly lower back down.",
+        "side_plank": "Lie on one side, stack your feet, and lift your hips off the ground using your forearm. Keep your body aligned and hold, engaging your obliques.",
+        "split_squat": "Stand in a staggered stance with one foot forward. Lower your back knee toward the floor, keeping your torso upright, then push through the front heel to rise.",
+        "squat": "Stand with feet shoulder-width apart. Push your hips back and bend your knees to lower down, keeping chest up. Press through heels to stand.",
+        "sumo_squat": "Take a wide stance with toes turned out. Lower your hips straight down until thighs are parallel to the ground. Keep your chest up and core engaged.",
+        "superman": "Lie face down with arms extended forward. Lift your arms, chest, and legs off the ground at once, hold briefly, then lower with control.",
+        "wall_pushup": "Stand a few feet from a wall and place hands at shoulder height. Bend elbows to bring your chest toward the wall, then push back to the start position.",
+        "wall_sit": "Lean against a wall and slide down until your thighs are parallel to the ground. Hold this seated position, keeping your back flat and core braced."
+      }
     },
     "exercise": {
       "sets_x_reps": "{sets} sets × {reps} reps",
       "sets_x_duration": "{sets} sets × {duration}",
       "duration_m_s": "{minutes}m {seconds}s",
-      "duration_s": "{seconds}s"
+      "duration_s": "{seconds}s",
+      "initializing_session": "Initializing workout session...",
+      "failed_initialize_session": "Failed to initialize workout session",
+      "failed_initialize_session_with_error": "Failed to initialize workout session: {error}",
+      "exercise_number": "EXERCISE {current} OF {total}",
+      "close": "CLOSE",
+      "facing_camera": "facing the camera",
+      "turned_sideways": "turned sideways to the camera",
+      "optimal_tracking_message": "Make sure you are {position} for optimal tracking.",
+      "instructions": "Instructions",
+      "no_instructions": "No instructions available for this exercise.",
+      "start_exercise": "START EXERCISE",
+      "auto_starting": "Auto-starting in {seconds}s...",
+      "rest": "REST",
+      "next_set": "Next: Set {set} - {exerciseName}",
+      "skip_rest": "SKIP REST",
+      "set_info": " - Set {current}/{total}",
+      "time_info": " | Time: {time}s",
+      "ai_feedback": {
+        "form_correction_needed": "Form Correction Needed",
+        "excellent_performance": "Excellent Performance",
+        "exercise_label": "Exercise: {exercise}",
+        "set_label": "Set: {current} out of {total}",
+        "feedback_type_label": "Feedback Type: {type}",
+        "metrics_label": "Metrics:",
+        "duration_label": "Duration: {current} out of {total} seconds",
+        "form_score_label": "Form Score: {score}",
+        "correctness_label": "Exercise Correctness Score: {score}",
+        "form_feedback_label": "Form Feedback:",
+        "recent_reps_label": "Recent Repetitions Data:",
+        "current_rep_analysis": "Current Rep Analysis:",
+        "rep_label": "Rep: {current} out of {total}",
+        "score_label": "Score: {score}",
+        "quality_label": "Quality: {quality}",
+        "rep_duration_label": "Rep Duration: {duration} seconds",
+        "rep_summary": "Rep {number}: Score {score}, Quality: {quality}, Duration: {duration} seconds"
+      },
+      "camera": {
+        "reps_label": "REPS",
+        "time_label": "TIME",
+        "position_up": "UP",
+        "position_down": "DOWN",
+        "initialization_failed": "Initialization failed: {error}"
+      }
+    },
+    "turned_sideways": "turned sideways to the camera",
+    "optimal_tracking_message": "Make sure you are {position} for optimal tracking.",
+    "instructions": "Instructions",
+    "no_instructions": "No instructions available for this exercise.",
+    "start_exercise": "START EXERCISE",
+    "auto_starting": "Auto-starting in {seconds}s...",
+    "rest": "REST",
+    "next_set": "Next: Set {set} - {exerciseName}",
+    "skip_rest": "SKIP REST",
+    "set_info": " - Set {current}/{total}",
+    "time_info": " | Time: {time}s",
+    "ai_feedback": {
+      "form_correction_needed": "Form Correction Needed",
+      "excellent_performance": "Excellent Performance",
+      "exercise_label": "Exercise: {exercise}",
+      "set_label": "Set: {current} out of {total}",
+      "feedback_type_label": "Feedback Type: {type}",
+      "metrics_label": "Metrics:",
+      "duration_label": "Duration: {current} out of {total} seconds",
+      "form_score_label": "Form Score: {score}",
+      "correctness_label": "Exercise Correctness Score: {score}",
+      "form_feedback_label": "Form Feedback:",
+      "recent_reps_label": "Recent Repetitions Data:",
+      "current_rep_analysis": "Current Rep Analysis:",
+      "rep_label": "Rep: {current} out of {total}",
+      "score_label": "Score: {score}",
+      "quality_label": "Quality: {quality}",
+      "rep_duration_label": "Rep Duration: {duration} seconds",
+      "rep_summary": "Rep {number}: Score {score}, Quality: {quality}, Duration: {duration} seconds"
+    }
+  },
+  "coach": {
+    "system_prompt": {
+      "bad_form_example1": "You are slowing down, mind your pace.",
+      "bad_form_example2": "You are not going deep enough in your squats. Aim to lower your hips until your thighs are parallel to the ground.",
+      "bad_form_example3": "It seems like you are getting tired. Your performance is dropping. Stay strong, 2 reps left!",
+      "excellent_perf_example1": "Yes! Just like that! You have perfect form on that last rep.",
+      "excellent_perf_example2": "Wow, your form is impeccable! Keep that up and you'll maximize your gains.",
+      "excellent_perf_example3": "You are killing it today! 4 more reps to go."
     }
   },
   "counselor": {
@@ -106,7 +360,13 @@
     "cancel_processing_question": "Are you sure you want to cancel the processing? This will discard any progress made.",
     "cancel_button": "Cancel",
     "continue_processing": "Continue Processing",
-    "initializing_chat": "Initializing Chat"
+    "initializing_chat": "Initializing Chat",
+    "user_creation": {
+      "preferred_name": "Preferred name",
+      "name_description": "How would you like the counselor to call you?",
+      "name_note": "It doesn't have to be your real name. You can also use the default, 'User'.",
+      "preferred_name_label": "Preferred name"
+    }
   },
   "ai_models": {
     "title": "AI Models Initialization",
@@ -165,8 +425,7 @@
     "hours": "hours",
     "water": "Water",
     "liters": "liters",
-    "weight": "Weight",
-    "kg": "kg"
+    "weight": "Weight"
   },
   "calendar": {
     "no_upcoming_events": "No upcoming events in the next 7 days",
@@ -174,14 +433,6 @@
     "failed_load_events": "Failed to load events",
     "no_title": "(No title)",
     "at": "{day} at {time}",
-    "in_minutes": {
-      "one": "{count} minute",
-      "other": "{count} minutes"
-    },
-    "in_hours": {
-      "one": "{count} hour",
-      "other": "{count} hours"
-    },
     "in_hours_minutes": "In {hours}h {minutes}m"
   },
   "meditation": {
@@ -206,7 +457,84 @@
     "perfect_for_beginners": "Perfect for Beginners",
     "all_meditation_types": "All Meditation Types",
     "creating_guide": "Creating your personalized meditation guide...",
-    "your_meditations": "Your Meditations"
+    "your_meditations": "Your Meditations",
+    "type_selection": {
+      "choose_meditation_type": "Choose Meditation Type",
+      "create_your_guide": "Create Your Meditation Guide",
+      "guide_description": "Choose the type of meditation that resonates with you. Each guide will be personalized and crafted just for you.",
+      "personalize_meditation": "Personalize Your Meditation",
+      "meditation_title_optional": "Meditation title (optional)",
+      "enter_meditation_title": "Enter meditation title...",
+      "background_sound": "Background Sound",
+      "select_duration": "Select Duration",
+      "choose_background_sound": "Choose a background sound for your meditation (optional)",
+      "no_background_sound": "No Background Sound",
+      "voice_only": "Meditation with voice only",
+      "tap_to_preview": "Tap to preview"
+    },
+    "duration_descriptions": {
+      "quick_focused": "Quick and focused",
+      "perfect_beginners": "Perfect for beginners",
+      "balanced_relaxing": "Balanced and relaxing",
+      "deep_restorative": "Deep and restorative",
+      "extended_practice": "Extended practice"
+    },
+    "player": {
+      "meditation_script": "Meditation Script"
+    },
+    "generator": {
+      "system_prompt": "You are an expert meditation instructor and guide creator. Your task is to create personalized, high-quality meditation scripts that help users achieve deep relaxation and mindfulness.\\n\\nKey requirements for meditation scripts:\\n1. Include specific pause durations in brackets like [pause 3s], [pause 10s], etc.\\n2. Use a gentle, calming tone throughout\\n3. Provide clear, simple instructions\\n4. Include breathing guidance\\n5. Create a complete guided experience from beginning to end\\n6. End with a gentle return to awareness\\n\\nPlease format your response exactly as follows:\\nTitle: [Your meditation title here]\\nDescription: [Your 1-2 sentence description here]\\nMeditation Script:\\n[Your complete meditation script here with pause instructions throughout]\\n\\nDo not include any additional text or explanations outside of this format.\\n\\nExample format:\\nTitle: Peaceful Evening Meditation\\nDescription: A calming meditation to help you unwind and release the day's tensions.\\nMeditation Script:\\nWelcome to this evening meditation. [pause 5s]\\n\\nFind a comfortable position and allow your body to settle. [pause 10s]\\n\\nClose your eyes gently and take a deep breath in. [pause 7s]\\n\\nAnd slowly exhale, releasing any tension from the day. [pause 10s]\\n\\nContinue to breathe deeply and observe your thoughts without judgment. Allow them to come and go, like waves on the ocean. [pause 45]\\n\\nContinue with the full meditation script here...",
+      "prompts": {
+        "title_instruction": "Use the title \"{title}\" for this meditation. ",
+        "base_prompt": "Create a {duration}-minute meditation script for ",
+        "mindfulness": "mindfulness meditation focused on present moment awareness and observing thoughts without judgment.",
+        "body_scanning": "body scanning meditation that guides the user through progressive relaxation of each body part from toes to head.",
+        "loving_kindness": "loving kindness meditation that cultivates compassion and positive emotions toward self and others.",
+        "breathwork": "breathwork meditation focused on specific breathing techniques like 4-7-8 breathing or box breathing.",
+        "visualization": "visualization meditation with guided imagery of a peaceful, restorative place or experience.",
+        "walking": "walking meditation that can be done slowly indoors or outdoors, focusing on mindful movement.",
+        "mantra": "mantra meditation with a simple, repeated phrase or sound to focus the mind.",
+        "beginner": "beginner-friendly meditation that introduces basic mindfulness concepts and simple breathing techniques. Make it welcoming and easy to follow for someone new to meditation."
+      },
+      "titles": {
+        "mindfulness": "Mindfulness Meditation",
+        "body_scanning": "Body Scan Meditation",
+        "loving_kindness": "Loving Kindness Meditation",
+        "breathwork": "Breathwork Meditation",
+        "visualization": "Visualization Meditation",
+        "walking": "Walking Meditation",
+        "mantra": "Mantra Meditation",
+        "beginner": "Beginner's Meditation"
+      },
+      "descriptions": {
+        "mindfulness": "Focus on present moment awareness and breathing.",
+        "body_scanning": "Progressive relaxation through body awareness.",
+        "loving_kindness": "Cultivate compassion and positive emotions.",
+        "breathwork": "Focus on specific breathing techniques.",
+        "visualization": "Guided imagery and mental visualization.",
+        "walking": "Mindful movement and awareness.",
+        "mantra": "Repetition of sacred words or phrases.",
+        "beginner": "Perfect introduction to meditation practice."
+      },
+      "parsing": {
+        "title_prefix": "Title:",
+        "description_prefix": "Description:",
+        "script_prefix": "Meditation Script:"
+      },
+      "log_messages": {
+        "generating_prompt": "Generating meditation guide with prompt: {prompt}",
+        "generated_content": "Generated meditation guide content: {content}",
+        "saved_audio_chunk": "Saved audio chunk {index} to {path}",
+        "synthesis_error": "Error synthesizing chunk {index}: {error}"
+      }
+    },
+    "background_sounds": {
+      "meditation_bg_1": "One",
+      "meditation_bg_2": "Two",
+      "meditation_bg_3": "Three",
+      "meditation_bg_4": "Four",
+      "fallback_prefix": "Sound "
+    }
   },
   "common": {
     "loading": "Loading",
@@ -224,6 +552,49 @@
     "today": "Today",
     "tomorrow": "Tomorrow",
     "unknown_error": "Something went wrong",
-    "total": "Total"
+    "total": "Total",
+    "camera": "Camera",
+    "gallery": "Gallery",
+    "years": "years",
+    "hour": "hour",
+    "hours": "hours",
+    "start_training": "Start Training",
+    "user": "User",
+    "preferred_name": "Preferred name",
+    "stop_preview": "Stop preview",
+    "play_preview": "Play preview",
+    "exercises": "Exercises",
+    "gender_label": "Gender",
+    "male_label": "Male",
+    "female_label": "Female",
+    "other_label": "Other",
+    "unit_cm": "cm",
+    "unit_kg": "kg",
+    "duration_30_min": "30 min",
+    "duration_45_min": "45 min",
+    "duration_1_hour": "1 hour",
+    "in_seconds": {
+      "one": "{count} second",
+      "other": "{count} seconds"
+    },
+    "in_minutes": {
+      "one": "{count} minute",
+      "other": "{count} minutes"
+    },
+    "in_hours": {
+      "one": "{count} hour",
+      "other": "{count} hours"
+    },
+    "not_applicable": "N/A",
+    "no_options_available": "No options available"
+  },
+  "voice_chat": {
+    "show_image_to_waico": "Show an image to Waico",
+    "press_hold_to_speak": "Press and hold to speak long messages",
+    "starting_chat_session": "Starting chat session",
+    "on_hold": " (On Hold)"
+  },
+  "chart": {
+    "health_data": "Health Data"
   }
 }

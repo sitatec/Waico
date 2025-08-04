@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' show log;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
@@ -8,6 +9,7 @@ import 'package:waico/features/workout/pose_detection/exercise_classifiers/exerc
 import 'package:waico/features/workout/pose_detection/pose_detection_service.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Manages the state and flow of a workout session
 class WorkoutSessionManager {
@@ -161,19 +163,21 @@ class WorkoutSessionManager {
 
   Future<void> _sendDurationMetricsToAI(_DurationBasedExerciseMetrics metrics, {required bool isFormFeedback}) async {
     final exerciseName = _state.currentExercise.name;
-    final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
+    final feedbackType = isFormFeedback
+        ? LocaleKeys.workout_exercise_ai_feedback_form_correction_needed.tr()
+        : LocaleKeys.workout_exercise_ai_feedback_excellent_performance.tr();
     final message =
         '''<system>
-Exercise: $exerciseName
-Set: ${_state.currentSet} out of ${_state.currentExercise.load.sets}
-Feedback Type: $feedbackType
+${LocaleKeys.workout_exercise_ai_feedback_exercise_label.tr(namedArgs: {'exercise': exerciseName})}
+${LocaleKeys.workout_exercise_ai_feedback_set_label.tr(namedArgs: {'current': _state.currentSet.toString(), 'total': _state.currentExercise.load.sets.toString()})}
+${LocaleKeys.workout_exercise_ai_feedback_feedback_type_label.tr(namedArgs: {'type': feedbackType})}
 
-Metrics:
-${_state.exerciseTimerValue != null ? '- Duration: ${_state.exerciseTimerValue!} out of ${_state.currentExercise.load.duration} seconds\n' : ''}
-- Form Score: ${metrics.formScore}
-- Exercise Correctness Score: ${metrics.correctness}
+${LocaleKeys.workout_exercise_ai_feedback_metrics_label.tr()}
+${_state.exerciseTimerValue != null ? '- ${LocaleKeys.workout_exercise_ai_feedback_duration_label.tr(namedArgs: {'current': _state.exerciseTimerValue!.toString(), 'total': _state.currentExercise.load.duration.toString()})}\n' : ''}
+- ${LocaleKeys.workout_exercise_ai_feedback_form_score_label.tr(namedArgs: {'score': metrics.formScore.toString()})}
+- ${LocaleKeys.workout_exercise_ai_feedback_correctness_label.tr(namedArgs: {'score': metrics.correctness.toString()})}
 ${isFormFeedback ? '''
-- Form Feedback: 
+- ${LocaleKeys.workout_exercise_ai_feedback_form_feedback_label.tr()}
     ${metrics.formMetrics.entries.where((entry) => entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
 ''' : ''}
 </system>
@@ -381,23 +385,25 @@ ${isFormFeedback ? '''
     final previousRepsToSend = _cachedReps.sublist(_cachedReps.length > 3 ? _cachedReps.length - 3 : 0)
       ..remove(currentRep); // Remove the current rep, as it will be included in the message separately
     final exerciseName = _state.currentExercise.name;
-    final feedbackType = isFormFeedback ? "Form Correction Needed" : "Excellent Performance";
+    final feedbackType = isFormFeedback
+        ? LocaleKeys.workout_exercise_ai_feedback_form_correction_needed.tr()
+        : LocaleKeys.workout_exercise_ai_feedback_excellent_performance.tr();
     final message =
         '''<system>
-Exercise: $exerciseName
-Set: ${_state.currentSet} out of ${_state.currentExercise.load.sets}
-Feedback Type: $feedbackType
+${LocaleKeys.workout_exercise_ai_feedback_exercise_label.tr(namedArgs: {'exercise': exerciseName})}
+${LocaleKeys.workout_exercise_ai_feedback_set_label.tr(namedArgs: {'current': _state.currentSet.toString(), 'total': _state.currentExercise.load.sets.toString()})}
+${LocaleKeys.workout_exercise_ai_feedback_feedback_type_label.tr(namedArgs: {'type': feedbackType})}
 
-Recent Repetitions Data:
-${previousRepsToSend.map((rep) => 'Rep ${rep.repNumber}: Score ${rep.quality.score}, Quality: ${rep.quality.name}, Duration: ${rep.duration / 1000} seconds').join('\n')}
+${LocaleKeys.workout_exercise_ai_feedback_recent_reps_label.tr()}
+${previousRepsToSend.map((rep) => LocaleKeys.workout_exercise_ai_feedback_rep_summary.tr(namedArgs: {'number': rep.repNumber.toString(), 'score': rep.quality.score.toString(), 'quality': rep.quality.name, 'duration': (rep.duration / 1000).toString()})).join('\n')}
 
-Current Rep Analysis:
-- Rep: ${currentRep.repNumber} out of ${_state.currentExercise.load.reps}
-- Score: ${currentRep.quality.score}
-- Quality: ${currentRep.quality.name}
-- Rep Duration: ${currentRep.duration / 1000} seconds
+${LocaleKeys.workout_exercise_ai_feedback_current_rep_analysis.tr()}
+- ${LocaleKeys.workout_exercise_ai_feedback_rep_label.tr(namedArgs: {'current': currentRep.repNumber.toString(), 'total': _state.currentExercise.load.reps.toString()})}
+- ${LocaleKeys.workout_exercise_ai_feedback_score_label.tr(namedArgs: {'score': currentRep.quality.score.toString()})}
+- ${LocaleKeys.workout_exercise_ai_feedback_quality_label.tr(namedArgs: {'quality': currentRep.quality.name})}
+- ${LocaleKeys.workout_exercise_ai_feedback_rep_duration_label.tr(namedArgs: {'duration': (currentRep.duration / 1000).toString()})}
 ${isFormFeedback ? '''
-- Form Feedback: 
+- ${LocaleKeys.workout_exercise_ai_feedback_form_feedback_label.tr()}
     ${currentRep.formMetrics.entries.where((entry) => entry.value.containsKey('message')).map((entry) => '${entry.key}: score=${entry.value['score']}, feedback=${entry.value['message']}').join('\n    ')}
 ''' : ''}
 </system>

@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:objectbox/objectbox.dart';
+import 'package:waico/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 @Entity()
 class MeditationGuide {
@@ -76,17 +78,54 @@ class MeditationGuide {
 }
 
 enum MeditationType {
-  mindfulness('Mindfulness', 'Focus on present moment awareness and breathing'),
-  bodyScanning('Body Scanning', 'Progressive relaxation through body awareness'),
-  lovingKindness('Loving Kindness', 'Cultivate compassion and positive emotions'),
-  breathwork('Breathwork', 'Focus on different breathing techniques'),
-  visualization('Visualization', 'Guided imagery and mental visualization'),
-  walking('Walking Meditation', 'Mindful movement and awareness'),
-  mantra('Mantra', 'Repetition of sacred words or phrases'),
-  beginner('Beginner Friendly', 'Perfect introduction to meditation practice');
+  mindfulness,
+  bodyScanning,
+  lovingKindness,
+  breathwork,
+  visualization,
+  walking,
+  mantra,
+  beginner;
 
-  const MeditationType(this.title, this.description);
+  String get title {
+    switch (this) {
+      case MeditationType.mindfulness:
+        return LocaleKeys.meditation_generator_titles_mindfulness.tr();
+      case MeditationType.bodyScanning:
+        return LocaleKeys.meditation_generator_titles_body_scanning.tr();
+      case MeditationType.lovingKindness:
+        return LocaleKeys.meditation_generator_titles_loving_kindness.tr();
+      case MeditationType.breathwork:
+        return LocaleKeys.meditation_generator_titles_breathwork.tr();
+      case MeditationType.visualization:
+        return LocaleKeys.meditation_generator_titles_visualization.tr();
+      case MeditationType.walking:
+        return LocaleKeys.meditation_generator_titles_walking.tr();
+      case MeditationType.mantra:
+        return LocaleKeys.meditation_generator_titles_mantra.tr();
+      case MeditationType.beginner:
+        return LocaleKeys.meditation_generator_titles_beginner.tr();
+    }
+  }
 
-  final String title;
-  final String description;
+  String get description {
+    switch (this) {
+      case MeditationType.mindfulness:
+        return LocaleKeys.meditation_generator_descriptions_mindfulness.tr();
+      case MeditationType.bodyScanning:
+        return LocaleKeys.meditation_generator_descriptions_body_scanning.tr();
+      case MeditationType.lovingKindness:
+        return LocaleKeys.meditation_generator_descriptions_loving_kindness.tr();
+      case MeditationType.breathwork:
+        return LocaleKeys.meditation_generator_descriptions_breathwork.tr();
+      case MeditationType.visualization:
+        return LocaleKeys.meditation_generator_descriptions_visualization.tr();
+      case MeditationType.walking:
+        return LocaleKeys.meditation_generator_descriptions_walking.tr();
+      case MeditationType.mantra:
+        return LocaleKeys.meditation_generator_descriptions_mantra.tr();
+      case MeditationType.beginner:
+        return LocaleKeys.meditation_generator_descriptions_beginner.tr();
+    }
+  }
 }

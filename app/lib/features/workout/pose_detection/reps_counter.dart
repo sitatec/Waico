@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
+import 'package:waico/core/utils/number_utils.dart';
 import 'package:waico/features/workout/pose_detection/exercise_classifiers/exercise_classifiers.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Configuration for rep counting parameters
 class RepCountingConfig {
@@ -67,7 +70,10 @@ class RepetitionData {
     return {
       'repNumber': repNumber,
       'timestamp': timestamp.millisecondsSinceEpoch,
-      'duration': '${duration / 1000} seconds',
+      'duration': LocaleKeys.common_in_seconds.plural(
+        duration / 1000,
+        namedArgs: {'count': (duration / 1000).toStringWithoutZeroDecimal()},
+      ),
       'quality': quality.toString(),
       'averageConfidence': confidence,
       'formScore': formScore,

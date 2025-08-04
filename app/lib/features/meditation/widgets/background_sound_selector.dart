@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:waico/features/meditation/background_sound_manager.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Widget for selecting background sounds during meditation creation
 class BackgroundSoundSelector extends StatefulWidget {
@@ -50,7 +52,7 @@ class _BackgroundSoundSelectorState extends State<BackgroundSoundSelector> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose a background sound for your meditation (optional)',
+              LocaleKeys.meditation_type_selection_choose_background_sound.tr(),
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
@@ -58,8 +60,8 @@ class _BackgroundSoundSelectorState extends State<BackgroundSoundSelector> {
             // No sound option
             if (widget.allowNoSound) ...[
               _buildSoundOption(
-                title: 'No Background Sound',
-                subtitle: 'Meditation with voice only',
+                title: LocaleKeys.meditation_type_selection_no_background_sound.tr(),
+                subtitle: LocaleKeys.meditation_type_selection_voice_only.tr(),
                 filename: null,
                 icon: Icons.volume_off,
                 theme: theme,
@@ -73,7 +75,7 @@ class _BackgroundSoundSelectorState extends State<BackgroundSoundSelector> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: _buildSoundOption(
                   title: sound.displayName,
-                  subtitle: 'Tap to preview',
+                  subtitle: LocaleKeys.meditation_type_selection_tap_to_preview.tr(),
                   filename: sound.filename,
                   icon: Icons.music_note_outlined,
                   theme: theme,
@@ -136,7 +138,7 @@ class _BackgroundSoundSelectorState extends State<BackgroundSoundSelector> {
                   isCurrentlyPlaying ? Icons.stop : Icons.play_arrow,
                   color: isCurrentlyPlaying ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                 ),
-                tooltip: isCurrentlyPlaying ? 'Stop preview' : 'Play preview',
+                tooltip: isCurrentlyPlaying ? LocaleKeys.common_stop_preview.tr() : LocaleKeys.common_play_preview.tr(),
               ),
             ],
           ],

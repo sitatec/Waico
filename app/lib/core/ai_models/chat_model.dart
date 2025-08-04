@@ -85,7 +85,8 @@ class ChatModel extends LlmProvider with ChangeNotifier {
         '<system_prompt>\n'
         '$systemPrompt\n\n'
         'Your knowledge base was last updated on August 2024.\n'
-        'The current date and time is $formattedDateAndTime.\n'
+        'The current date and time is $formattedDateAndTime.\n\n'
+        'Make sure to answer the user in their language.\n'
         '</system_prompt>\n\n';
 
     await _chatSession!.addQueryChunk(Message.text(text: formattedSysPrompt, isUser: true));
@@ -165,7 +166,7 @@ class ChatModel extends LlmProvider with ChangeNotifier {
     int currentMessageTokenCount = await _chatSession!.sizeInTokens(prompt);
     if (imageAttachments?.isNotEmpty == true) {
       // Add token count for the image attachment
-      currentMessageTokenCount += 256 * imageAttachments!.length; // Assuming 256 tokens per image
+      currentMessageTokenCount += 256 * imageAttachments!.length; // 256 tokens per image
     }
 
     if ((_chatTokenCount + currentMessageTokenCount) >= (_maxTokenCount - _reservedTokenCount)) {

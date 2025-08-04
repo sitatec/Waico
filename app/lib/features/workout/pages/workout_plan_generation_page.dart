@@ -526,7 +526,9 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
                             if (session.exercises.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Text(
-                                'Exercises: ${session.exercises.map((e) => e.name).join(', ')}',
+                                LocaleKeys.workout_generation_exercises.tr(
+                                  namedArgs: {'exercises': session.exercises.map((e) => e.name).join(', ')},
+                                ),
                                 style: Theme.of(
                                   context,
                                 ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),

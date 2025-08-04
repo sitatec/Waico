@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:waico/features/meditation/models/meditation_guide.dart';

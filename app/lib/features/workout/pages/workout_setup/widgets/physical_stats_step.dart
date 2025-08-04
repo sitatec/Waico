@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:waico/core/utils/number_utils.dart';
@@ -5,6 +6,7 @@ import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/setup_card.dart';
 import 'package:waico/features/workout/widgets/custom_text_field.dart';
 import 'package:waico/features/workout/widgets/selection_chips.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class PhysicalStatsStep extends StatefulWidget {
   final WorkoutSetupData data;
@@ -21,7 +23,12 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
   late TextEditingController _heightController;
   late TextEditingController _ageController;
 
-  final List<String> _genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
+  final List<String> _genderOptions = [
+    LocaleKeys.common_male_label.tr(),
+    LocaleKeys.common_female_label.tr(),
+    LocaleKeys.common_other_label.tr(),
+    LocaleKeys.workout_setup_physical_stats_prefer_not_to_say.tr(),
+  ];
 
   @override
   void initState() {
@@ -78,7 +85,7 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Let\'s start with your basic info',
+            LocaleKeys.workout_setup_physical_stats_title.tr(),
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -88,7 +95,7 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
           const SizedBox(height: 8),
 
           Text(
-            'This information helps us create a personalized workout plan for you.',
+            LocaleKeys.workout_setup_physical_stats_description.tr(),
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
 
@@ -96,7 +103,7 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
 
           // Weight and Height
           SetupCard(
-            title: 'Physical Measurements',
+            title: LocaleKeys.workout_setup_physical_stats_physical_measurements.tr(),
             icon: Icons.straighten,
             child: Column(
               children: [
@@ -105,8 +112,8 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
                     Expanded(
                       child: CustomTextField(
                         controller: _weightController,
-                        label: 'Weight',
-                        suffix: 'kg',
+                        label: LocaleKeys.workout_setup_physical_stats_weight.tr(),
+                        suffix: LocaleKeys.common_unit_kg.tr(),
                         keyboardType: TextInputType.number,
                         // inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                         onChanged: _updateWeight,
@@ -116,8 +123,8 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
                     Expanded(
                       child: CustomTextField(
                         controller: _heightController,
-                        label: 'Height',
-                        suffix: 'cm',
+                        label: LocaleKeys.workout_setup_physical_stats_height.tr(),
+                        suffix: LocaleKeys.common_unit_cm.tr(),
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                         onChanged: _updateHeight,
@@ -140,7 +147,11 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
                         Icon(Icons.calculate, color: theme.colorScheme.primary, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'BMI: ${widget.data.bmi?.toStringAsFixed(1) ?? 'N/A'}',
+                          LocaleKeys.workout_setup_physical_stats_bmi_label.tr(
+                            namedArgs: {
+                              'bmi': widget.data.bmi?.toStringAsFixed(1) ?? LocaleKeys.common_not_applicable.tr(),
+                            },
+                          ),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.w600,
@@ -158,12 +169,12 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
 
           // Age
           SetupCard(
-            title: 'Age',
+            title: LocaleKeys.workout_setup_physical_stats_age.tr(),
             icon: Icons.cake,
             child: CustomTextField(
               controller: _ageController,
-              label: 'Age',
-              suffix: 'years',
+              label: LocaleKeys.workout_setup_physical_stats_age.tr(),
+              suffix: LocaleKeys.common_years.tr(),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
               onChanged: _updateAge,
@@ -174,7 +185,7 @@ class _PhysicalStatsStepState extends State<PhysicalStatsStep> {
 
           // Gender
           SetupCard(
-            title: 'Gender',
+            title: LocaleKeys.common_gender_label.tr(),
             icon: Icons.person,
             child: SelectionChips(
               options: _genderOptions,

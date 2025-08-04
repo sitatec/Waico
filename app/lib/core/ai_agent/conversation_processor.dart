@@ -27,6 +27,8 @@ First, think through the conversation step by step:
 5. Were there any significant developments or changes?
 
 Then provide a summary that captures these elements. Keep it factual, objective, and focused on the most important elements. The summary should be 1-4 paragraphs and serve as a quick reference for understanding what happened in this conversation without missing any important details.
+
+Make sure your output is in the same language as the conversation.
 ''';
 
   static const _userInfoPrompt = '''
@@ -67,6 +69,8 @@ The user is dealing stress, but is getting help from a therapist.
 If there is not information to extract, output an empty text:
 ```text
 ```
+
+Make sure your output is in the same language as the conversation.
 ''';
 
   static const _memoriesPrompt = '''
@@ -110,6 +114,8 @@ If no significant memories are found, return an empty array:
 ```json
 []
 ```
+
+Make sure your output is in the same language as the conversation.
 ''';
 
   static const _observationPrompt = '''
@@ -140,6 +146,8 @@ The user is showing signs of improvement in their emotional well-being. They rep
 If the conversation doesn't contain enough information for a meaningful observation, return an empty string:
 ```text
 ```
+
+Make sure your output is in the same language as the conversation.
 ''';
 
   final UserRepository _userRepository;

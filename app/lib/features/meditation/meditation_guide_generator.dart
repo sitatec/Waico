@@ -7,6 +7,8 @@ import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/list_utils.dart';
 import 'package:waico/features/meditation/models/meditation_guide.dart';
 import 'package:waico/features/meditation/background_sound_manager.dart';
+import 'package:waico/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class MeditationGuideGenerator {
   /// Generate a meditation guide using AI and synthesize audio chunks
@@ -21,12 +23,12 @@ class MeditationGuideGenerator {
     await chatModel.initialize();
 
     final prompt = _buildPrompt(type, durationMinutes, customTitle);
-    log('Generating meditation guide with prompt: $prompt');
+    log(LocaleKeys.meditation_generator_log_messages_generating_prompt.tr(namedArgs: {'prompt': prompt}));
     String generatedContent = '';
     await for (final chunk in chatModel.sendMessageStream(prompt)) {
       generatedContent += chunk;
     }
-    log('Generated meditation guide content: $generatedContent');
+    log(LocaleKeys.meditation_generator_log_messages_generated_content.tr(namedArgs: {'content': generatedContent}));
     final disposeFuture = chatModel.dispose();
     final meditationGuide = _parseAndSynthesizeGuide(
       generatedContent,
@@ -40,70 +42,42 @@ class MeditationGuideGenerator {
   }
 
   static String _getSystemPrompt() {
-    return '''You are an expert meditation instructor and guide creator. Your task is to create personalized, high-quality meditation scripts that help users achieve deep relaxation and mindfulness.
-
-Key requirements for meditation scripts:
-1. Include specific pause durations in brackets like [pause 3s], [pause 10s], etc.
-2. Use a gentle, calming tone throughout
-3. Provide clear, simple instructions
-4. Include breathing guidance
-5. Create a complete guided experience from beginning to end
-6. End with a gentle return to awareness
-
-Please format your response exactly as follows:
-Title: [Your meditation title here]
-Description: [Your 1-2 sentence description here]
-Meditation Script:
-[Your complete meditation script here with pause instructions throughout]
-
-Do not include any additional text or explanations outside of this format.
-
-Example format:
-Title: Peaceful Evening Meditation
-Description: A calming meditation to help you unwind and release the day's tensions.
-Meditation Script:
-Welcome to this evening meditation. [pause 5s]
-
-Find a comfortable position and allow your body to settle. [pause 10s]
-
-Close your eyes gently and take a deep breath in. [pause 7s]
-
-And slowly exhale, releasing any tension from the day. [pause 10s]
-
-Continue to breathe deeply and observe your thoughts without judgment. Allow them to come and go, like waves on the ocean. [pause 45]
-
-Continue with the full meditation script here...''';
+    return LocaleKeys.meditation_generator_system_prompt.tr();
   }
 
   static String _buildPrompt(MeditationType type, int durationMinutes, String? customTitle) {
-    final titleInstruction = customTitle != null ? 'Use the title "$customTitle" for this meditation. ' : '';
+    final titleInstruction = customTitle != null
+        ? LocaleKeys.meditation_generator_prompts_title_instruction.tr(namedArgs: {'title': customTitle})
+        : '';
 
-    final basePrompt = '${titleInstruction}Create a $durationMinutes-minute meditation script for ';
+    final basePrompt =
+        titleInstruction +
+        LocaleKeys.meditation_generator_prompts_base_prompt.tr(namedArgs: {'duration': durationMinutes.toString()});
 
     switch (type) {
       case MeditationType.mindfulness:
-        return '${basePrompt}mindfulness meditation focused on present moment awareness and observing thoughts without judgment.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_mindfulness.tr();
 
       case MeditationType.bodyScanning:
-        return '${basePrompt}body scanning meditation that guides the user through progressive relaxation of each body part from toes to head.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_body_scanning.tr();
 
       case MeditationType.lovingKindness:
-        return '${basePrompt}loving kindness meditation that cultivates compassion and positive emotions toward self and others.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_loving_kindness.tr();
 
       case MeditationType.breathwork:
-        return '${basePrompt}breathwork meditation focused on specific breathing techniques like 4-7-8 breathing or box breathing.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_breathwork.tr();
 
       case MeditationType.visualization:
-        return '${basePrompt}visualization meditation with guided imagery of a peaceful, restorative place or experience.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_visualization.tr();
 
       case MeditationType.walking:
-        return '${basePrompt}walking meditation that can be done slowly indoors or outdoors, focusing on mindful movement.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_walking.tr();
 
       case MeditationType.mantra:
-        return '${basePrompt}mantra meditation with a simple, repeated phrase or sound to focus the mind.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_mantra.tr();
 
       case MeditationType.beginner:
-        return '${basePrompt}beginner-friendly meditation that introduces basic mindfulness concepts and simple breathing techniques. Make it welcoming and easy to follow for someone new to meditation.';
+        return basePrompt + LocaleKeys.meditation_generator_prompts_beginner.tr();
     }
   }
 
@@ -116,21 +90,33 @@ Continue with the full meditation script here...''';
   ) async {
     // Extract title from the response
     String title = customTitle ?? _generateTitleForType(type);
-    final titleMatch = RegExp(r'Title:\s*(.+)', caseSensitive: false).firstMatch(generatedContent);
+    final titleRegex = RegExp(
+      '${LocaleKeys.meditation_generator_parsing_title_prefix.tr()}\\s*(.+)',
+      caseSensitive: false,
+    );
+    final titleMatch = titleRegex.firstMatch(generatedContent);
     if (titleMatch != null && customTitle == null) {
       title = titleMatch.group(1)?.trim() ?? title;
     }
 
     // Extract description from the response
     String description = _generateDescriptionForType(type);
-    final descriptionMatch = RegExp(r'Description:\s*(.+)', caseSensitive: false).firstMatch(generatedContent);
+    final descriptionRegex = RegExp(
+      '${LocaleKeys.meditation_generator_parsing_description_prefix.tr()}\\s*(.+)',
+      caseSensitive: false,
+    );
+    final descriptionMatch = descriptionRegex.firstMatch(generatedContent);
     if (descriptionMatch != null) {
       description = descriptionMatch.group(1)?.trim() ?? description;
     }
 
     // Extract script from the response after "Meditation Script:" line
     String script = '';
-    final scriptMatch = RegExp(r'Meditation Script:\s*\n([\s\S]*)', multiLine: true).firstMatch(generatedContent);
+    final scriptRegex = RegExp(
+      '${LocaleKeys.meditation_generator_parsing_script_prefix.tr()}\\s*\\n([\\s\\S]*)',
+      multiLine: true,
+    );
+    final scriptMatch = scriptRegex.firstMatch(generatedContent);
     if (scriptMatch != null) {
       script = scriptMatch.group(1)?.trim() ?? '';
     } else {
@@ -140,14 +126,16 @@ Continue with the full meditation script here...''';
       final scriptLines = <String>[];
 
       for (final line in lines) {
-        if (line.toLowerCase().contains('meditation script:') || line.toLowerCase().contains('script:')) {
+        final lowerLine = line.toLowerCase();
+        final scriptPrefix = LocaleKeys.meditation_generator_parsing_script_prefix.tr().toLowerCase();
+        if (lowerLine.contains(scriptPrefix) || lowerLine.contains('script:')) {
           foundScriptSection = true;
           continue;
         }
 
         if (foundScriptSection &&
-            !line.toLowerCase().startsWith('title:') &&
-            !line.toLowerCase().startsWith('description:')) {
+            !lowerLine.startsWith(LocaleKeys.meditation_generator_parsing_title_prefix.tr().toLowerCase()) &&
+            !lowerLine.startsWith(LocaleKeys.meditation_generator_parsing_description_prefix.tr().toLowerCase())) {
           scriptLines.add(line);
         }
       }
@@ -254,7 +242,11 @@ Continue with the full meditation script here...''';
         final audioFile = File('${meditationDir.path}/chunk_$i.wav');
         await audioFile.writeAsBytes(ttsResult.toWav());
 
-        log('Saved audio chunk $i to ${audioFile.path}');
+        log(
+          LocaleKeys.meditation_generator_log_messages_saved_audio_chunk.tr(
+            namedArgs: {'index': i.toString(), 'path': audioFile.path},
+          ),
+        );
 
         // Add chunk index to processed script
         processedChunks.add('CHUNK_$i');
@@ -264,7 +256,13 @@ Continue with the full meditation script here...''';
           processedChunks.add('[pause ${pauseDurations[i]}s]');
         }
       } catch (e, s) {
-        log('Error synthesizing chunk $i: $e', error: e, stackTrace: s);
+        log(
+          LocaleKeys.meditation_generator_log_messages_synthesis_error.tr(
+            namedArgs: {'index': i.toString(), 'error': e.toString()},
+          ),
+          error: e,
+          stackTrace: s,
+        );
         // Fallback: keep original text if synthesis fails
         processedChunks.add(chunkText);
         if (i < pauseDurations.length) {
@@ -279,42 +277,42 @@ Continue with the full meditation script here...''';
   static String _generateTitleForType(MeditationType type) {
     switch (type) {
       case MeditationType.mindfulness:
-        return 'Mindfulness Meditation';
+        return LocaleKeys.meditation_generator_titles_mindfulness.tr();
       case MeditationType.bodyScanning:
-        return 'Body Scan Meditation';
+        return LocaleKeys.meditation_generator_titles_body_scanning.tr();
       case MeditationType.lovingKindness:
-        return 'Loving Kindness Meditation';
+        return LocaleKeys.meditation_generator_titles_loving_kindness.tr();
       case MeditationType.breathwork:
-        return 'Breathwork Meditation';
+        return LocaleKeys.meditation_generator_titles_breathwork.tr();
       case MeditationType.visualization:
-        return 'Visualization Meditation';
+        return LocaleKeys.meditation_generator_titles_visualization.tr();
       case MeditationType.walking:
-        return 'Walking Meditation';
+        return LocaleKeys.meditation_generator_titles_walking.tr();
       case MeditationType.mantra:
-        return 'Mantra Meditation';
+        return LocaleKeys.meditation_generator_titles_mantra.tr();
       case MeditationType.beginner:
-        return 'Beginner\'s Meditation';
+        return LocaleKeys.meditation_generator_titles_beginner.tr();
     }
   }
 
   static String _generateDescriptionForType(MeditationType type) {
     switch (type) {
       case MeditationType.mindfulness:
-        return 'Focus on present moment awareness and breathing.';
+        return LocaleKeys.meditation_generator_descriptions_mindfulness.tr();
       case MeditationType.bodyScanning:
-        return 'Progressive relaxation through body awareness.';
+        return LocaleKeys.meditation_generator_descriptions_body_scanning.tr();
       case MeditationType.lovingKindness:
-        return 'Cultivate compassion and positive emotions.';
+        return LocaleKeys.meditation_generator_descriptions_loving_kindness.tr();
       case MeditationType.breathwork:
-        return 'Focus on specific breathing techniques.';
+        return LocaleKeys.meditation_generator_descriptions_breathwork.tr();
       case MeditationType.visualization:
-        return 'Guided imagery and mental visualization.';
+        return LocaleKeys.meditation_generator_descriptions_visualization.tr();
       case MeditationType.walking:
-        return 'Mindful movement and awareness.';
+        return LocaleKeys.meditation_generator_descriptions_walking.tr();
       case MeditationType.mantra:
-        return 'Repetition of sacred words or phrases.';
+        return LocaleKeys.meditation_generator_descriptions_mantra.tr();
       case MeditationType.beginner:
-        return 'Perfect introduction to meditation practice.';
+        return LocaleKeys.meditation_generator_descriptions_beginner.tr();
     }
   }
 }

@@ -317,10 +317,8 @@ class _WorkoutPlanContent extends StatelessWidget {
                 context: context,
                 builder: (context) {
                   return AlertDialog(
-                    title: Text('Confirm Deletion'),
-                    content: Text(
-                      'Are you sure you want to delete this workout plan? This action cannot be undone.\n\nYou can always generate a new plan.',
-                    ),
+                    title: Text(LocaleKeys.workout_plan_confirm_deletion_title.tr()),
+                    content: Text(LocaleKeys.workout_plan_confirm_deletion_message.tr()),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -653,7 +651,9 @@ class _WorkoutSessionCard extends StatelessWidget {
                             Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
                             const SizedBox(width: 4),
                             Text(
-                              '${session.estimatedDuration} min',
+                              LocaleKeys.workout_plan_session_duration.tr(
+                                namedArgs: {'duration': session.estimatedDuration.toString()},
+                              ),
                               style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                             ),
                           ],

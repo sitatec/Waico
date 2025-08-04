@@ -1,11 +1,12 @@
 import 'dart:developer' show log;
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
-import 'package:meta/meta.dart';
 import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/utils/map_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Progress data containing both parsed structure and raw text
 class WorkoutGenerationProgress {
@@ -22,127 +23,8 @@ class WorkoutGenerationProgress {
 class WorkoutPlanGenerator {
   late final ChatModel _chatModel;
 
-  static const String _systemPrompt = '''
-You are an expert personal trainer and exercise physiologist with over 15 years of experience designing customized workout programs. You specialize in creating safe, effective, and sustainable bodyweight workout plans tailored to individual goals, and workout experience levels.
-
-Your expertise includes:
-- Exercise physiology and biomechanics
-- Adaptation strategies for different fitness levels (beginner, intermediate, advanced)
-- Providing rest periods appropriate for exercise intensity
-
-
-**STRUCTURED TEXT FORMAT (use EXACTLY this format):**
-
-PLAN_NAME: [Short, motivating name for the workout plan]
-DESCRIPTION: [Brief overview of the plan's approach and benefits (1-2 sentences)]
-DIFFICULTY: [Beginner/Intermediate/Advanced]
-FOCUS: [Main focus for this week]
-
-SESSION_NAME: [Day - Body part, e.g: Monday - Full Body]
-SESSION_TYPE: [cardio/strength/endurance]
-DURATION: [Duration in minutes]
-
-EXERCISE: [Exercise name from allowed list]
-TARGET_MUSCLES: [muscle1, muscle2, muscle3]
-LOAD_TYPE: [reps/duration]
-SETS: [number]
-REPS: [number, only for reps-based exercises]
-DURATION: [seconds, only for duration-based exercises]
-REST: [rest duration in seconds]
-
-[Repeat EXERCISE block for each exercise in the session]
-[Repeat SESSION_NAME block for each session in the week]
-
-IMPORTANT RULES:
-- No equipment available, use only bodyweight exercises from the allowed exercises list
-- For exercises with (Left) and (Right) variants, the 2 sides must always follow each other - they should not be used separately or have another exercise in between them. E.g Side Plank (Right) must always be followed by Side Plank (Left).
-- **ALLOWED EXERCISES (use ONLY these exercises):** 
-  - Reps-based exercises:
-    - Push-Up
-    - Knee Push-Up
-    - Wall Push-Up
-    - Incline Push-Up
-    - Decline Push-Up
-    - Diamond Push-Up
-    - Wide Push-Up
-    - Squat
-    - Split Squat (Right)
-    - Split Squat (Left)
-    - Sumo Squat
-    - Crunch
-    - Reverse Crunch
-    - Double Crunch
-    - Superman
-    - Superman Pulse
-
-  - Duration-based exercises:
-    - Wall Sit
-    - Plank
-    - Side Plank (Right)
-    - Side Plank (Left)
-    - Jumping Jacks
-    - High Knees
-    - Mountain Climbers
-
-**EXAMPLE 1:**
-PLAN_NAME: Full Body Strength Builder
-DESCRIPTION: A comprehensive bodyweight program focusing on building strength across all major muscle groups. Perfect for developing functional fitness and muscle endurance.
-DIFFICULTY: Intermediate
-FOCUS: Foundation building and strength development
-
-SESSION_NAME: Monday - Upper Body
-SESSION_TYPE: strength
-DURATION: 30
-
-EXERCISE: Push-Up
-TARGET_MUSCLES: chest, shoulders, triceps
-LOAD_TYPE: reps
-REPS: 12
-SETS: 3
-REST: 60
-
-EXERCISE: Plank
-TARGET_MUSCLES: core, shoulders
-LOAD_TYPE: duration
-DURATION: 30
-SETS: 3
-REST: 45
-
-EXERCISE: Superman
-TARGET_MUSCLES: back, glutes
-LOAD_TYPE: reps
-REPS: 15
-SETS: 2
-REST: 60
-
-SESSION_NAME: Wednesday - Lower Body
-SESSION_TYPE: strength
-DURATION: 25
-
-EXERCISE: Squat
-TARGET_MUSCLES: quadriceps, glutes
-LOAD_TYPE: reps
-REPS: 15
-SETS: 3
-REST: 60
-
-EXERCISE: Split Squat (Right)
-TARGET_MUSCLES: quadriceps, glutes
-LOAD_TYPE: reps
-REPS: 10
-SETS: 2
-REST: 30
-
-EXERCISE: Split Squat (Left)
-TARGET_MUSCLES: quadriceps, glutes
-LOAD_TYPE: reps
-REPS: 10
-SETS: 2
-REST: 30
-''';
-
   WorkoutPlanGenerator() {
-    _chatModel = ChatModel(systemPrompt: _systemPrompt);
+    _chatModel = ChatModel(systemPrompt: LocaleKeys.workout_generation_system_prompt.tr());
   }
 
   /// Generates a personalized workout plan based on the provided setup data
@@ -235,7 +117,7 @@ REST: 30
       } catch (parseError, stackTrace) {
         log('WorkoutPlanGenerator: Text parsing failed', error: parseError, stackTrace: stackTrace);
         throw WorkoutPlanGenerationException(
-          'Failed to parse workout plan structured text response',
+          LocaleKeys.workout_generation_failed_to_parse.tr(),
           kDebugMode
               ? parseError is Exception
                     ? parseError
@@ -248,7 +130,7 @@ REST: 30
       if (e is WorkoutPlanGenerationException) rethrow;
 
       throw WorkoutPlanGenerationException(
-        'Failed to generate workout plan: ${e.toString()}',
+        LocaleKeys.workout_generation_failed_to_generate.tr(namedArgs: {'error': e.toString()}),
         e is Exception ? e : Exception(e.toString()),
       );
     } finally {
@@ -260,39 +142,63 @@ REST: 30
   String _buildPrompt(WorkoutSetupData setupData) {
     final buffer = StringBuffer();
 
-    buffer.writeln('Create a personalized workout plan based on the following user data:');
+    buffer.writeln(LocaleKeys.workout_generation_base_prompt.tr());
     buffer.writeln();
 
     // Physical stats
-    buffer.writeln('Physical Profile:');
-    if (setupData.age != null) buffer.writeln('- Age: ${setupData.age} years');
-    if (setupData.gender != null) buffer.writeln('- Gender: ${setupData.gender}');
-    if (setupData.weight != null) buffer.writeln('- Weight: ${setupData.weight} kg');
-    if (setupData.height != null) buffer.writeln('- Height: ${setupData.height} cm');
-    if (setupData.bmi != null) buffer.writeln('- BMI: ${setupData.bmi?.toStringAsFixed(1)}');
+    buffer.writeln(LocaleKeys.workout_generation_physical_profile.tr());
+    if (setupData.age != null) {
+      buffer.writeln('- ${LocaleKeys.workout_generation_age_label.tr(namedArgs: {'age': setupData.age.toString()})}');
+    }
+    if (setupData.gender != null) {
+      buffer.writeln('- ${LocaleKeys.workout_generation_gender_label.tr(namedArgs: {'gender': setupData.gender!})}');
+    }
+    if (setupData.weight != null) {
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_weight_label.tr(namedArgs: {'weight': setupData.weight.toString()})}',
+      );
+    }
+    if (setupData.height != null) {
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_height_label.tr(namedArgs: {'height': setupData.height.toString()})}',
+      );
+    }
+    if (setupData.bmi != null) {
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_bmi_label.tr(namedArgs: {'bmi': setupData.bmi!.toStringAsFixed(1)})}',
+      );
+    }
     buffer.writeln();
 
     // Fitness level and experience
-    buffer.writeln('Fitness Background:');
+    buffer.writeln(LocaleKeys.workout_generation_fitness_background.tr());
     if (setupData.currentFitnessLevel != null) {
-      buffer.writeln('- Current fitness level: ${setupData.currentFitnessLevel}');
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_current_fitness_level.tr(namedArgs: {'level': setupData.currentFitnessLevel!})}',
+      );
     }
     if (setupData.experienceLevel != null) {
-      buffer.writeln('- Exercise experience: ${setupData.experienceLevel}');
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_exercise_experience.tr(namedArgs: {'experience': setupData.experienceLevel!})}',
+      );
     }
     buffer.writeln(
-      '- Weekly workout frequency: ${setupData.selectedWeekDays.join(', ')} (${setupData.selectedWeekDays.length} sessions per week)',
+      '- ${LocaleKeys.workout_generation_weekly_workout_frequency.tr(namedArgs: {'days': setupData.selectedWeekDays.join(', '), 'count': setupData.selectedWeekDays.length.toString()})}',
     );
-    buffer.writeln('- Preferred workout duration: ${setupData.workoutDurationPreference} minutes');
+    buffer.writeln(
+      '- ${LocaleKeys.workout_generation_preferred_workout_duration.tr(namedArgs: {'duration': setupData.workoutDurationPreference.toString()})}',
+    );
     buffer.writeln();
 
     // Goals and preferences
-    buffer.writeln('Goals and Preferences:');
+    buffer.writeln(LocaleKeys.workout_generation_goals_and_preferences.tr());
     if (setupData.primaryGoal != null) {
-      buffer.writeln('- Primary goal: ${setupData.primaryGoal}');
+      buffer.writeln('- ${LocaleKeys.workout_generation_primary_goal.tr(namedArgs: {'goal': setupData.primaryGoal!})}');
     }
     if (setupData.targetWeight != null) {
-      buffer.writeln('- Target weight: ${setupData.targetWeight}');
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_target_weight.tr(namedArgs: {'weight': setupData.targetWeight.toString()})}',
+      );
     }
     // if (setupData.timeframe != null) {
     // buffer.writeln('- Timeframe: ${setupData.timeframe}');
@@ -301,17 +207,19 @@ REST: 30
     // buffer.writeln('- Timeframe: 2 Weeks'); // Fixed to 2 weeks for now
 
     if (setupData.specificGoals.isNotEmpty) {
-      buffer.writeln('- Specific goals: ${setupData.specificGoals.join(", ")}');
+      buffer.writeln(
+        '- ${LocaleKeys.workout_generation_specific_goals.tr(namedArgs: {'goals': setupData.specificGoals.join(", ")})}',
+      );
     }
 
     buffer.writeln();
 
-    buffer.writeln('Please generate a comprehensive workout plan that:');
-    buffer.writeln('1. Matches the user\'s fitness level and experience');
-    buffer.writeln('2. Aligns with their specific goals and preferences');
-    buffer.writeln('3. Fits within their time constraints');
-    buffer.writeln('4. Uses ONLY the allowed exercises above');
-    buffer.writeln('4. Uses the structured text format specified above');
+    buffer.writeln(LocaleKeys.workout_generation_plan_requirements_intro.tr());
+    buffer.writeln(LocaleKeys.workout_generation_plan_requirement_1.tr());
+    buffer.writeln(LocaleKeys.workout_generation_plan_requirement_2.tr());
+    buffer.writeln(LocaleKeys.workout_generation_plan_requirement_3.tr());
+    buffer.writeln(LocaleKeys.workout_generation_plan_requirement_4.tr());
+    buffer.writeln(LocaleKeys.workout_generation_plan_requirement_5.tr());
 
     return buffer.toString();
   }
@@ -337,15 +245,15 @@ REST: 30
     for (final line in lines) {
       if (line.isEmpty) continue;
 
-      if (line.startsWith('PLAN_NAME:')) {
-        result['planName'] = line.substring(10).trim();
-      } else if (line.startsWith('DESCRIPTION:')) {
-        result['description'] = line.substring(12).trim();
-      } else if (line.startsWith('DIFFICULTY:')) {
-        result['difficulty'] = line.substring(11).trim();
-      } else if (line.startsWith('FOCUS:')) {
-        planFocus = line.substring(6).trim();
-      } else if (line.startsWith('SESSION_NAME:')) {
+      if (line.startsWith(LocaleKeys.workout_generation_keywords_plan_name.tr())) {
+        result['planName'] = line.substring(LocaleKeys.workout_generation_keywords_plan_name.tr().length).trim();
+      } else if (line.startsWith(LocaleKeys.workout_generation_keywords_description.tr())) {
+        result['description'] = line.substring(LocaleKeys.workout_generation_keywords_description.tr().length).trim();
+      } else if (line.startsWith(LocaleKeys.workout_generation_keywords_difficulty.tr())) {
+        result['difficulty'] = line.substring(LocaleKeys.workout_generation_keywords_difficulty.tr().length).trim();
+      } else if (line.startsWith(LocaleKeys.workout_generation_keywords_focus.tr())) {
+        planFocus = line.substring(LocaleKeys.workout_generation_keywords_focus.tr().length).trim();
+      } else if (line.startsWith(LocaleKeys.workout_generation_keywords_session_name.tr())) {
         // Save previous session if it exists
         if (currentSession != null) {
           // Add the current exercise if it exists
@@ -361,44 +269,51 @@ REST: 30
 
         // Start a new session
         currentSession = <String, dynamic>{};
-        currentSession['sessionName'] = line.substring(13).trim();
+        currentSession['sessionName'] = line
+            .substring(LocaleKeys.workout_generation_keywords_session_name.tr().length)
+            .trim();
       } else if (currentSession != null) {
         // Inside a session
-        if (line.startsWith('SESSION_TYPE:')) {
-          currentSession['type'] = line.substring(13).trim();
-        } else if (line.startsWith('DURATION:') && currentExercise == null) {
+        if (line.startsWith(LocaleKeys.workout_generation_keywords_session_type.tr())) {
+          currentSession['type'] = line
+              .substring(LocaleKeys.workout_generation_keywords_session_type.tr().length)
+              .trim();
+        } else if (line.startsWith(LocaleKeys.workout_generation_keywords_duration.tr()) && currentExercise == null) {
           // If currentExercise != null then the duration if for the exercise, not the session
-          currentSession['estimatedDuration'] = int.tryParse(line.substring(9).trim()) ?? 30;
-        } else if (line.startsWith('EXERCISE:')) {
+          currentSession['estimatedDuration'] =
+              int.tryParse(line.substring(LocaleKeys.workout_generation_keywords_duration.tr().length).trim()) ?? 30;
+        } else if (line.startsWith(LocaleKeys.workout_generation_keywords_exercise.tr())) {
           // Save previous exercise if exists
           if (currentExercise != null) {
             currentExercises.add(Map<String, dynamic>.from(currentExercise));
           }
           // Start new exercise
           currentExercise = <String, dynamic>{};
-          currentExercise['name'] = line.substring(9).trim();
+          currentExercise['name'] = line.substring(LocaleKeys.workout_generation_keywords_exercise.tr().length).trim();
         } else if (currentExercise != null) {
           // Inside an exercise
-          if (line.startsWith('TARGET_MUSCLES:')) {
-            final musclesText = line.substring(15).trim();
+          if (line.startsWith(LocaleKeys.workout_generation_keywords_target_muscles.tr())) {
+            final musclesText = line
+                .substring(LocaleKeys.workout_generation_keywords_target_muscles.tr().length)
+                .trim();
             currentExercise['targetMuscles'] = musclesText
                 .split(',')
                 .map((m) => m.trim())
                 .where((m) => m.isNotEmpty)
                 .toList();
-          } else if (line.startsWith('LOAD_TYPE:')) {
-            final loadType = line.substring(10).trim();
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_load_type.tr())) {
+            final loadType = line.substring(LocaleKeys.workout_generation_keywords_load_type.tr().length).trim();
             currentExercise['load'] = <String, dynamic>{'type': loadType};
-          } else if (line.startsWith('SETS:')) {
-            final setsText = line.substring(5).trim();
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_sets.tr())) {
+            final setsText = line.substring(LocaleKeys.workout_generation_keywords_sets.tr().length).trim();
             // Remove any non-numeric characters (e.g., "sets")
             final cleanSetsText = _cleanNumber(setsText).trim();
             final sets = int.tryParse(cleanSetsText) ?? 1;
             final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
             load['sets'] = sets;
             currentExercise['load'] = load;
-          } else if (line.startsWith('REPS:')) {
-            final repsText = line.substring(5);
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_reps.tr())) {
+            final repsText = line.substring(LocaleKeys.workout_generation_keywords_reps.tr().length);
             // Remove any non-numeric characters (e.g., "reps")
             final cleanRepsText = _cleanNumber(repsText).trim();
             if (cleanRepsText.isNotEmpty) {
@@ -407,8 +322,8 @@ REST: 30
               load['reps'] = reps;
               currentExercise['load'] = load;
             }
-          } else if (line.startsWith('DURATION:')) {
-            final durationText = line.substring(9);
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_duration.tr())) {
+            final durationText = line.substring(LocaleKeys.workout_generation_keywords_duration.tr().length);
             // Remove any non-numeric characters (e.g., "seconds")
             final cleanDurationText = _cleanNumber(durationText).trim();
             if (cleanDurationText.isNotEmpty) {
@@ -417,8 +332,8 @@ REST: 30
               load['duration'] = duration;
               currentExercise['load'] = load;
             }
-          } else if (line.startsWith('REST:')) {
-            final restText = line.substring(5);
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_rest.tr())) {
+            final restText = line.substring(LocaleKeys.workout_generation_keywords_rest.tr().length);
             // Remove any non-numeric characters (e.g., "seconds")
             final cleanRestText = _cleanNumber(restText).trim();
             final rest = int.tryParse(cleanRestText) ?? 60;
@@ -548,7 +463,7 @@ class _WorkoutProgressTracker {
     for (final line in lines) {
       if (line.isEmpty) continue;
 
-      if (line.startsWith('SESSION_NAME:')) {
+      if (line.startsWith(LocaleKeys.workout_generation_keywords_session_name.tr())) {
         // Save previous session if it exists
         if (currentSession != null && currentSession.containsKey('sessionName')) {
           // Add the current exercise if it exists
@@ -606,55 +521,64 @@ class _WorkoutProgressTracker {
 
         // Start new session
         currentSession = <String, dynamic>{};
-        currentSession['sessionName'] = line.substring(13).trim();
+        currentSession['sessionName'] = line
+            .substring(LocaleKeys.workout_generation_keywords_session_name.tr().length)
+            .trim();
       } else if (currentSession != null) {
         // Parse session data
-        if (line.startsWith('SESSION_TYPE:')) {
-          currentSession['type'] = line.substring(13).trim();
-        } else if (line.startsWith('DURATION:') && currentExercise == null) {
+        if (line.startsWith(LocaleKeys.workout_generation_keywords_session_type.tr())) {
+          currentSession['type'] = line
+              .substring(LocaleKeys.workout_generation_keywords_session_type.tr().length)
+              .trim();
+        } else if (line.startsWith(LocaleKeys.workout_generation_keywords_duration.tr()) && currentExercise == null) {
           // If currentExercise != null then the duration if for the exercise, not the session
-          currentSession['estimatedDuration'] = int.tryParse(line.substring(9).trim()) ?? 30;
-        } else if (line.startsWith('EXERCISE:')) {
+          currentSession['estimatedDuration'] =
+              int.tryParse(line.substring(LocaleKeys.workout_generation_keywords_duration.tr().length).trim()) ?? 30;
+        } else if (line.startsWith(LocaleKeys.workout_generation_keywords_exercise.tr())) {
           if (currentExercise != null) {
             currentExercises.add(Map<String, dynamic>.from(currentExercise));
           }
           currentExercise = <String, dynamic>{};
-          currentExercise['name'] = line.substring(9).trim();
+          currentExercise['name'] = line.substring(LocaleKeys.workout_generation_keywords_exercise.tr().length).trim();
         } else if (currentExercise != null) {
           // Parse exercise data
-          if (line.startsWith('TARGET_MUSCLES:')) {
-            final musclesText = line.substring(15).trim();
+          if (line.startsWith(LocaleKeys.workout_generation_keywords_target_muscles.tr())) {
+            final musclesText = line
+                .substring(LocaleKeys.workout_generation_keywords_target_muscles.tr().length)
+                .trim();
             currentExercise['targetMuscles'] = musclesText
                 .split(',')
                 .map((m) => m.trim())
                 .where((m) => m.isNotEmpty)
                 .toList();
-          } else if (line.startsWith('LOAD_TYPE:')) {
-            final loadType = line.substring(10).trim();
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_load_type.tr())) {
+            final loadType = line.substring(LocaleKeys.workout_generation_keywords_load_type.tr().length).trim();
             currentExercise['load'] = <String, dynamic>{'type': loadType};
-          } else if (line.startsWith('SETS:')) {
-            final sets = int.tryParse(line.substring(5).trim()) ?? 1;
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_sets.tr())) {
+            final sets =
+                int.tryParse(line.substring(LocaleKeys.workout_generation_keywords_sets.tr().length).trim()) ?? 1;
             final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
             load['sets'] = sets;
             currentExercise['load'] = load;
-          } else if (line.startsWith('REPS:')) {
-            final repsText = line.substring(5).trim();
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_reps.tr())) {
+            final repsText = line.substring(LocaleKeys.workout_generation_keywords_reps.tr().length).trim();
             if (repsText.isNotEmpty) {
               final reps = int.tryParse(repsText) ?? 1;
               final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
               load['reps'] = reps;
               currentExercise['load'] = load;
             }
-          } else if (line.startsWith('DURATION:')) {
-            final durationText = line.substring(9).trim();
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_duration.tr())) {
+            final durationText = line.substring(LocaleKeys.workout_generation_keywords_duration.tr().length).trim();
             if (durationText.isNotEmpty) {
               final duration = int.tryParse(durationText) ?? 30;
               final load = currentExercise['load'] as Map<String, dynamic>? ?? <String, dynamic>{};
               load['duration'] = duration;
               currentExercise['load'] = load;
             }
-          } else if (line.startsWith('REST:')) {
-            final rest = int.tryParse(line.substring(5).trim()) ?? 60;
+          } else if (line.startsWith(LocaleKeys.workout_generation_keywords_rest.tr())) {
+            final rest =
+                int.tryParse(line.substring(LocaleKeys.workout_generation_keywords_rest.tr().length).trim()) ?? 60;
             currentExercise['restDuration'] = rest;
           }
         }
@@ -831,115 +755,96 @@ Map<String, Map<String, String>> _getExerciseGuideMap() => {
   "close_push_up": {
     "image": "assets/images/exercises/close_puch_up.gif",
     "optimalView": "side",
-    "instruction":
-        "Start in a plank with hands close together under your chest. Lower your body, keeping elbows tucked. Push back up, keeping your core tight and body in a straight line.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_close_push_up.tr(),
   },
   "crunch": {
     "image": "assets/images/exercises/crunch.gif",
     "optimalView": "side",
-    "instruction":
-        "Lie on your back with knees bent and feet flat. Place hands behind your head or across your chest. Engage your abs to lift your shoulders, then slowly return.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_crunch.tr(),
   },
   "decline_push_up": {
     "image": "assets/images/exercises/decline_push_up.gif",
     "optimalView": "side",
-    "instruction":
-        "Place your feet on an elevated surface, hands on the floor slightly wider than shoulders. Lower your chest with control, then push back up, keeping a straight body.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_decline_push_up.tr(),
   },
   "double_crunch": {
     "image": "assets/images/exercises/duble_crunch.gif",
     "optimalView": "side",
-    "instruction":
-        "Lie on your back, hands behind your head. Simultaneously lift your shoulders and knees toward each other, engaging your entire core. Slowly return to start.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_double_crunch.tr(),
   },
   "high_knee": {
     "image": "assets/images/exercises/high_knee.gif",
     "optimalView": "side",
-    "instruction":
-        "Stand tall and jog in place, driving your knees up toward your chest quickly. Swing your arms naturally to keep the rhythm and intensity up.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_high_knee.tr(),
   },
   "incline_push_up": {
     "image": "assets/images/exercises/incline_push_up.gif",
     "optimalView": "side",
-    "instruction":
-        "Place your hands on a sturdy elevated surface. Step your feet back into a straight plank. Lower your chest until elbows reach 90°, then press up to start.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_incline_push_up.tr(),
   },
   "jumping_jacks": {
     "image": "assets/images/exercises/jumping_jacks.gif",
     "optimalView": "front",
-    "instruction":
-        "Begin standing tall with arms at sides. Jump while spreading legs and raising arms overhead. Jump again to return to start. Maintain a steady rhythm.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_jumping_jacks.tr(),
   },
   "knee_push_up": {
     "image": "assets/images/exercises/knee_push_up.gif",
     "optimalView": "side",
-    "instruction":
-        "Start in a modified plank with knees on the floor and hands under shoulders. Lower your chest while keeping your hips aligned, then press back up.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_knee_push_up.tr(),
   },
   "mountain_climbers": {
     "image": "assets/images/exercises/mountain_climbers.webp",
     "optimalView": "side",
-    "instruction":
-        "In a high plank position, drive one knee toward your chest, then quickly switch. Alternate legs at a brisk pace while keeping your core stable.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_mountain_climbers.tr(),
   },
   "plank": {
     "image": "assets/images/exercises/plank.webp",
     "optimalView": "side",
-    "instruction":
-        "Support your body on forearms and toes, keeping your spine straight and hips level. Engage your abs and hold this steady position without sagging.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_plank.tr(),
   },
   "push_up": {
     "image": "assets/images/exercises/push_up.gif",
     "optimalView": "side",
-    "instruction":
-        "Begin in a plank with hands under shoulders. Lower your body until your chest nearly touches the ground, then push back up in one fluid motion.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_push_up.tr(),
   },
   "reverse_crunch": {
     "image": "assets/images/exercises/reverse_crunch.gif",
     "optimalView": "side",
-    "instruction":
-        "Lie flat with legs bent and feet lifted. Curl your hips off the ground toward your chest using your lower abs, then slowly lower back down.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_reverse_crunch.tr(),
   },
   "side_plank": {
     "image": "assets/images/exercises/side_plank.png",
     "optimalView": "side",
-    "instruction":
-        "Lie on one side, stack your feet, and lift your hips off the ground using your forearm. Keep your body aligned and hold, engaging your obliques.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_side_plank.tr(),
   },
   "split_squat": {
     "image": "assets/images/exercises/split_squat.gif",
     "optimalView": "side",
-    "instruction":
-        "Stand in a staggered stance with one foot forward. Lower your back knee toward the floor, keeping your torso upright, then push through the front heel to rise.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_split_squat.tr(),
   },
   "squat": {
     "image": "assets/images/exercises/squat.gif",
     "optimalView": "side",
-    "instruction":
-        "Stand with feet shoulder-width apart. Push your hips back and bend your knees to lower down, keeping chest up. Press through heels to stand.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_squat.tr(),
   },
   "sumo_squat": {
     "image": "assets/images/exercises/sumo_squat.gif",
     "optimalView": "front",
-    "instruction":
-        "Take a wide stance with toes turned out. Lower your hips straight down until thighs are parallel to the ground. Keep your chest up and core engaged.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_sumo_squat.tr(),
   },
   "superman": {
     "image": "assets/images/exercises/superman.gif",
     "optimalView": "side",
-    "instruction":
-        "Lie face down with arms extended forward. Lift your arms, chest, and legs off the ground at once, hold briefly, then lower with control.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_superman.tr(),
   },
   "wall_pushup": {
     "image": "assets/images/exercises/wall_pushup.webp",
     "optimalView": "side",
-    "instruction":
-        "Stand a few feet from a wall and place hands at shoulder height. Bend elbows to bring your chest toward the wall, then push back to the start position.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_wall_pushup.tr(),
   },
   "wall_sit": {
     "image": "assets/images/exercises/wall_sit.jpg.webp",
     "optimalView": "side",
-    "instruction":
-        "Lean against a wall and slide down until your thighs are parallel to the ground. Hold this seated position, keeping your back flat and core braced.",
+    "instruction": LocaleKeys.workout_generation_exercise_instructions_wall_sit.tr(),
   },
 };

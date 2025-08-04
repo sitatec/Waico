@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/setup_card.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class PreferencesStep extends StatefulWidget {
   final WorkoutSetupData data;
@@ -13,7 +15,12 @@ class PreferencesStep extends StatefulWidget {
 }
 
 class _PreferencesStepState extends State<PreferencesStep> {
-  final Map<int, String> _durationLabels = {15: '15 min', 30: '30 min', 45: '45 min', 60: '1 hour'};
+  Map<int, String> get _durationLabels => {
+    15: LocaleKeys.workout_setup_preferences_15_min.tr(),
+    30: LocaleKeys.common_duration_30_min.tr(),
+    45: LocaleKeys.common_duration_45_min.tr(),
+    60: LocaleKeys.common_duration_1_hour.tr(),
+  };
 
   void _updateDuration(int duration) {
     widget.onDataChanged(widget.data.copyWith(workoutDurationPreference: duration));
@@ -29,7 +36,7 @@ class _PreferencesStepState extends State<PreferencesStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Let\'s customize your experience',
+            LocaleKeys.workout_setup_preferences_title.tr(),
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -39,7 +46,7 @@ class _PreferencesStepState extends State<PreferencesStep> {
           const SizedBox(height: 8),
 
           Text(
-            'These preferences help us recommend workouts that fit your lifestyle.',
+            LocaleKeys.workout_setup_preferences_description.tr(),
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
 
@@ -49,13 +56,13 @@ class _PreferencesStepState extends State<PreferencesStep> {
 
           // Workout Duration Preference
           SetupCard(
-            title: 'Workout Duration',
+            title: LocaleKeys.workout_setup_preferences_workout_duration.tr(),
             icon: Icons.timer,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How long would you prefer your workouts to be?',
+                  LocaleKeys.workout_setup_preferences_workout_duration_question.tr(),
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 16),
@@ -73,7 +80,7 @@ class _PreferencesStepState extends State<PreferencesStep> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '15 min',
+                      LocaleKeys.workout_setup_preferences_15_min.tr(),
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     Container(
@@ -91,7 +98,7 @@ class _PreferencesStepState extends State<PreferencesStep> {
                       ),
                     ),
                     Text(
-                      '1 hours',
+                      LocaleKeys.workout_setup_preferences_1_hours.tr(),
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                   ],
@@ -104,39 +111,49 @@ class _PreferencesStepState extends State<PreferencesStep> {
 
           // Summary Card
           SetupCard(
-            title: 'Setup Summary',
+            title: LocaleKeys.workout_setup_preferences_setup_summary.tr(),
             icon: Icons.summarize,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildSummaryItem(
-                  'Physical Stats',
+                  LocaleKeys.workout_setup_preferences_physical_stats.tr(),
                   widget.data.weight != null && widget.data.height != null
-                      ? '${widget.data.weight?.toStringAsFixed(1)} kg, ${widget.data.height?.toStringAsFixed(0)} cm'
-                      : 'Not completed',
+                      ? LocaleKeys.workout_setup_preferences_weight_height_format.tr(
+                          namedArgs: {
+                            'weight': widget.data.weight!.toStringAsFixed(1),
+                            'height': widget.data.height!.toStringAsFixed(0),
+                          },
+                        )
+                      : LocaleKeys.workout_setup_preferences_not_completed.tr(),
                   widget.data.weight != null && widget.data.height != null,
                   theme,
                 ),
                 _buildSummaryItem(
-                  'Fitness Level',
-                  widget.data.currentFitnessLevel ?? 'Not selected',
+                  LocaleKeys.workout_setup_preferences_fitness_level.tr(),
+                  widget.data.currentFitnessLevel ?? LocaleKeys.workout_setup_preferences_not_selected.tr(),
                   widget.data.currentFitnessLevel != null,
                   theme,
                 ),
                 _buildSummaryItem(
-                  'Workout Frequency',
-                  '${widget.data.selectedWeekDays.length}x per week: ${widget.data.selectedWeekDays.join(', ')}',
+                  LocaleKeys.workout_setup_preferences_workout_frequency.tr(),
+                  LocaleKeys.workout_setup_preferences_frequency_per_week.tr(
+                    namedArgs: {
+                      'count': widget.data.selectedWeekDays.length.toString(),
+                      'days': widget.data.selectedWeekDays.join(', '),
+                    },
+                  ),
                   true,
                   theme,
                 ),
                 _buildSummaryItem(
-                  'Primary Goal',
-                  widget.data.primaryGoal ?? 'Not specified',
+                  LocaleKeys.workout_setup_preferences_primary_goal.tr(),
+                  widget.data.primaryGoal ?? LocaleKeys.workout_setup_preferences_not_specified.tr(),
                   widget.data.primaryGoal != null,
                   theme,
                 ),
                 _buildSummaryItem(
-                  'Preferred Duration',
+                  LocaleKeys.workout_setup_preferences_preferred_duration.tr(),
                   _durationLabels[widget.data.workoutDurationPreference]!,
                   true,
                   theme,

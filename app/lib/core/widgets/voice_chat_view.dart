@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/core/widgets/ai_voice_waveform.dart';
 import 'package:waico/core/widgets/loading_widget.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 import 'package:wakelock_plus/wakelock_plus.dart' show WakelockPlus;
 
 class VoiceChatView extends StatefulWidget {
@@ -113,7 +115,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                           Icon(Icons.add_a_photo, size: 40, color: theme.colorScheme.primary),
                           const SizedBox(height: 16),
                           Text(
-                            "Show an image to Waico",
+                            LocaleKeys.voice_chat_show_image_to_waico.tr(),
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
@@ -131,13 +133,13 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                 onLongPressStart: (_) {
                   widget.voiceChatPipeline.hold();
                   setState(() {
-                    _aiSpeechState += " (On Hold)";
+                    _aiSpeechState += LocaleKeys.voice_chat_on_hold.tr();
                   });
                 },
                 onLongPressEnd: (_) {
                   widget.voiceChatPipeline.unHold();
                   setState(() {
-                    _aiSpeechState = _aiSpeechState.replaceAll(" (On Hold)", "");
+                    _aiSpeechState = _aiSpeechState.replaceAll(LocaleKeys.voice_chat_on_hold.tr(), "");
                   });
                 },
                 child: Column(
@@ -168,7 +170,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Press and hold to speak long messages",
+                      LocaleKeys.voice_chat_press_hold_to_speak.tr(),
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
@@ -179,7 +181,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
             ),
           ],
         ),
-        if (!_chatStarted) LoadingWidget(message: "Starting chat session"),
+        if (!_chatStarted) LoadingWidget(message: LocaleKeys.voice_chat_starting_chat_session.tr()),
       ],
     );
   }
@@ -214,7 +216,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                         children: [
                           Icon(Icons.camera_alt_outlined, size: 47, color: theme.colorScheme.primary),
                           const SizedBox(height: 8),
-                          Text('Camera'),
+                          Text(LocaleKeys.common_camera.tr()),
                         ],
                       ),
                     ),
@@ -232,7 +234,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
                         children: [
                           Icon(Icons.image_outlined, size: 50, color: theme.colorScheme.primary),
                           const SizedBox(height: 8),
-                          Text('Gallery'),
+                          Text(LocaleKeys.common_gallery.tr()),
                         ],
                       ),
                     ),

@@ -1,6 +1,7 @@
 import 'dart:developer' show log;
 
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:health/health.dart';
 import 'package:waico/core/services/health_service.dart';
 import 'package:waico/core/repositories/user_repository.dart';
@@ -12,6 +13,7 @@ import 'package:waico/features/workout/pages/workout_setup/widgets/fitness_level
 import 'package:waico/features/workout/pages/workout_setup/widgets/goals_step.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/preferences_step.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/setup_progress_indicator.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class WorkoutSetupPage extends StatefulWidget {
   const WorkoutSetupPage({super.key});
@@ -26,10 +28,15 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
   final UserRepository _userRepository = UserRepository();
 
   int _currentStep = 0;
-  WorkoutSetupData _setupData = const WorkoutSetupData();
+  WorkoutSetupData _setupData = WorkoutSetupData();
   bool _isLoading = false;
 
-  final List<String> _stepTitles = ['Physical Stats', 'Fitness Level', 'Your Goals', 'Preferences'];
+  List<String> get _stepTitles => [
+    LocaleKeys.workout_setup_step_titles_physical_stats.tr(),
+    LocaleKeys.workout_setup_step_titles_fitness_level.tr(),
+    LocaleKeys.workout_setup_step_titles_goals.tr(),
+    LocaleKeys.workout_setup_step_titles_preferences.tr(),
+  ];
 
   @override
   void initState() {
@@ -112,9 +119,12 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
     } catch (e, s) {
       log("Failed to save workout setup", error: e, stackTrace: s);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to save workout setup: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LocaleKeys.workout_setup_failed_save.tr(namedArgs: {'error': e.toString()})),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -130,13 +140,13 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Setup Complete!'),
+        title: Text(LocaleKeys.workout_setup_complete_title.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 64),
             const SizedBox(height: 16),
-            const Text('Your workout profile has been saved successfully!', textAlign: TextAlign.center),
+            Text(LocaleKeys.workout_setup_complete_message.tr(), textAlign: TextAlign.center),
             if (_setupData.bmi != null) ...[
               const SizedBox(height: 16),
               Container(
@@ -148,7 +158,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
                 child: Column(
                   children: [
                     Text(
-                      'Your BMI: ${_setupData.bmi!.toStringAsFixed(1)}',
+                      LocaleKeys.workout_setup_your_bmi.tr(namedArgs: {'bmi': _setupData.bmi!.toStringAsFixed(1)}),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.primary,
@@ -157,7 +167,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
                     if (_setupData.primaryGoal != null) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Goal: ${_setupData.primaryGoal}',
+                        LocaleKeys.workout_setup_goal_label.tr(namedArgs: {'goal': _setupData.primaryGoal!}),
                         style: Theme.of(
                           context,
                         ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -169,7 +179,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
             ],
             const SizedBox(height: 12),
             Text(
-              'Your data has been saved locally and synchronized with Health Connect.',
+              LocaleKeys.workout_setup_data_saved_message.tr(),
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -182,7 +192,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
             onPressed: () {
               context.navigateTo(const WorkoutPlanGenerationPage(), replaceCurrent: true);
             },
-            child: const Text('Continue'),
+            child: Text(LocaleKeys.workout_setup_continue.tr()),
           ),
         ],
       ),
@@ -215,7 +225,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          'Workout Setup',
+          LocaleKeys.workout_setup_title.tr(),
           style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: theme.colorScheme.primary,
@@ -266,7 +276,10 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
                         child: OutlinedButton(
                           onPressed: _previousStep,
                           style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.primary)),
-                          child: Text('Previous', style: TextStyle(color: theme.colorScheme.primary)),
+                          child: Text(
+                            LocaleKeys.workout_setup_previous.tr(),
+                            style: TextStyle(color: theme.colorScheme.primary),
+                          ),
                         ),
                       ),
                     if (_currentStep > 0) const SizedBox(width: 16),
@@ -280,7 +293,9 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
                           disabledBackgroundColor: Colors.grey.shade300,
                         ),
                         child: Text(
-                          _currentStep == _stepTitles.length - 1 ? 'Finish' : 'Next',
+                          _currentStep == _stepTitles.length - 1
+                              ? LocaleKeys.workout_setup_finish.tr()
+                              : LocaleKeys.workout_setup_next.tr(),
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                       ),

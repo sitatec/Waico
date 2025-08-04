@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/pages/workout_setup/widgets/setup_card.dart';
 import 'package:waico/features/workout/widgets/selection_chips.dart';
 import 'package:waico/features/workout/widgets/custom_text_field.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class GoalsStep extends StatefulWidget {
   final WorkoutSetupData data;
@@ -19,29 +21,29 @@ class _GoalsStepState extends State<GoalsStep> {
   late TextEditingController _targetWeightController;
 
   final List<String> _primaryGoalSuggestions = [
-    'Lose weight',
-    'Build muscle',
-    'Improve fitness',
-    'Increase strength',
-    'Better health',
-    'Train for event',
-    'Stay active',
-    'Stress relief',
+    LocaleKeys.workout_setup_goals_lose_weight.tr(),
+    LocaleKeys.workout_setup_goals_build_muscle.tr(),
+    LocaleKeys.workout_setup_goals_improve_fitness.tr(),
+    LocaleKeys.workout_setup_goals_increase_strength.tr(),
+    LocaleKeys.workout_setup_goals_better_health.tr(),
+    LocaleKeys.workout_setup_goals_train_for_event.tr(),
+    LocaleKeys.workout_setup_goals_stay_active.tr(),
+    LocaleKeys.workout_setup_goals_stress_relief.tr(),
   ];
 
   final List<String> _specificGoalOptions = [
-    'Lose body fat',
-    'Build lean muscle',
-    'Improve cardiovascular health',
-    'Increase flexibility',
-    'Better posture',
-    'More energy',
-    'Better sleep',
-    'Reduce stress',
-    'Improve mood',
-    'Build confidence',
-    'Train for marathon',
-    'Prepare for competition',
+    LocaleKeys.workout_setup_goals_lose_body_fat.tr(),
+    LocaleKeys.workout_setup_goals_build_lean_muscle.tr(),
+    LocaleKeys.workout_setup_goals_improve_cardiovascular.tr(),
+    LocaleKeys.workout_setup_goals_increase_flexibility.tr(),
+    LocaleKeys.workout_setup_goals_better_posture.tr(),
+    LocaleKeys.workout_setup_goals_more_energy.tr(),
+    LocaleKeys.workout_setup_goals_better_sleep.tr(),
+    LocaleKeys.workout_setup_goals_reduce_stress.tr(),
+    LocaleKeys.workout_setup_goals_improve_mood.tr(),
+    LocaleKeys.workout_setup_goals_build_confidence.tr(),
+    LocaleKeys.workout_setup_goals_train_for_marathon.tr(),
+    LocaleKeys.workout_setup_goals_prepare_for_competition.tr(),
   ];
 
   @override
@@ -85,7 +87,7 @@ class _GoalsStepState extends State<GoalsStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'What are your fitness goals?',
+            LocaleKeys.workout_setup_goals_title.tr(),
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
@@ -95,7 +97,7 @@ class _GoalsStepState extends State<GoalsStep> {
           const SizedBox(height: 8),
 
           Text(
-            'Setting clear goals helps us create a plan that motivates and guides you.',
+            LocaleKeys.workout_setup_goals_description.tr(),
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
 
@@ -103,7 +105,7 @@ class _GoalsStepState extends State<GoalsStep> {
 
           // Primary Goal
           SetupCard(
-            title: 'Primary Goal',
+            title: LocaleKeys.workout_setup_goals_primary_goal.tr(),
             icon: Icons.track_changes,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,13 +113,13 @@ class _GoalsStepState extends State<GoalsStep> {
                 SuggestionChips(
                   suggestions: _primaryGoalSuggestions,
                   onSuggestionTapped: _onGoalSuggestionTapped,
-                  title: 'Popular goals',
+                  title: LocaleKeys.workout_setup_goals_popular_goals.tr(),
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
                   controller: _primaryGoalController,
-                  label: 'Your main fitness goal',
-                  hint: 'What do you want to achieve?',
+                  label: LocaleKeys.workout_setup_goals_main_fitness_goal.tr(),
+                  hint: LocaleKeys.workout_setup_goals_main_fitness_goal_hint.tr(),
                   onChanged: _updatePrimaryGoal,
                   maxLines: 2,
                 ),
@@ -135,15 +137,15 @@ class _GoalsStepState extends State<GoalsStep> {
             Column(
               children: [
                 SetupCard(
-                  title: 'Target Weight',
+                  title: LocaleKeys.workout_setup_goals_target_weight.tr(),
                   icon: Icons.monitor_weight,
                   child: Column(
                     children: [
                       CustomTextField(
                         controller: _targetWeightController,
-                        label: 'Target weight (optional)',
-                        suffix: 'kg',
-                        hint: 'Enter your target weight',
+                        label: LocaleKeys.workout_setup_goals_target_weight_optional.tr(),
+                        suffix: LocaleKeys.common_unit_kg.tr(),
+                        hint: LocaleKeys.workout_setup_goals_target_weight_hint.tr(),
                         keyboardType: TextInputType.number,
                         onChanged: _updateTargetWeight,
                       ),
@@ -158,13 +160,13 @@ class _GoalsStepState extends State<GoalsStep> {
 
           // Specific Goals
           SetupCard(
-            title: 'Additional Goals',
+            title: LocaleKeys.workout_setup_goals_additional_goals.tr(),
             icon: Icons.checklist,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'What else would you like to improve? (Optional)',
+                  LocaleKeys.workout_setup_goals_additional_goals_description.tr(),
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
@@ -191,7 +193,12 @@ class _GoalsStepState extends State<GoalsStep> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${widget.data.specificGoals.length} additional goal${widget.data.specificGoals.length == 1 ? '' : 's'} selected',
+                            LocaleKeys.workout_setup_goals_goals_selected.tr(
+                              namedArgs: {
+                                'count': widget.data.specificGoals.length.toString(),
+                                'plural': widget.data.specificGoals.length == 1 ? '' : 's',
+                              },
+                            ),
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary),
                           ),
                         ),
@@ -232,8 +239,8 @@ class _GoalsStepState extends State<GoalsStep> {
           Expanded(
             child: Text(
               isLoss
-                  ? 'Goal: Lose ${absChange.toStringAsFixed(1)} kg'
-                  : 'Goal: Gain ${absChange.toStringAsFixed(1)} kg',
+                  ? LocaleKeys.workout_setup_goals_goal_lose.tr(namedArgs: {'weight': absChange.toStringAsFixed(1)})
+                  : LocaleKeys.workout_setup_goals_goal_gain.tr(namedArgs: {'weight': absChange.toStringAsFixed(1)}),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.primary,
                 fontWeight: FontWeight.w600,

@@ -1,5 +1,7 @@
 import 'dart:math';
 import 'package:just_audio/just_audio.dart';
+import 'package:waico/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// Manages background meditation sounds
 class BackgroundSoundManager {
@@ -10,11 +12,11 @@ class BackgroundSoundManager {
     'meditation_bg_4.m4a',
   ];
 
-  static const Map<String, String> soundNames = {
-    'meditation_bg_1.m4a': 'One',
-    'meditation_bg_2.m4a': 'Two',
-    'meditation_bg_3.m4a': 'Three',
-    'meditation_bg_4.m4a': 'Four',
+  static Map<String, String> get soundNames => {
+    'meditation_bg_1.m4a': LocaleKeys.meditation_background_sounds_meditation_bg_1.tr(),
+    'meditation_bg_2.m4a': LocaleKeys.meditation_background_sounds_meditation_bg_2.tr(),
+    'meditation_bg_3.m4a': LocaleKeys.meditation_background_sounds_meditation_bg_3.tr(),
+    'meditation_bg_4.m4a': LocaleKeys.meditation_background_sounds_meditation_bg_4.tr(),
   };
 
   /// Get a random background sound filename
@@ -25,7 +27,10 @@ class BackgroundSoundManager {
 
   /// Get display name for a background sound
   static String getDisplayName(String filename) {
-    return soundNames[filename] ?? filename.replaceAll('.m4a', '').replaceAll('meditation_bg_', 'Sound ');
+    return soundNames[filename] ??
+        filename
+            .replaceAll('.m4a', '')
+            .replaceAll('meditation_bg_', LocaleKeys.meditation_background_sounds_fallback_prefix.tr());
   }
 
   /// Get all available sounds with their display names

@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:easy_localization/easy_localization.dart';
+import 'package:waico/generated/locale_keys.g.dart';
+
 class WorkoutSetupData {
   // Physical stats
   final double? weight;
@@ -23,13 +26,13 @@ class WorkoutSetupData {
   final int workoutDurationPreference; // in minutes
   final String? experienceLevel;
 
-  const WorkoutSetupData({
+  WorkoutSetupData({
     this.weight,
     this.height,
     this.age,
     this.gender,
     this.currentFitnessLevel,
-    this.selectedWeekDays = const ["Monday", "Wednesday", "Friday"],
+    List<String>? selectedWeekDays,
     this.primaryGoal,
     this.targetWeight,
     this.timeframe,
@@ -37,7 +40,13 @@ class WorkoutSetupData {
     this.availableEquipment = const [],
     this.workoutDurationPreference = 30,
     this.experienceLevel,
-  });
+  }) : selectedWeekDays =
+           selectedWeekDays ??
+           [
+             LocaleKeys.workout_setup_fitness_level_monday.tr(),
+             LocaleKeys.workout_setup_fitness_level_wednesday.tr(),
+             LocaleKeys.workout_setup_fitness_level_friday.tr(),
+           ];
 
   WorkoutSetupData copyWith({
     double? weight,

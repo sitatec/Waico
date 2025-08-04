@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/features/meditation/background_sound_manager.dart';
 import 'package:waico/features/meditation/models/meditation_guide.dart';
 import 'package:waico/features/meditation/widgets/meditation_type_card.dart';
 import 'package:waico/features/meditation/widgets/background_sound_selector.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class MeditationTypeSelectionPage extends StatelessWidget {
   final Function(MeditationType, int, String?, String?) onTypeSelected;
@@ -14,7 +16,7 @@ class MeditationTypeSelectionPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Choose Meditation Type'),
+        title: Text(LocaleKeys.meditation_type_selection_choose_meditation_type.tr()),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -44,13 +46,13 @@ class MeditationTypeSelectionPage extends StatelessWidget {
                 children: [
                   const Icon(Icons.self_improvement, color: Colors.white, size: 32),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Create Your Meditation Guide',
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  Text(
+                    LocaleKeys.meditation_type_selection_create_your_guide.tr(),
+                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Choose the type of meditation that resonates with you. Each guide will be personalized and crafted just for you.',
+                    LocaleKeys.meditation_type_selection_guide_description.tr(),
                     style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16, height: 1.4),
                   ),
                 ],
@@ -60,8 +62,8 @@ class MeditationTypeSelectionPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Beginner recommendation
-            const Text(
-              'Perfect for Beginners',
+            Text(
+              LocaleKeys.meditation_perfect_for_beginners.tr(),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 12),
@@ -74,16 +76,15 @@ class MeditationTypeSelectionPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // All meditation types
-            const Text(
-              'All Meditation Types',
+            Text(
+              LocaleKeys.meditation_all_meditation_types.tr(),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 12),
 
             ...MeditationType.values
                 .where((type) => type != MeditationType.beginner)
-                .map((type) => MeditationTypeCard(type: type, onTap: () => _showDurationSelection(context, type)))
-                .toList(),
+                .map((type) => MeditationTypeCard(type: type, onTap: () => _showDurationSelection(context, type))),
 
             const SizedBox(height: 20),
           ],
@@ -155,7 +156,7 @@ class _DurationSelectionModalState extends State<DurationSelectionModal> {
             Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
-                'Personalize Your Meditation',
+                LocaleKeys.meditation_type_selection_personalize_meditation.tr(),
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
               ),
             ),
@@ -167,12 +168,15 @@ class _DurationSelectionModalState extends State<DurationSelectionModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Meditation title (optional)', style: TextStyle(fontSize: 15, color: Colors.black54)),
+                  Text(
+                    LocaleKeys.meditation_type_selection_meditation_title_optional.tr(),
+                    style: TextStyle(fontSize: 15, color: Colors.black54),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _titleController,
                     decoration: InputDecoration(
-                      hintText: 'Enter meditation title...',
+                      hintText: LocaleKeys.meditation_type_selection_enter_meditation_title.tr(),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
@@ -188,7 +192,10 @@ class _DurationSelectionModalState extends State<DurationSelectionModal> {
                 children: [
                   Icon(Icons.music_note_outlined, color: theme.colorScheme.primary, size: 21),
                   const SizedBox(width: 8),
-                  Text('Background Sound', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
+                  Text(
+                    LocaleKeys.meditation_type_selection_background_sound.tr(),
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+                  ),
                 ],
               ),
               maintainState: true,
@@ -214,7 +221,10 @@ class _DurationSelectionModalState extends State<DurationSelectionModal> {
                 children: [
                   Icon(Icons.access_time, color: theme.colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text('Select Duration', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
+                  Text(
+                    LocaleKeys.meditation_type_selection_select_duration.tr(),
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+                  ),
                 ],
               ),
               maintainState: true,
@@ -290,7 +300,7 @@ class DurationCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$duration minutes',
+                        LocaleKeys.common_in_minutes.plural(duration, namedArgs: {'count': duration.toString()}),
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                       ),
                       Text(
@@ -311,15 +321,15 @@ class DurationCard extends StatelessWidget {
 
   String _getDurationDescription(int duration) {
     if (duration <= 5) {
-      return 'Quick and focused';
+      return LocaleKeys.meditation_duration_descriptions_quick_focused.tr();
     } else if (duration <= 10) {
-      return 'Perfect for beginners';
+      return LocaleKeys.meditation_duration_descriptions_perfect_beginners.tr();
     } else if (duration <= 15) {
-      return 'Balanced and relaxing';
+      return LocaleKeys.meditation_duration_descriptions_balanced_relaxing.tr();
     } else if (duration <= 20) {
-      return 'Deep and restorative';
+      return LocaleKeys.meditation_duration_descriptions_deep_restorative.tr();
     } else {
-      return 'Extended practice';
+      return LocaleKeys.meditation_duration_descriptions_extended_practice.tr();
     }
   }
 }

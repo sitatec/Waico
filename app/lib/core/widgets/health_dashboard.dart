@@ -183,7 +183,7 @@ class _HealthDashboardState extends State<HealthDashboard> {
                   icon: Icons.monitor_weight,
                   title: LocaleKeys.health_weight.tr(),
                   value: metrics.weight?.toStringWithoutZeroDecimal(numDecimals: 1) ?? '-',
-                  unit: LocaleKeys.health_kg.tr(),
+                  unit: LocaleKeys.common_unit_kg.tr(),
                   iconSize: 15.5,
                 ),
               ],

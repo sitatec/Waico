@@ -4,6 +4,7 @@ import 'dart:developer' show log;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:waico/core/utils/localization_utils.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/core/voice_chat_pipeline.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
@@ -119,7 +120,7 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
   Future<void> _initializeWorkoutSession() async {
     setState(() => _isInitialized = false);
     try {
-      _workoutCoachAgent = WorkoutCoachAgent();
+      _workoutCoachAgent = WorkoutCoachAgent(language: context.locale.languageName);
       await _workoutCoachAgent?.initialize();
       _voiceChatPipeline = VoiceChatPipeline(agent: _workoutCoachAgent!);
       _poseDetectionService = PoseDetectionService.instance;
@@ -154,7 +155,12 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
       setState(() => _isInitialized = true); // Stop loading even on error
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to initialize workout session: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(
+              LocaleKeys.workout_exercise_failed_initialize_session_with_error.tr(namedArgs: {'error': e.toString()}),
+            ),
+            backgroundColor: Colors.red,
+          ),
         );
       });
     }
@@ -179,7 +185,7 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
                 valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 20),
-              const Text('Initializing workout session...', style: TextStyle(fontSize: 16)),
+              Text(LocaleKeys.workout_exercise_initializing_session.tr(), style: TextStyle(fontSize: 16)),
             ],
           ),
         ),
@@ -187,9 +193,12 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
     }
 
     if (_sessionManager == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Failed to initialize workout session', style: TextStyle(color: Colors.white, fontSize: 16)),
+          child: Text(
+            LocaleKeys.workout_exercise_failed_initialize_session.tr(),
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
         ),
       );
     }
@@ -287,7 +296,12 @@ class InstructionsView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'EXERCISE ${state.currentExerciseIndex + 1} OF ${state.totalExercises}',
+                          LocaleKeys.workout_exercise_exercise_number.tr(
+                            namedArgs: {
+                              'current': (state.currentExerciseIndex + 1).toString(),
+                              'total': state.totalExercises.toString(),
+                            },
+                          ),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -297,8 +311,8 @@ class InstructionsView extends StatelessWidget {
                         ),
                         InkWell(
                           onTap: context.navBack,
-                          child: const Text(
-                            'CLOSE',
+                          child: Text(
+                            LocaleKeys.workout_exercise_close.tr(),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -347,7 +361,19 @@ class InstructionsView extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 ),
                 child: Text(
-                  '${exercise.load.sets} sets × ${exercise.load.reps ?? exercise.load.duration ?? 'N/A'} ${exercise.load.type.name}',
+                  exercise.load.type == ExerciseLoadType.reps
+                      ? LocaleKeys.workout_exercise_sets_x_reps.tr(
+                          namedArgs: {
+                            'sets': exercise.load.sets.toString(),
+                            'reps': (exercise.load.reps ?? LocaleKeys.common_not_applicable.tr()).toString(),
+                          },
+                        )
+                      : LocaleKeys.workout_exercise_sets_x_duration.tr(
+                          namedArgs: {
+                            'sets': exercise.load.sets.toString(),
+                            'duration': (exercise.load.duration ?? LocaleKeys.common_not_applicable.tr()).toString(),
+                          },
+                        ),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontSize: 14,
@@ -365,7 +391,13 @@ class InstructionsView extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   ),
                   child: Text(
-                    'Make sure you are ${exercise.optimalView == 'front' ? 'facing the camera' : 'turned sideways to the camera'} for optimal tracking.',
+                    LocaleKeys.workout_exercise_optimal_tracking_message.tr(
+                      namedArgs: {
+                        'position': exercise.optimalView == 'front'
+                            ? LocaleKeys.workout_exercise_facing_camera.tr()
+                            : LocaleKeys.workout_exercise_turned_sideways.tr(),
+                      },
+                    ),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontSize: 14,
@@ -389,8 +421,8 @@ class InstructionsView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Instructions',
+                      Text(
+                        LocaleKeys.workout_exercise_instructions.tr(),
                         style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
@@ -413,7 +445,7 @@ class InstructionsView extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    'No instructions available for this exercise.',
+                    LocaleKeys.workout_exercise_no_instructions.tr(),
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
@@ -438,9 +470,9 @@ class InstructionsView extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: onStartExercise,
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        'START EXERCISE',
+                        LocaleKeys.workout_exercise_start_exercise.tr(),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -455,7 +487,12 @@ class InstructionsView extends StatelessWidget {
               const SizedBox(height: 8),
               if (state.restTimerValue != null && state.restTimerValue! > 0)
                 Center(
-                  child: Text('Auto-starting in ${state.restTimerValue}s...', style: TextStyle(color: Colors.orange)),
+                  child: Text(
+                    LocaleKeys.workout_exercise_auto_starting.tr(
+                      namedArgs: {'seconds': state.restTimerValue.toString()},
+                    ),
+                    style: TextStyle(color: Colors.orange),
+                  ),
                 ),
             ],
           ),
@@ -499,8 +536,8 @@ class RestOverlay extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'REST',
+              Text(
+                LocaleKeys.workout_exercise_rest.tr(),
                 style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
               ),
               const SizedBox(height: 20),
@@ -510,13 +547,18 @@ class RestOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Next: Set ${state.currentSet} - ${state.currentExercise.name}',
-                style: const TextStyle(color: Colors.white70, fontSize: 18),
+                LocaleKeys.workout_exercise_next_set.tr(
+                  namedArgs: {'set': state.currentSet.toString(), 'exerciseName': state.currentExercise.name},
+                ),
+                style: TextStyle(color: Colors.white70, fontSize: 18),
               ),
               const SizedBox(height: 40),
               TextButton(
                 onPressed: onSkipRest,
-                child: Text('SKIP REST', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 16)),
+                child: Text(
+                  LocaleKeys.workout_exercise_skip_rest.tr(),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 16),
+                ),
               ),
             ],
           ),
@@ -602,7 +644,14 @@ class ControlOverlay extends StatelessWidget {
                       style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                     Text(
-                      ' - Set ${state.currentSet}/${exercise.load.sets}${exercise.load.type == ExerciseLoadType.duration ? ' | Time: ${state.exerciseTimerValue ?? exercise.load.duration}s' : ''}',
+                      LocaleKeys.workout_exercise_set_info.tr(
+                            namedArgs: {'current': state.currentSet.toString(), 'total': exercise.load.sets.toString()},
+                          ) +
+                          (exercise.load.type == ExerciseLoadType.duration
+                              ? LocaleKeys.workout_exercise_time_info.tr(
+                                  namedArgs: {'time': (state.exerciseTimerValue ?? exercise.load.duration).toString()},
+                                )
+                              : ''),
                       style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ],
