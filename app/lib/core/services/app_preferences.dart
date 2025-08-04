@@ -7,6 +7,8 @@ class AppPreferences {
   static const String _voiceModelTypeKey = 'voice_model_type';
   static const String _chatModelTypeKey = 'chat_model_type';
   static const String _hasShownDevicePerfSelectionKey = 'has_shown_device_performance_selection';
+  static const String _languageCodeKey = 'language_code';
+  static const String _hasShownLanguageSelectionKey = 'has_shown_language_selection';
 
   static SharedPreferences? _preferences;
 
@@ -58,6 +60,30 @@ class AppPreferences {
   static Future<void> setHasShownDevicePerfSelection(bool value) async {
     _ensureInitialized();
     await _preferences!.setBool(_hasShownDevicePerfSelectionKey, value);
+  }
+
+  /// Get the selected language code (default: 'en')
+  static String getLanguageCode() {
+    _ensureInitialized();
+    return _preferences!.getString(_languageCodeKey) ?? 'en';
+  }
+
+  /// Set the selected language code
+  static Future<void> setLanguageCode(String languageCode) async {
+    _ensureInitialized();
+    await _preferences!.setString(_languageCodeKey, languageCode);
+  }
+
+  /// Check if language selection has been shown before
+  static bool hasShownLanguageSelection() {
+    _ensureInitialized();
+    return _preferences!.getBool(_hasShownLanguageSelectionKey) ?? false;
+  }
+
+  /// Mark that language selection has been shown
+  static Future<void> setHasShownLanguageSelection(bool value) async {
+    _ensureInitialized();
+    await _preferences!.setBool(_hasShownLanguageSelectionKey, value);
   }
 
   /// Clear all preferences (useful for testing/reset)

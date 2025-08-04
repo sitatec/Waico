@@ -8,8 +8,10 @@ import 'package:waico/core/constants.dart';
 import 'package:waico/core/ai_models/stt_model.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
+import 'package:waico/core/services/app_preferences.dart';
 import 'package:waico/ai_models_init_page.dart';
 import 'package:waico/home_page.dart';
+import 'package:waico/core/language_selection_page.dart';
 import 'package:waico/generated/locale_keys.g.dart';
 import 'package:provider/provider.dart';
 
@@ -65,6 +67,29 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           : Builder(
               // Using a Builder to ensure we get the correct context from material app for navigation
               builder: (context) {
+                // Check if language selection has been shown before
+                if (!AppPreferences.hasShownLanguageSelection()) {
+                  return LanguageSelectionPage(
+                    onComplete: () {
+                      context.navigateTo(
+                        AiModelsInitializationPage(
+                          onDone: (downloadedModelPaths) {
+                            context.navigateTo(
+                              Provider.value(
+                                value: downloadedModelPaths,
+                                updateShouldNotify: (_, _) => false,
+                                child: HomePage(),
+                              ),
+                              replaceCurrent: true,
+                            );
+                          },
+                        ),
+                        replaceCurrent: true,
+                      );
+                    },
+                  );
+                }
+
                 return AiModelsInitializationPage(
                   onDone: (downloadedModelPaths) {
                     context.navigateTo(

@@ -5,6 +5,10 @@
 abstract class  LocaleKeys {
   static const app_title = 'app.title';
   static const app = 'app';
+  static const language_selection_title = 'language_selection.title';
+  static const language_selection_subtitle = 'language_selection.subtitle';
+  static const language_selection_continue = 'language_selection.continue';
+  static const language_selection = 'language_selection';
   static const home_features_meditation = 'home.features.meditation';
   static const home_features_sleep = 'home.features.sleep';
   static const home_features_nutrition = 'home.features.nutrition';
@@ -544,6 +548,8 @@ abstract class  LocaleKeys {
   static const common_not_applicable = 'common.not_applicable';
   static const common_no_options_available = 'common.no_options_available';
   static const common_sort = 'common.sort';
+  static const common_language = 'common.language';
+  static const common_settings = 'common.settings';
   static const common = 'common';
   static const voice_chat_show_image_to_waico = 'voice_chat.show_image_to_waico';
   static const voice_chat_press_hold_to_speak = 'voice_chat.press_hold_to_speak';

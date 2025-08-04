@@ -22,6 +22,7 @@ Future<void> main() async {
       supportedLocales: [Locale('en')],
       path: 'assets/translations',
       fallbackLocale: Locale('en'),
+      startLocale: Locale(AppPreferences.getLanguageCode()),
       child: const App(),
     ),
   );

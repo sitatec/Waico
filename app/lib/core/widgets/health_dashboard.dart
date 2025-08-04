@@ -109,87 +109,98 @@ class _HealthDashboardState extends State<HealthDashboard> {
           buttonText: LocaleKeys.common_retry.tr(),
         );
 
-      case HealthServiceStatus.ready:
-        return _buildDashboard(theme);
+      case HealthServiceStatus.ready || HealthServiceStatus.refreshing:
+        return _buildDashboard(theme, _healthService.status == HealthServiceStatus.refreshing);
     }
   }
 
-  Widget _buildDashboard(ThemeData theme) {
+  Widget _buildDashboard(ThemeData theme, bool isRefreshing) {
     final metrics = _healthService.metrics;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
+      alignment: AlignmentDirectional.center,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              LocaleKeys.health_dashboard_title.tr(),
-              style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              tooltip: LocaleKeys.health_refresh_tooltip.tr(),
-              onPressed: _handleActionButton,
-            ),
-          ],
-        ),
-        // const SizedBox(height: 24),
-        Expanded(
-          child: Center(
-            child: GridView.count(
-              crossAxisCount: 3,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.2,
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(8),
+            Row(
               children: [
-                HealthMetricCard(
-                  icon: Icons.directions_walk,
-                  title: LocaleKeys.health_steps.tr(),
-                  value: metrics.steps.toString(),
-                  unit: '',
-                  iconSize: 15,
+                Text(
+                  LocaleKeys.health_dashboard_title.tr(),
+                  style: theme.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
                 ),
-                HealthMetricCard(
-                  icon: Icons.favorite,
-                  title: LocaleKeys.health_heart_rate.tr(),
-                  value: metrics.heartRate.toInt().toString(),
-                  unit: LocaleKeys.health_bpm.tr(),
-                  iconSize: 14,
-                ),
-                HealthMetricCard(
-                  icon: Icons.local_fire_department,
-                  title: LocaleKeys.health_active_energy.tr(),
-                  value: metrics.calories.toInt().toString(),
-                  unit: LocaleKeys.health_kcal.tr(),
-                  iconSize: 16,
-                ),
-                HealthMetricCard(
-                  icon: Icons.bedtime,
-                  title: LocaleKeys.health_sleep.tr(),
-                  value: metrics.sleepHours.toStringWithoutZeroDecimal(numDecimals: 1),
-                  unit: LocaleKeys.health_hours.tr(),
-                  iconSize: 15,
-                ),
-                HealthMetricCard(
-                  icon: Icons.water_drop,
-                  title: LocaleKeys.health_water.tr(),
-                  value: metrics.waterIntake.toStringWithoutZeroDecimal(numDecimals: 1),
-                  unit: LocaleKeys.health_liters.tr(),
-                  iconSize: 15,
-                ),
-                HealthMetricCard(
-                  icon: Icons.monitor_weight,
-                  title: LocaleKeys.health_weight.tr(),
-                  value: metrics.weight?.toStringWithoutZeroDecimal(numDecimals: 1) ?? '-',
-                  unit: LocaleKeys.common_unit_kg.tr(),
-                  iconSize: 15.5,
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                  tooltip: LocaleKeys.health_refresh_tooltip.tr(),
+                  onPressed: _handleActionButton,
                 ),
               ],
             ),
-          ),
+            // const SizedBox(height: 24),
+            Expanded(
+              child: Center(
+                child: GridView.count(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(8),
+                  children: [
+                    HealthMetricCard(
+                      icon: Icons.directions_walk,
+                      title: LocaleKeys.health_steps.tr(),
+                      value: metrics.steps.toString(),
+                      unit: '',
+                      iconSize: 15,
+                    ),
+                    HealthMetricCard(
+                      icon: Icons.favorite,
+                      title: LocaleKeys.health_heart_rate.tr(),
+                      value: metrics.heartRate.toInt().toString(),
+                      unit: LocaleKeys.health_bpm.tr(),
+                      iconSize: 14,
+                    ),
+                    HealthMetricCard(
+                      icon: Icons.local_fire_department,
+                      title: LocaleKeys.health_active_energy.tr(),
+                      value: metrics.calories.toInt().toString(),
+                      unit: LocaleKeys.health_kcal.tr(),
+                      iconSize: 16,
+                    ),
+                    HealthMetricCard(
+                      icon: Icons.bedtime,
+                      title: LocaleKeys.health_sleep.tr(),
+                      value: metrics.sleepHours.toStringWithoutZeroDecimal(numDecimals: 1),
+                      unit: LocaleKeys.health_hours.tr(),
+                      iconSize: 15,
+                    ),
+                    HealthMetricCard(
+                      icon: Icons.water_drop,
+                      title: LocaleKeys.health_water.tr(),
+                      value: metrics.waterIntake.toStringWithoutZeroDecimal(numDecimals: 1),
+                      unit: LocaleKeys.health_liters.tr(),
+                      iconSize: 15,
+                    ),
+                    HealthMetricCard(
+                      icon: Icons.monitor_weight,
+                      title: LocaleKeys.health_weight.tr(),
+                      value: metrics.weight?.toStringWithoutZeroDecimal(numDecimals: 1) ?? '-',
+                      unit: LocaleKeys.common_unit_kg.tr(),
+                      iconSize: 15.5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
+        if (isRefreshing)
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(12)),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
       ],
     );
   }

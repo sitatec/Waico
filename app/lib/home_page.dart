@@ -4,6 +4,7 @@ import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/counselor/counselor_page.dart';
 import 'package:waico/features/workout/pages/workout_router_page.dart';
 import 'package:waico/features/meditation/pages/meditation_page.dart';
+import 'package:waico/features/settings/settings_page.dart';
 import 'package:waico/core/widgets/health_dashboard.dart';
 import 'package:waico/core/widgets/upcoming_event_card.dart';
 import 'package:waico/generated/locale_keys.g.dart';
@@ -51,6 +52,14 @@ class _HomePageState extends State<HomePage> {
           SliverAppBar(
             backgroundColor: Colors.transparent,
             expandedHeight: MediaQuery.sizeOf(context).height * 0.34,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  context.navigateTo(const SettingsPage());
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               expandedTitleScale: 1.2,
               background: ClipRRect(

@@ -47,7 +47,15 @@ class HealthMetrics {
 }
 
 /// Health service status
-enum HealthServiceStatus { loading, permissionsRequired, healthConnectRequired, ready, error, uninitialized }
+enum HealthServiceStatus {
+  loading,
+  permissionsRequired,
+  healthConnectRequired,
+  ready,
+  error,
+  uninitialized,
+  refreshing,
+}
 
 /// A service that provides a simple and intuitive API for health data
 class HealthService extends ChangeNotifier {
@@ -166,7 +174,10 @@ class HealthService extends ChangeNotifier {
 
   /// Refresh health data from the current day
   Future<void> refreshData() async {
-    if (_status == HealthServiceStatus.loading) return;
+    if (_status == HealthServiceStatus.loading || _status == HealthServiceStatus.refreshing) return;
+    if (_status == HealthServiceStatus.ready) {
+      _updateStatus(HealthServiceStatus.refreshing);
+    }
 
     try {
       final now = DateTime.now();
@@ -187,7 +198,7 @@ class HealthService extends ChangeNotifier {
       final processedMetrics = _processHealthData(healthData, steps ?? 0);
 
       _metrics = processedMetrics.copyWith(lastUpdated: DateTime.now());
-      notifyListeners();
+      _updateStatus(HealthServiceStatus.ready);
     } catch (e, s) {
       _setError('Failed to refresh health data: $e');
       log('Error refreshing health data: ', error: e, stackTrace: s);

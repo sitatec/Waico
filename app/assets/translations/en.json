@@ -2,6 +2,11 @@
   "app": {
     "title": "Waico"
   },
+  "language_selection": {
+    "title": "Select Language",
+    "subtitle": "These languages are for the app's language and the AI voice. When chatting with the AI in text mode, you can use virtually any language.",
+    "continue": "Continue"
+  },
   "home": {
     "features": {
       "meditation": "Meditation",
@@ -594,7 +599,9 @@
     },
     "not_applicable": "N/A",
     "no_options_available": "No options available",
-    "sort": "Sort"
+    "sort": "Sort",
+    "language": "Language",
+    "settings": "Settings"
   },
   "voice_chat": {
     "show_image_to_waico": "Show an image to Waico",
