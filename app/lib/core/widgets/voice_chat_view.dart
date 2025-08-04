@@ -24,7 +24,7 @@ class _VoiceChatViewState extends State<VoiceChatView> {
   bool _chatStarted = false;
   final _imagePicker = ImagePicker();
   final _pageController = PageController(viewportFraction: 0.85);
-  String _aiSpeechState = "Loading";
+  String _aiSpeechState = LocaleKeys.common_loading.tr();
 
   /// A history of what the AI has displayed to the user and what the user has sent to the AI.
   final _displayHistory = <Widget>[];

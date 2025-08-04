@@ -46,6 +46,13 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  String get _aiVoice => switch (context.locale.languageCode) {
+    'en' => 'am_fenrir',
+    'fr' => 'ff_siwis',
+    'es' => 'em_alex',
+    _ => 'am_fenrir', // Default to English voice
+  };
+
   @override
   void initState() {
     super.initState();
@@ -131,6 +138,7 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
         workoutWeek: widget.workoutWeek,
         workoutSessionIndex: widget.workoutSessionIndex,
         poseDetectionService: _poseDetectionService,
+        aiVoice: _aiVoice,
       );
 
       _isCameraPermissionGranted = await _poseDetectionService?.hasCameraPermission ?? false;

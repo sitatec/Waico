@@ -12,9 +12,10 @@ import 'package:easy_localization/easy_localization.dart';
 
 class MeditationGuideGenerator {
   /// Generate a meditation guide using AI and synthesize audio chunks
-  static Future<MeditationGuide> generateGuide(
-    MeditationType type,
-    int durationMinutes, {
+  static Future<MeditationGuide> generateGuide({
+    required MeditationType type,
+    required int durationMinutes,
+    required String voice,
     String? customTitle,
     String? backgroundSound,
   }) async {
@@ -36,6 +37,7 @@ class MeditationGuideGenerator {
       durationMinutes,
       customTitle,
       backgroundSound,
+      voice,
     );
     await disposeFuture;
     return meditationGuide;
@@ -87,6 +89,7 @@ class MeditationGuideGenerator {
     int durationMinutes,
     String? customTitle,
     String? backgroundSound,
+    String voice,
   ) async {
     // Extract title from the response
     String title = customTitle ?? _generateTitleForType(type);
@@ -155,7 +158,7 @@ class MeditationGuideGenerator {
     final selectedBackgroundSound = backgroundSound ?? BackgroundSoundManager.getRandomSound();
 
     // Synthesize audio chunks and get processed script
-    final processedScript = await _synthesizeAudioChunks(script, meditationId);
+    final processedScript = await _synthesizeAudioChunks(script, meditationId, voice);
 
     return MeditationGuide(
       title: title,
@@ -170,7 +173,7 @@ class MeditationGuideGenerator {
 
   /// Synthesize audio chunks from meditation script and save them
   /// Returns processed script with chunk indices instead of text
-  static Future<String> _synthesizeAudioChunks(String script, String meditationId) async {
+  static Future<String> _synthesizeAudioChunks(String script, String meditationId, String voice) async {
     // Create unique folder for this meditation
     final appDocumentsDir = await getApplicationDocumentsDirectory();
     final meditationDir = Directory('${appDocumentsDir.path}/meditation_audio/$meditationId');
@@ -227,7 +230,7 @@ class MeditationGuideGenerator {
         // it seems to trim the end of sentence pauses, which make the meditation sound unnatural.
         for (final sentence in chunkText.split(RegExp(r'(?<=[.!?])\s+'))) {
           if (sentence.trim().isNotEmpty) {
-            ttsResults.add(await tts.generateSpeech(text: sentence.trim(), voice: 'af_nicole', speed: 0.85));
+            ttsResults.add(await tts.generateSpeech(text: sentence.trim(), voice: voice, speed: 0.85));
           }
         }
 

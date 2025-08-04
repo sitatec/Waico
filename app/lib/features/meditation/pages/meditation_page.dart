@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:waico/features/meditation/models/meditation_guide.dart';
 import 'package:waico/features/meditation/repositories/meditation_repository.dart';
@@ -7,6 +8,7 @@ import 'package:waico/features/meditation/pages/meditation_type_selection_page.d
 import 'package:waico/features/meditation/widgets/meditation_guide_card.dart';
 import 'package:waico/features/meditation/widgets/meditation_sound_player.dart';
 import 'package:waico/features/meditation/meditation_guide_generator.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Page that displays all user's meditation guides with option to create new ones
 class MeditationPage extends StatefulWidget {
@@ -21,6 +23,13 @@ class _MeditationPageState extends State<MeditationPage> {
   List<MeditationGuide> _meditationGuides = [];
   bool _isLoading = true;
   bool _isGenerating = false;
+
+  String get _aiVoice => switch (context.locale.languageCode) {
+    'en' => 'af_nicole',
+    'fr' => 'ff_siwis',
+    'es' => 'ef_dora',
+    _ => 'af_nicole', // Default to English voice
+  };
 
   @override
   void initState() {
@@ -44,9 +53,12 @@ class _MeditationPageState extends State<MeditationPage> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load meditation guides: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LocaleKeys.meditation_failed_to_load.tr(namedArgs: {'error': e.toString()})),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -61,9 +73,12 @@ class _MeditationPageState extends State<MeditationPage> {
       await _loadMeditationGuides();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to update meditation status: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LocaleKeys.meditation_failed_to_update.tr(namedArgs: {'error': e.toString()})),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -72,14 +87,14 @@ class _MeditationPageState extends State<MeditationPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Meditation'),
-        content: Text('Are you sure you want to delete "${guide.title}"?'),
+        title: Text(LocaleKeys.meditation_delete_meditation.tr()),
+        content: Text(LocaleKeys.meditation_delete_confirmation.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(LocaleKeys.common_cancel.tr())),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(LocaleKeys.common_delete.tr()),
           ),
         ],
       ),
@@ -91,14 +106,17 @@ class _MeditationPageState extends State<MeditationPage> {
         await _loadMeditationGuides();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Meditation deleted successfully'), backgroundColor: Colors.green),
+            SnackBar(content: Text(LocaleKeys.meditation_meditation_deleted.tr()), backgroundColor: Colors.green),
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to delete meditation: $e'), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(LocaleKeys.meditation_failed_to_delete.tr(namedArgs: {'error': e.toString()})),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     }
@@ -124,10 +142,11 @@ class _MeditationPageState extends State<MeditationPage> {
 
     try {
       final guide = await MeditationGuideGenerator.generateGuide(
-        type,
-        durationMinutes,
+        type: type,
+        durationMinutes: durationMinutes,
         customTitle: customTitle,
         backgroundSound: backgroundSound,
+        voice: _aiVoice,
       );
       _meditationRepository.save(guide);
       log("Generated meditation guide: ${guide.title} (${guide.type}) $guide");
@@ -135,15 +154,18 @@ class _MeditationPageState extends State<MeditationPage> {
       await _loadMeditationGuides();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${guide.title} created successfully!'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LocaleKeys.meditation_meditation_created.tr()), backgroundColor: Colors.green),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to generate meditation: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LocaleKeys.meditation_failed_to_generate.tr(namedArgs: {'error': e.toString()})),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       setState(() {
@@ -166,7 +188,7 @@ class _MeditationPageState extends State<MeditationPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Meditation', style: TextStyle(fontSize: 20)),
+        title: Text(LocaleKeys.meditation_title.tr(), style: const TextStyle(fontSize: 20)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -190,7 +212,7 @@ class _MeditationPageState extends State<MeditationPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Your Meditations',
+                          LocaleKeys.meditation_your_meditations.tr(),
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
                         ),
                         if (_meditationGuides.isNotEmpty)
@@ -199,7 +221,7 @@ class _MeditationPageState extends State<MeditationPage> {
                               // TODO: Add filter/sort options
                             },
                             icon: const Icon(Icons.sort, size: 16),
-                            label: const Text('Sort'),
+                            label: Text(LocaleKeys.common_sort.tr()),
                           ),
                       ],
                     ),
@@ -213,7 +235,7 @@ class _MeditationPageState extends State<MeditationPage> {
                           border: Border.all(color: Colors.blue.shade200, width: 1.5),
                         ),
                         child: Text(
-                          'Generation can take 30 seconds to a few minutes depending on the duration and your device performance. Please bear with us!',
+                          LocaleKeys.meditation_generation_notice.tr(),
                           style: TextStyle(color: Colors.blue.shade700, fontSize: 14, height: 1.4),
                         ),
                       ),
@@ -252,9 +274,9 @@ class _MeditationPageState extends State<MeditationPage> {
               onPressed: _showCreateMeditation,
               backgroundColor: Theme.of(context).colorScheme.primary,
               icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                'New Meditation',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              label: Text(
+                LocaleKeys.meditation_new_meditation.tr(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
     );
@@ -280,9 +302,9 @@ class _MeditationPageState extends State<MeditationPage> {
         children: [
           const Icon(Icons.self_improvement, color: Colors.white, size: 32),
           const SizedBox(height: 12),
-          const Text(
-            'Meditation Journey',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          Text(
+            LocaleKeys.meditation_meditation_journey.tr(),
+            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Row(
@@ -295,7 +317,10 @@ class _MeditationPageState extends State<MeditationPage> {
                       '$totalCount',
                       style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
-                    Text('Total Meditations', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
+                    Text(
+                      LocaleKeys.meditation_total_meditations.tr(),
+                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+                    ),
                   ],
                 ),
               ),
@@ -307,7 +332,10 @@ class _MeditationPageState extends State<MeditationPage> {
                       '$completedCount',
                       style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                     ),
-                    Text('Completed', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
+                    Text(
+                      LocaleKeys.meditation_completed.tr(),
+                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+                    ),
                   ],
                 ),
               ),
@@ -332,12 +360,12 @@ class _MeditationPageState extends State<MeditationPage> {
           Icon(Icons.self_improvement, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
-            'No Meditations Yet',
+            LocaleKeys.meditation_no_meditations_yet.tr(),
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your first personalized meditation guide to begin your mindfulness journey.',
+            LocaleKeys.meditation_no_meditations_description.tr(),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: Colors.grey.shade500, height: 1.4),
           ),
@@ -351,7 +379,7 @@ class _MeditationPageState extends State<MeditationPage> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             icon: const Icon(Icons.add),
-            label: const Text('Create Meditation'),
+            label: Text(LocaleKeys.meditation_create_meditation.tr()),
           ),
         ],
       ),
@@ -414,7 +442,9 @@ class MeditationGuideViewer extends StatelessWidget {
                     Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
-                      '${guide.durationMinutes} min',
+                      LocaleKeys.meditation_duration_minutes.tr(
+                        namedArgs: {'minutes': guide.durationMinutes.toString()},
+                      ),
                       style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                     ),
                   ],

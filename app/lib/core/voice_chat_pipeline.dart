@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' show log;
 
 import 'package:cross_file/cross_file.dart' show XFile;
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ImageFileAttachment;
 import 'package:synchronized/synchronized.dart';
 import 'package:waico/core/ai_agent/ai_agent.dart';
@@ -9,6 +10,7 @@ import 'package:waico/core/services/audio_stream_player.dart';
 import 'package:waico/core/ai_models/tts_model.dart';
 import 'package:waico/core/services/user_speech_listener.dart';
 import 'package:waico/core/utils/string_utils.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 class VoiceChatPipeline {
   final AiAgent agent;
@@ -167,7 +169,7 @@ class VoiceChatPipeline {
   Future<void> startListeningToUser() async {
     await _audioStreamPlayer.pause();
     await _userSpeechToTextListener.resume();
-    _aiSpeechState.add("🦻Listening");
+    _aiSpeechState.add(LocaleKeys.voice_chat_listening.tr());
   }
 
   Future<void> stopListeningToUser() async {
@@ -180,7 +182,7 @@ class VoiceChatPipeline {
     // Stop listening to the user since interruption is not supported yet.
     await stopListeningToUser();
     // For now only "Speaking" state is emitted, when the AI is generating.
-    _aiSpeechState.add("🗣️ Speaking");
+    _aiSpeechState.add(LocaleKeys.voice_chat_speaking.tr());
   }
 
   Future<void> _exitBusyState() async {

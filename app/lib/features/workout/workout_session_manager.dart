@@ -40,6 +40,8 @@ class WorkoutSessionManager {
   _DurationBasedExerciseFormTracker? _durationFormTracker;
   StreamSubscription<_DurationBasedExerciseMetrics>? _durationMetricsSubscription;
 
+  final String aiVoice;
+
   WorkoutSessionManager({
     required this.session,
     UserRepository? userRepository,
@@ -47,6 +49,7 @@ class WorkoutSessionManager {
     required this.voiceChatPipeline,
     required this.workoutWeek,
     required this.workoutSessionIndex,
+    required this.aiVoice,
   }) : userRepository = userRepository ?? UserRepository(),
        poseDetectionService = poseDetectionService ?? PoseDetectionService.instance;
 
@@ -58,7 +61,7 @@ class WorkoutSessionManager {
 
   /// Initialize the workout session manager
   Future<void> initialize() async {
-    await voiceChatPipeline.startChat(voice: 'am_fenrir');
+    await voiceChatPipeline.startChat(voice: aiVoice);
     // We only start listening when the exercise starts
     await voiceChatPipeline.stopListeningToUser();
     await _initializeCurrentExercise();

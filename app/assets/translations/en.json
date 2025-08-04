@@ -450,13 +450,14 @@
     "delete_confirmation": "Are you sure you want to delete this meditation?",
     "meditation_created": "Meditation created successfully!",
     "meditation_deleted": "Meditation deleted successfully",
-    "failed_to_generate": "Failed to generate meditation",
-    "failed_to_load": "Failed to load meditation guides",
-    "failed_to_delete": "Failed to delete meditation",
-    "failed_to_update": "Failed to update meditation status",
+    "failed_to_generate": "Failed to generate meditation: {error}",
+    "failed_to_load": "Failed to load meditation guides: {error}",
+    "failed_to_delete": "Failed to delete meditation: {error}",
+    "failed_to_update": "Failed to update meditation status: {error}",
     "perfect_for_beginners": "Perfect for Beginners",
     "all_meditation_types": "All Meditation Types",
     "creating_guide": "Creating your personalized meditation guide...",
+    "generation_notice": "Generation can take 30 seconds to a few minutes depending on the duration and your device performance. Please bear with us!",
     "your_meditations": "Your Meditations",
     "type_selection": {
       "choose_meditation_type": "Choose Meditation Type",
@@ -536,6 +537,12 @@
       "fallback_prefix": "Sound "
     }
   },
+  "conversation_processor": {
+    "memory_generation": "Memory Generation",
+    "observations_generation": "Observations Generation",
+    "summary_generation": "Summary Generation",
+    "user_info_extraction": "User Info Extraction"
+  },
   "common": {
     "loading": "Loading",
     "error": "Error",
@@ -586,13 +593,16 @@
       "other": "{count} hours"
     },
     "not_applicable": "N/A",
-    "no_options_available": "No options available"
+    "no_options_available": "No options available",
+    "sort": "Sort"
   },
   "voice_chat": {
     "show_image_to_waico": "Show an image to Waico",
     "press_hold_to_speak": "Press and hold to speak long messages",
     "starting_chat_session": "Starting chat session",
-    "on_hold": " (On Hold)"
+    "on_hold": " (On Hold)",
+    "listening": "🦻 Listening",
+    "speaking": "🗣️ Speaking"
   },
   "chart": {
     "health_data": "Health Data"

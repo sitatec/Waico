@@ -30,6 +30,13 @@ class _CounselorPageState extends State<CounselorPage> {
 
   bool get _isSpeechMode => _conversationMode == 'speech';
 
+  String get _aiVoice => switch (context.locale.languageCode) {
+    'en' => 'af_heart',
+    'fr' => 'ff_siwis',
+    'es' => 'ef_dora',
+    _ => 'af_heart', // Default to English voice
+  };
+
   @override
   void initState() {
     super.initState();
@@ -125,7 +132,7 @@ class _CounselorPageState extends State<CounselorPage> {
             ),
             body: _initialized
                 ? _isSpeechMode
-                      ? VoiceChatView(voiceChatPipeline: _voiceChat!, voice: 'af_heart')
+                      ? VoiceChatView(voiceChatPipeline: _voiceChat!, voice: _aiVoice)
                       : LlmChatView(
                           enableVoiceNotes: false,
                           provider: _agent!.chatModel,
@@ -165,7 +172,11 @@ class _CounselorPageState extends State<CounselorPage> {
       isDismissible: true,
       scrollControlDisabledMaxHeightRatio: 0.65,
       builder: (context) {
-        return ChartWidget(data: healthData, totalLabel: LocaleKeys.common_total.tr(), title: "Health Data");
+        return ChartWidget(
+          data: healthData,
+          totalLabel: LocaleKeys.common_total.tr(),
+          title: LocaleKeys.chart_health_data.tr(),
+        );
       },
     );
   }
@@ -181,18 +192,24 @@ class _CounselorPageState extends State<CounselorPage> {
           final controller = TextEditingController(text: 'User');
 
           return AlertDialog(
-            title: Text('Preferred name'),
+            title: Text(LocaleKeys.counselor_user_creation_preferred_name.tr()),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('How would you like the counselor to call you?', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  LocaleKeys.counselor_user_creation_name_description.tr(),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 8),
-                Text("It doesn't have to be your real name. You can also use the default, 'User'."),
+                Text(LocaleKeys.counselor_user_creation_name_note.tr()),
                 const SizedBox(height: 16),
                 TextField(
                   controller: controller,
                   autofocus: true,
-                  decoration: InputDecoration(labelText: 'Preferred name', border: const OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: LocaleKeys.counselor_user_creation_preferred_name_label.tr(),
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
               ],
             ),

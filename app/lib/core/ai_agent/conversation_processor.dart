@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' show log;
-import 'package:easy_localization/easy_localization.dart' show DateFormat;
+import 'package:easy_localization/easy_localization.dart' show DateFormat, StringTranslateExtension;
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart' show ChatMessage;
 import 'package:waico/core/ai_models/chat_model.dart';
 import 'package:waico/core/ai_models/embedding_model.dart';
@@ -9,6 +9,7 @@ import 'package:waico/core/entities/conversation_memory.dart';
 import 'package:waico/core/repositories/conversation_memory_repository.dart';
 import 'package:waico/core/repositories/conversation_repository.dart';
 import 'package:waico/core/repositories/user_repository.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// Process a conversation to extract useful insights
 ///
@@ -172,10 +173,10 @@ Make sure your output is in the same language as the conversation.
   }) async {
     final currentProgress = {
       // True == Complete | False == Incomplete
-      'Memory Generation': false,
-      'Observations Generation': false,
-      'Summary Generation': false,
-      'User Info Extraction': false,
+      LocaleKeys.conversation_processor_memory_generation.tr(): false,
+      LocaleKeys.conversation_processor_observations_generation.tr(): false,
+      LocaleKeys.conversation_processor_summary_generation.tr(): false,
+      LocaleKeys.conversation_processor_user_info_extraction.tr(): false,
     };
     updateProgress?.call(currentProgress);
 
@@ -188,13 +189,13 @@ Make sure your output is in the same language as the conversation.
       final conversationText = formatConversationToText(conversation);
       // _returnDefaultOnError ensures that if one extraction fails, the others can still proceed
       final memories = await _returnDefaultOnError(() => extractMemories(conversationText), []);
-      _markCompleted(currentProgress, 'Memory Generation', updateProgress);
+      _markCompleted(currentProgress, LocaleKeys.conversation_processor_memory_generation.tr(), updateProgress);
       final observation = await _returnDefaultOnError(() => extractObservation(conversationText), '');
-      _markCompleted(currentProgress, 'Observations Generation', updateProgress);
+      _markCompleted(currentProgress, LocaleKeys.conversation_processor_observations_generation.tr(), updateProgress);
       final summary = await _returnDefaultOnError(() => summarizeConversation(conversationText), '');
-      _markCompleted(currentProgress, 'Summary Generation', updateProgress);
+      _markCompleted(currentProgress, LocaleKeys.conversation_processor_summary_generation.tr(), updateProgress);
       final userInfo = await _returnDefaultOnError(() => extractUserInfo(conversationText), '');
-      _markCompleted(currentProgress, 'User Info Extraction', updateProgress);
+      _markCompleted(currentProgress, LocaleKeys.conversation_processor_user_info_extraction.tr(), updateProgress);
 
       if (userInfo.isEmpty && memories.isEmpty && observation.isEmpty && summary.isEmpty) {
         throw Exception('All extractions returned empty contents');

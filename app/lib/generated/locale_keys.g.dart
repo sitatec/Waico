@@ -427,6 +427,7 @@ abstract class  LocaleKeys {
   static const meditation_perfect_for_beginners = 'meditation.perfect_for_beginners';
   static const meditation_all_meditation_types = 'meditation.all_meditation_types';
   static const meditation_creating_guide = 'meditation.creating_guide';
+  static const meditation_generation_notice = 'meditation.generation_notice';
   static const meditation_your_meditations = 'meditation.your_meditations';
   static const meditation_type_selection_choose_meditation_type = 'meditation.type_selection.choose_meditation_type';
   static const meditation_type_selection_create_your_guide = 'meditation.type_selection.create_your_guide';
@@ -496,6 +497,11 @@ abstract class  LocaleKeys {
   static const meditation_background_sounds_fallback_prefix = 'meditation.background_sounds.fallback_prefix';
   static const meditation_background_sounds = 'meditation.background_sounds';
   static const meditation = 'meditation';
+  static const conversation_processor_memory_generation = 'conversation_processor.memory_generation';
+  static const conversation_processor_observations_generation = 'conversation_processor.observations_generation';
+  static const conversation_processor_summary_generation = 'conversation_processor.summary_generation';
+  static const conversation_processor_user_info_extraction = 'conversation_processor.user_info_extraction';
+  static const conversation_processor = 'conversation_processor';
   static const common_loading = 'common.loading';
   static const common_error = 'common.error';
   static const common_cancel = 'common.cancel';
@@ -537,11 +543,14 @@ abstract class  LocaleKeys {
   static const common_in_hours = 'common.in_hours';
   static const common_not_applicable = 'common.not_applicable';
   static const common_no_options_available = 'common.no_options_available';
+  static const common_sort = 'common.sort';
   static const common = 'common';
   static const voice_chat_show_image_to_waico = 'voice_chat.show_image_to_waico';
   static const voice_chat_press_hold_to_speak = 'voice_chat.press_hold_to_speak';
   static const voice_chat_starting_chat_session = 'voice_chat.starting_chat_session';
   static const voice_chat_on_hold = 'voice_chat.on_hold';
+  static const voice_chat_listening = 'voice_chat.listening';
+  static const voice_chat_speaking = 'voice_chat.speaking';
   static const voice_chat = 'voice_chat';
   static const chart_health_data = 'chart.health_data';
   static const chart = 'chart';
