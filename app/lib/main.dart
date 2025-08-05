@@ -19,7 +19,7 @@ Future<void> main() async {
 
   runApp(
     EasyLocalization(
-      supportedLocales: [Locale('en')],
+      supportedLocales: [Locale('en'), Locale('fr'), Locale('es')],
       path: 'assets/translations',
       fallbackLocale: Locale('en'),
       startLocale: Locale(AppPreferences.getLanguageCode()),
