@@ -63,9 +63,9 @@ class AppPreferences {
   }
 
   /// Get the selected language code (default: 'en')
-  static String getLanguageCode() {
+  static String? getLanguageCode() {
     _ensureInitialized();
-    return _preferences!.getString(_languageCodeKey) ?? 'en';
+    return _preferences!.getString(_languageCodeKey);
   }
 
   /// Set the selected language code

@@ -17,12 +17,15 @@ Future<void> main() async {
   await DB.init();
   await AppPreferences.initialize();
 
+  final languageCode = AppPreferences.getLanguageCode();
+
   runApp(
     EasyLocalization(
       supportedLocales: [Locale('en'), Locale('fr'), Locale('es')],
       path: 'assets/translations',
       fallbackLocale: Locale('en'),
-      startLocale: Locale(AppPreferences.getLanguageCode()),
+      // Default to the system language if no language is set yet
+      startLocale: languageCode != null ? Locale(languageCode) : null,
       child: const App(),
     ),
   );

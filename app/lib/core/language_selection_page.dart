@@ -20,7 +20,7 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
   @override
   void initState() {
     super.initState();
-    selectedLanguageCode = AppPreferences.getLanguageCode();
+    selectedLanguageCode = AppPreferences.getLanguageCode() ?? context.locale.languageCode;
   }
 
   void _onLanguageChanged(String languageCode) {

@@ -36,7 +36,7 @@ class _LanguageSelectionWidgetState extends State<LanguageSelectionWidget> {
   @override
   void initState() {
     super.initState();
-    selectedLanguageCode = AppPreferences.getLanguageCode();
+    selectedLanguageCode = AppPreferences.getLanguageCode() ?? context.locale.languageCode;
   }
 
   Future<void> _changeLanguage(String languageCode) async {
