@@ -4,6 +4,6 @@
     <!-- For JustAudio Streaming (uses local http proxy) -->
 		<domain includeSubdomains="false">127.0.0.1</domain> 
     <!-- For local model download during dev/test -->
-		<domain includeSubdomains="false">10.59.179.170</domain> 
+		<domain includeSubdomains="false">10.59.143.170</domain> 
 	</domain-config>
 </network-security-config>

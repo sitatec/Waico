@@ -62,48 +62,46 @@ class _AppState extends State<App> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: primaryColor).copyWith(primary: primaryColor),
         appBarTheme: defaultTheme.appBarTheme.copyWith(backgroundColor: primaryColor, foregroundColor: Colors.white),
       ),
-      home: false
-          ? HomePage()
-          : Builder(
-              // Using a Builder to ensure we get the correct context from material app for navigation
-              builder: (context) {
-                // Check if language selection has been shown before
-                if (!AppPreferences.hasShownLanguageSelection()) {
-                  return LanguageSelectionPage(
-                    onComplete: () {
-                      context.navigateTo(
-                        AiModelsInitializationPage(
-                          onDone: (downloadedModelPaths) {
-                            context.navigateTo(
-                              Provider.value(
-                                value: downloadedModelPaths,
-                                updateShouldNotify: (_, _) => false,
-                                child: HomePage(),
-                              ),
-                              replaceCurrent: true,
-                            );
-                          },
-                        ),
-                        replaceCurrent: true,
+      home: Builder(
+        // Using a Builder to ensure we get the correct context from material app for navigation
+        builder: (context) {
+          // Check if language selection has been shown before
+          if (!AppPreferences.hasShownLanguageSelection()) {
+            return LanguageSelectionPage(
+              onComplete: () {
+                context.navigateTo(
+                  Builder(
+                    builder: (context) {
+                      return AiModelsInitializationPage(
+                        onDone: (downloadedModelPaths) {
+                          context.navigateTo(
+                            Provider.value(
+                              value: downloadedModelPaths,
+                              updateShouldNotify: (_, _) => false,
+                              child: HomePage(),
+                            ),
+                            replaceCurrent: true,
+                          );
+                        },
                       );
                     },
-                  );
-                }
-
-                return AiModelsInitializationPage(
-                  onDone: (downloadedModelPaths) {
-                    context.navigateTo(
-                      Provider.value(
-                        value: downloadedModelPaths,
-                        updateShouldNotify: (_, _) => false,
-                        child: HomePage(),
-                      ),
-                      replaceCurrent: true,
-                    );
-                  },
+                  ),
+                  replaceCurrent: true,
                 );
               },
-            ),
+            );
+          }
+
+          return AiModelsInitializationPage(
+            onDone: (downloadedModelPaths) {
+              context.navigateTo(
+                Provider.value(value: downloadedModelPaths, updateShouldNotify: (_, _) => false, child: HomePage()),
+                replaceCurrent: true,
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

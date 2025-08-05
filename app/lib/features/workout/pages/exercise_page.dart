@@ -32,6 +32,8 @@ class ExercisePage extends StatefulWidget {
   State<ExercisePage> createState() => _ExercisePageState();
 }
 
+// TODO: Create a separate page for the camera view and start creating the chat session while
+// this page is visible to improve UX
 class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMixin, WidgetsBindingObserver {
   WorkoutSessionManager? _sessionManager;
   VoiceChatPipeline? _voiceChatPipeline;
@@ -64,7 +66,9 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
     ]);
     WidgetsBinding.instance.addObserver(this);
     _setupAnimations();
-    _initializeWorkoutSession();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeWorkoutSession();
+    });
   }
 
   @override
@@ -389,31 +393,6 @@ class InstructionsView extends StatelessWidget {
                   ),
                 ),
               ),
-              if (exercise.optimalView != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withOpacity(0.1)),
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  ),
-                  child: Text(
-                    LocaleKeys.workout_exercise_optimal_tracking_message.tr(
-                      namedArgs: {
-                        'position': exercise.optimalView == 'front'
-                            ? LocaleKeys.workout_exercise_facing_camera.tr()
-                            : LocaleKeys.workout_exercise_turned_sideways.tr(),
-                      },
-                    ),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
               const SizedBox(height: 16),
               if (exercise.instruction != null)
                 Container(
@@ -458,6 +437,31 @@ class InstructionsView extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                 ),
+              if (exercise.optimalView != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.withOpacity(0.1)),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  ),
+                  child: Text(
+                    LocaleKeys.workout_exercise_optimal_tracking_message.tr(
+                      namedArgs: {
+                        'position': exercise.optimalView == 'front'
+                            ? LocaleKeys.workout_exercise_facing_camera.tr()
+                            : LocaleKeys.workout_exercise_turned_sideways.tr(),
+                      },
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               Container(
                 width: double.infinity,

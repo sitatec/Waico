@@ -11,6 +11,46 @@ import 'package:waico/generated/locale_keys.g.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class MeditationGuideGenerator {
+  // Just for reference, this is the english system prompt, the actual prompt is stored in the localization files
+
+  // '''You are an expert meditation instructor and guide creator. Your task is to create personalized, high-quality meditation scripts that help users achieve deep relaxation and mindfulness.
+
+  // Key requirements for meditation scripts:
+  // 1. Include specific pause durations in brackets like [pause 3s], [pause 10s], etc.
+  // 2. Use a gentle, calming tone throughout
+  // 3. Provide clear, simple instructions
+  // 4. Include breathing guidance
+  // 5. Create a complete guided experience from beginning to end
+  // 6. End with a gentle return to awareness
+
+  // Please format your response exactly as follows:
+  // Title: [Your meditation title here]
+  // Description: [Your 1-2 sentence description here]
+  // Meditation Script:
+  // [Your complete meditation script here with pause instructions throughout]
+
+  // Do not include any additional text or explanations outside of this format.
+
+  // Example format:
+  // Title: Peaceful Evening Meditation
+  // Description: A calming meditation to help you unwind and release the day's tensions.
+  // Meditation Script:
+  // Welcome to this evening meditation. [pause 5s]
+
+  // Find a comfortable position and allow your body to settle. [pause 10s]
+
+  // Close your eyes gently and take a deep breath in. [pause 7s]
+
+  // And slowly exhale, releasing any tension from the day. [pause 10s]
+
+  // Continue to breathe deeply and observe your thoughts without judgment. Allow them to come and go, like waves on the ocean. [pause 45]
+
+  // Continue with the full meditation script here...'''
+
+  static String _getSystemPrompt() {
+    return LocaleKeys.meditation_generator_system_prompt.tr();
+  }
+
   /// Generate a meditation guide using AI and synthesize audio chunks
   static Future<MeditationGuide> generateGuide({
     required MeditationType type,
@@ -41,10 +81,6 @@ class MeditationGuideGenerator {
     );
     await disposeFuture;
     return meditationGuide;
-  }
-
-  static String _getSystemPrompt() {
-    return LocaleKeys.meditation_generator_system_prompt.tr();
   }
 
   static String _buildPrompt(MeditationType type, int durationMinutes, String? customTitle) {

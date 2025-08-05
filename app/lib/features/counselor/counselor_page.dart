@@ -158,7 +158,11 @@ class _CounselorPageState extends State<CounselorPage> {
                         )
                 : null,
           ),
-          if (!_initialized) LoadingWidget(message: LocaleKeys.counselor_initializing_chat.tr()),
+          if (!_initialized)
+            LoadingWidget(
+              message: LocaleKeys.counselor_initializing_chat.tr(),
+              secondaryMessage: LocaleKeys.counselor_initializing_chat_secondary.tr(),
+            ),
         ],
       ),
     );

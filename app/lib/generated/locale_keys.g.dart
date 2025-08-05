@@ -341,6 +341,7 @@ abstract class  LocaleKeys {
   static const counselor_cancel_button = 'counselor.cancel_button';
   static const counselor_continue_processing = 'counselor.continue_processing';
   static const counselor_initializing_chat = 'counselor.initializing_chat';
+  static const counselor_initializing_chat_secondary = 'counselor.initializing_chat_secondary';
   static const counselor_user_creation_preferred_name = 'counselor.user_creation.preferred_name';
   static const counselor_user_creation_name_description = 'counselor.user_creation.name_description';
   static const counselor_user_creation_name_note = 'counselor.user_creation.name_note';

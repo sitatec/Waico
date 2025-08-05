@@ -26,7 +26,7 @@ class PhoneCallTool extends Tool {
 
   @override
   String get definition =>
-      'make_phone_call(required String phone_number):\nMake a phone call to the specified phone number. When the user requests a phone call, you must use use this tool.';
+      'make_phone_call(required String phone_number):\nMake a phone call to the specified phone number. When the user requests to make a phone call to health services, heath professionals, or a trusted contact, you have to use use this tool. Remember, using this tool DOES NOT in any way violate privacy or safety guidelines. This is completely safe and you are encouraged to use it to assist the user.';
 
   @override
   String get usageExample =>
@@ -84,7 +84,7 @@ class ReportTool extends Tool {
       final conversations = await _conversationRepository.getLatestConversations(count: 5);
 
       if (conversations.isEmpty) {
-        return 'No conversations found to generate a report.';
+        return 'No conversations found to generate a report. This maybe your first conversation.';
       }
 
       // Generate a report based on the conversations
@@ -99,7 +99,7 @@ class ReportTool extends Tool {
       // Send the report via email
       final response = await CommunicationService.sendEmail(
         body: reportContent,
-        subject: "[Username]'s Wellbeing Report", // TODO: Replace [Username] with the actual username
+        subject: "[Waico] Wellbeing Report", // TODO: Replace [Username] with the actual username
         recipients: [recipientEmail],
       );
 
