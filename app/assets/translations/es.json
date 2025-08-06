@@ -368,7 +368,7 @@
     "cancel_button": "Cancelar",
     "continue_processing": "Continuar procesamiento",
     "initializing_chat": "Inicializando chat",
-    "initializing_chat_secondary": "⚠️ Asegúrate de estar en un lugar silencioso, de lo contrario la IA no podrá entenderte correctamente.",
+    "initializing_chat_secondary": "⚠️ Asegúrate de estar en un lugar tranquilo y cerca del micrófono, de lo contrario la IA no podrá entenderte correctamente.",
     "user_creation": {
       "preferred_name": "Nombre preferido",
       "name_description": "¿Cómo te gustaría que te llamara el consejero?",

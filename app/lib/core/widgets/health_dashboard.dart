@@ -131,7 +131,17 @@ class _HealthDashboardState extends State<HealthDashboard> {
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
                   tooltip: LocaleKeys.health_refresh_tooltip.tr(),
-                  onPressed: _handleActionButton,
+                  onPressed: () {
+                    _handleActionButton();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Note: Waico does not track steps or heart rate directly, it reads data from the system. Please use apps like Google Fit or Samsung Health for logging the data.",
+                        ),
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -268,7 +278,13 @@ class HealthMetricCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 8),
-              Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontSize: 12)),
+              Text(
+                title,
+                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white, fontSize: 12),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 4),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,

@@ -1,30 +1,3 @@
-# Table of Contents
-- [Overview](#overview)
-- [Core Architecture](#core-architecture)
-  - [High-Level System Design](#high-level-system-design)
-- [AI Agent System](#ai-agent-system)
-- [Core AI Agent Architecture](#core-ai-agent-architecture)
-  - [Agent Initialization and System Prompt Enhancement](#agent-initialization-and-system-prompt-enhancement)
-  - [Token-Efficient Tool Calling](#token-efficient-tool-calling)
-  - [Tool Execution Pipeline](#tool-execution-pipeline)
-- [Memory Architecture](#memory-architecture)
-- [Dual Memory System](#dual-memory-system)
-  - [Shared User Information Memory](#shared-user-information-memory)
-  - [RAG-Based Episodic Memory](#rag-based-episodic-memory)
-    - [Conversation Processing Pipeline](#conversation-processing-pipeline)
-- [Specialized AI Agents](#specialized-ai-agents)
-- [Counselor Agent](#counselor-agent)
-- [Meditation Guide Generator](#meditation-guide-generator)
-- [Workout Coach Agent](#workout-coach-agent)
-- [MediaPipe Integration for Pose Detection](#mediapipe-integration-for-pose-detection)
-  - [Exercise Classification System](#exercise-classification-system)
-  - [Repetition Counting Algorithm](#repetition-counting-algorithm)
-- [AI Model Infrastructure](#ai-model-infrastructure)
-- [On-Device Model Stack](#on-device-model-stack)
-- [Voice Chat Pipeline](#voice-chat-pipeline)
-  - [Real-Time Voice Interaction](#real-time-voice-interaction)
-- [Conclusion](#conclusion)
-
 ## Overview
 
 Waico (Wellbeing AI Companion) is a Mobile App that leverages Gemma 3n and other on-device AI models to provide personalized wellbeing support through multiple specialized AI agents. The system combines conversational AI with Gemma 3n, computer vision for pose detection with Mediapipe, health data integration, and tailored optimization for on-device performance to create a comprehensive wellbeing platform.

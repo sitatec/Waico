@@ -36,6 +36,8 @@
       "toolArgs": [
         "--dart-define",
         "ENV=profile",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=http://localhost:8011",
       ]
     },
     {
@@ -60,6 +62,19 @@
       "toolArgs": [
         "--dart-define",
         "ENV=prod"
+      ]
+    },
+    {
+      "name": "Release mode - Locale Physical D",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "cwd": "app",
+      "toolArgs": [
+        "--dart-define",
+        "ENV=prod",
+        "--dart-define",
+        "MODELS_DOWNLOAD_BASE_URL=http://10.59.143.170:8011",
       ]
     }
   ]

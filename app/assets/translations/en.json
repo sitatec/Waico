@@ -368,7 +368,7 @@
     "cancel_button": "Cancel",
     "continue_processing": "Continue Processing",
     "initializing_chat": "Initializing Chat",
-    "initializing_chat_secondary": "⚠️ Make sure you are in a quiet place, otherwise the AI won't be able to understand you properly.",
+    "initializing_chat_secondary": "⚠️ Make sure you are in a quiet place and close to the microphone, otherwise the AI won't be able to understand you properly.",
     "user_creation": {
       "preferred_name": "Preferred name",
       "name_description": "How would you like the counselor to call you?",

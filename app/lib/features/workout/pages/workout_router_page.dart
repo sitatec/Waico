@@ -111,6 +111,7 @@ class _LoadingState extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.primary,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
@@ -118,6 +119,7 @@ class _LoadingState extends StatelessWidget {
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -156,6 +158,7 @@ class _ErrorState extends StatelessWidget {
               Text(
                 LocaleKeys.workout_plan_error_title.tr(),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600, color: Colors.red),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               Container(

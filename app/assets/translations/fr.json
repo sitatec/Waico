@@ -368,7 +368,7 @@
     "cancel_button": "Annuler",
     "continue_processing": "Continuer le traitement",
     "initializing_chat": "Initialisation de la discussion",
-    "initializing_chat_secondary": "⚠️ Assurez-vous d'être dans un endroit calme, sinon l'IA ne pourra pas vous comprendre correctement.",
+    "initializing_chat_secondary": "⚠️ Assurez-vous d'être dans un endroit calme et proche du microphone, sinon l'IA ne pourra pas vous comprendre correctement.",
     "user_creation": {
       "preferred_name": "Nom préféré",
       "name_description": "Comment souhaitez-vous que le conseiller vous appelle ?",

@@ -190,13 +190,15 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              LocaleKeys.workout_generation_ui_progress.tr(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: _showUIProgress
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: _showUIProgress ? FontWeight.w600 : FontWeight.normal,
+            Expanded(
+              child: Text(
+                LocaleKeys.workout_generation_ui_progress.tr(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: _showUIProgress
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: _showUIProgress ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -210,13 +212,15 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
               activeColor: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 12),
-            Text(
-              LocaleKeys.workout_generation_raw_text_progress.tr(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: !_showUIProgress
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: !_showUIProgress ? FontWeight.w600 : FontWeight.normal,
+            Expanded(
+              child: Text(
+                LocaleKeys.workout_generation_raw_text_progress.tr(),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: !_showUIProgress
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: !_showUIProgress ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ),
           ],

@@ -21,7 +21,11 @@ class LoadingWidget extends StatelessWidget {
               CircularProgressIndicator.adaptive(),
               if (message != null) ...[
                 const SizedBox(height: 16),
-                Text(message!, style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
+                Text(
+                  message!,
+                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
               ],
               if (secondaryMessage != null) ...[
                 const SizedBox(height: 8),
