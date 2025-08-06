@@ -190,6 +190,7 @@ class _WorkoutSetupPageState extends State<WorkoutSetupPage> {
         actions: [
           TextButton(
             onPressed: () {
+              context.navBack(); // Close the dialog
               context.navigateTo(const WorkoutPlanGenerationPage(), replaceCurrent: true);
             },
             child: Text(LocaleKeys.workout_setup_continue.tr()),

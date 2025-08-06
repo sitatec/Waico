@@ -28,7 +28,7 @@ class PremiumTtsModel implements TtsModel {
     }
   }
 
-  static Future<void> initialize({required String modelPath}) async {
+  static Future<void> initialize({required String modelPath, required String langCode}) async {
     if (_isolate != null) {
       log("TtsModel Already initialized, Skipping.");
       return;
@@ -73,7 +73,7 @@ class PremiumTtsModel implements TtsModel {
     final initRequestId = _requestCounter++;
     _pendingRequests[initRequestId] = initCompleter;
 
-    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath});
+    _sendPort!.send({'action': 'initialize', 'requestId': initRequestId, 'modelPath': modelPath, 'lang': langCode});
 
     await initCompleter.future;
     log("Tts model initialized successfully");
@@ -159,7 +159,7 @@ class PremiumTtsModel implements TtsModel {
                   tokens: tokensFile.path,
                   dataDir: espeakDataDir.path,
                   dictDir: dictDir.path,
-                  lang: 'en-us', // TODO: get from preferences
+                  lang: message['lang'] as String? ?? 'en-us',
                 );
 
                 final modelConfig = OfflineTtsModelConfig(
@@ -546,7 +546,11 @@ class TtsModelFactory {
   static VoiceModelType? _currentType;
 
   /// Initialize TTS model based on type
-  static Future<void> initialize({required VoiceModelType type, required String modelPath}) async {
+  static Future<void> initialize({
+    required VoiceModelType type,
+    required String modelPath,
+    required String langCode,
+  }) async {
     if (_currentModel != null) {
       log("TtsModel Already initialized, Skipping. If you want to reset/reinitialize the model, call dispose first");
       return;
@@ -556,7 +560,7 @@ class TtsModelFactory {
 
     switch (type) {
       case VoiceModelType.advanced:
-        await PremiumTtsModel.initialize(modelPath: modelPath);
+        await PremiumTtsModel.initialize(modelPath: modelPath, langCode: langCode);
         _currentModel = PremiumTtsModel();
         break;
       case VoiceModelType.lite:

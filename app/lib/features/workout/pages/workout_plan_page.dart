@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/features/workout/pages/exercise_page.dart';
 import 'package:waico/features/workout/pages/session_exercises_page.dart';
 import 'package:waico/generated/locale_keys.g.dart';
 
@@ -678,10 +679,22 @@ class _WorkoutSessionCard extends StatelessWidget {
                     builder: (context, snapshot) {
                       final isCompleted = snapshot.data ?? false;
 
-                      return _ExerciseItem(
-                        exercise: exercise,
-                        isCompleted: isCompleted,
-                        onToggle: () => onExerciseToggle(weekIndex, sessionIndex, exerciseIndex),
+                      return InkWell(
+                        onTap: () {
+                          context.navigateTo(
+                            ExercisePage(
+                              session: session,
+                              workoutSessionIndex: sessionIndex,
+                              workoutWeek: weekIndex,
+                              startingExerciseIndex: exerciseIndex,
+                            ),
+                          );
+                        },
+                        child: _ExerciseItem(
+                          exercise: exercise,
+                          isCompleted: isCompleted,
+                          onToggle: () => onExerciseToggle(weekIndex, sessionIndex, exerciseIndex),
+                        ),
                       );
                     },
                   );

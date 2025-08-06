@@ -4,6 +4,7 @@ import 'package:waico/core/repositories/user_repository.dart';
 import 'package:waico/core/utils/navigation_utils.dart';
 import 'package:waico/features/workout/models/workout_setup_data.dart';
 import 'package:waico/features/workout/models/workout_plan.dart';
+import 'package:waico/features/workout/pages/workout_plan_page.dart';
 import 'package:waico/features/workout/workout_plan_generator.dart';
 import 'package:waico/features/workout/pages/workout_setup/workout_setup_page.dart';
 import 'package:waico/generated/locale_keys.g.dart';
@@ -160,8 +161,8 @@ class _WorkoutPlanGenerationPageState extends State<WorkoutPlanGenerationPage> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
               context.navBack();
+              context.navigateTo(const WorkoutPlanPage(), replaceCurrent: true);
             },
             child: Text(LocaleKeys.workout_setup_start_training.tr()),
           ),

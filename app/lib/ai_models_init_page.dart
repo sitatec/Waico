@@ -193,8 +193,6 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
   Map<String, String> _getLiteTtsModelForLanguage(String languageCode) {
     switch (languageCode) {
-      case 'de':
-        return {'fileName': 'piper-de-mls.tar.gz', 'displayName': 'Piper TTS DE'};
       case 'es':
         return {'fileName': 'piper-es-mx_ald.tar.gz', 'displayName': 'Piper TTS ES'};
       case 'fr':
@@ -475,7 +473,11 @@ class _AiModelsInitializationPageState extends State<AiModelsInitializationPage>
 
       ttsModelPath = await _modelsToDownload[3].downloadedFilePath;
 
-      await TtsModelFactory.initialize(type: voiceModelType, modelPath: ttsModelPath);
+      String languageCode = 'en-us';
+      if (mounted) {
+        languageCode = context.locale.languageCode;
+      }
+      await TtsModelFactory.initialize(type: voiceModelType, modelPath: ttsModelPath, langCode: languageCode);
 
       final sttModelPath = await _modelsToDownload[0].downloadedFilePath;
       await SttModel.initialize(modelPath: sttModelPath);

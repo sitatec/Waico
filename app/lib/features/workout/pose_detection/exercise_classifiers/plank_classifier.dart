@@ -71,7 +71,7 @@ class PlankClassifier extends ExerciseClassifier {
     // Combine probabilities - alignment is most important for plank
     final plankProbability = (alignmentProb * 0.6 + armAngleProb * 0.25 + heightProb * 0.15);
 
-    return {'correct': plankProbability, 'incorrect': 1.0 - plankProbability};
+    return {'up': plankProbability, 'down': 1.0 - plankProbability};
   }
 
   @override
@@ -274,7 +274,7 @@ class SidePlankClassifier extends ExerciseClassifier {
     final sidePlankProbability =
         (alignmentProb * 0.4 + elevationProb * 0.3 + supportStabilityProb * 0.2 + lateralStabilityProb * 0.1);
 
-    return {'correct': sidePlankProbability, 'incorrect': 1.0 - sidePlankProbability};
+    return {'up': sidePlankProbability, 'down': 1.0 - sidePlankProbability};
   }
 
   @override

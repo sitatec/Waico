@@ -48,13 +48,6 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  String get _aiVoice => switch (context.locale.languageCode) {
-    'en' => 'am_fenrir',
-    'fr' => 'ff_siwis',
-    'es' => 'em_alex',
-    _ => 'am_fenrir', // Default to English voice
-  };
-
   @override
   void initState() {
     super.initState();
@@ -131,8 +124,12 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
   Future<void> _initializeWorkoutSession() async {
     setState(() => _isInitialized = false);
     try {
+      final enableVoiceChat = false;
       _workoutCoachAgent = WorkoutCoachAgent(language: context.locale.languageName);
-      await _workoutCoachAgent?.initialize();
+      // ignore: dead_code
+      if (enableVoiceChat) {
+        await _workoutCoachAgent?.initialize();
+      }
       _voiceChatPipeline = VoiceChatPipeline(agent: _workoutCoachAgent!);
       _poseDetectionService = PoseDetectionService.instance;
 
@@ -142,7 +139,8 @@ class _ExercisePageState extends State<ExercisePage> with TickerProviderStateMix
         workoutWeek: widget.workoutWeek,
         workoutSessionIndex: widget.workoutSessionIndex,
         poseDetectionService: _poseDetectionService,
-        aiVoice: _aiVoice,
+        languageCode: mounted ? context.locale.languageCode : 'en',
+        enableVoiceChat: enableVoiceChat,
       );
 
       _isCameraPermissionGranted = await _poseDetectionService?.hasCameraPermission ?? false;

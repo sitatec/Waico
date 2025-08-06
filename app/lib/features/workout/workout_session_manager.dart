@@ -9,6 +9,7 @@ import 'package:waico/features/workout/pose_detection/exercise_classifiers/exerc
 import 'package:waico/features/workout/pose_detection/pose_detection_service.dart';
 import 'package:waico/features/workout/pose_detection/pose_models.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
+import 'package:waico/features/workout/workout_feedback_manager.dart';
 import 'package:waico/generated/locale_keys.g.dart';
 
 /// Manages the state and flow of a workout session
@@ -18,15 +19,22 @@ class WorkoutSessionManager {
   final VoiceChatPipeline voiceChatPipeline;
   final int workoutWeek;
   final int workoutSessionIndex;
+  final bool enableVoiceChat;
 
   // Pose detection
   final PoseDetectionService poseDetectionService;
   StreamSubscription<PoseDetectionResult>? _poseDetectionSubscription;
 
+  // Feedback management
+  final WorkoutFeedbackManager? _feedbackManager;
+
   // Rep counting management
   StreamSubscription<RepetitionData>? _repStreamSubscription;
   final List<RepetitionData> _cachedReps = [];
   int? _lastExcellentRepSent;
+
+  // Duration-based exercise feedback management
+  DateTime? _lastExcellentFormFeedbackSent;
 
   // Timers
   Timer? _autoStartTimer;
@@ -40,7 +48,7 @@ class WorkoutSessionManager {
   _DurationBasedExerciseFormTracker? _durationFormTracker;
   StreamSubscription<_DurationBasedExerciseMetrics>? _durationMetricsSubscription;
 
-  final String aiVoice;
+  final String languageCode;
 
   WorkoutSessionManager({
     required this.session,
@@ -49,9 +57,11 @@ class WorkoutSessionManager {
     required this.voiceChatPipeline,
     required this.workoutWeek,
     required this.workoutSessionIndex,
-    required this.aiVoice,
+    required this.languageCode,
+    this.enableVoiceChat = true,
   }) : userRepository = userRepository ?? UserRepository(),
-       poseDetectionService = poseDetectionService ?? PoseDetectionService.instance;
+       poseDetectionService = poseDetectionService ?? PoseDetectionService.instance,
+       _feedbackManager = enableVoiceChat ? null : WorkoutFeedbackManager(languageCode: languageCode);
 
   /// Stream of workout session state changes.
   Stream<WorkoutSessionState> get stateStream => _stateController.stream;
@@ -59,11 +69,20 @@ class WorkoutSessionManager {
   /// The most recent state object.
   WorkoutSessionState get currentState => _state;
 
+  String get aiVoice => switch (languageCode) {
+    'en' => 'am_fenrir',
+    'fr' => 'ff_siwis',
+    'es' => 'em_alex',
+    _ => 'am_fenrir', // Default to English voice
+  };
+
   /// Initialize the workout session manager
   Future<void> initialize() async {
-    await voiceChatPipeline.startChat(voice: aiVoice);
-    // We only start listening when the exercise starts
-    await voiceChatPipeline.stopListeningToUser();
+    if (enableVoiceChat) {
+      await voiceChatPipeline.startChat(voice: aiVoice);
+      // We only start listening when the exercise starts
+      await voiceChatPipeline.stopListeningToUser();
+    }
     await _initializeCurrentExercise();
     _startPreExerciseOrRestTimer(duration: 20, isInitialStart: true);
   }
@@ -109,7 +128,9 @@ class WorkoutSessionManager {
     _state = _state.copyWith(currentPhase: WorkoutPhaseType.exercising, restTimerValue: null);
     _emitState();
 
-    await voiceChatPipeline.startListeningToUser();
+    if (enableVoiceChat) {
+      await voiceChatPipeline.startListeningToUser();
+    }
 
     if (_state.currentExercise.load.type == ExerciseLoadType.reps) {
       await _startPoseDetection();
@@ -155,16 +176,40 @@ class WorkoutSessionManager {
   }
 
   Future<void> _handleDurationMetrics(_DurationBasedExerciseMetrics metrics) async {
+    log(
+      'Handling duration metrics: ${metrics.formMetrics}, score: ${metrics.formScore}, correctness: ${metrics.correctness}',
+    );
     // Provide feedback if form is poor or excellent
     final hasFeedback = metrics.formMetrics.values.any((v) => v is Map && v.containsKey('message'));
     if (hasFeedback) {
-      await _sendDurationMetricsToAI(metrics, isFormFeedback: true);
+      if (enableVoiceChat) {
+        await _sendDurationMetricsToAI(metrics, isFormFeedback: true);
+      } else {
+        log('Handling pre-recorded form feedback');
+        await _handlePreRecordedFormFeedback(metrics.formMetrics);
+      }
     } else if (metrics.formScore > 0.9) {
-      await _sendDurationMetricsToAI(metrics, isFormFeedback: false);
+      // Check if we should send excellent form feedback (10 seconds gap for duration-based exercises) and
+      // at least 3 seconds have passed since the exercise started. This is to prevent sending too many feedback in a short time.
+      final now = DateTime.now();
+      final shouldSend =
+          (_exerciseDurationTimer?.tick ?? 0) > 3 &&
+          (_lastExcellentFormFeedbackSent == null || now.difference(_lastExcellentFormFeedbackSent!).inSeconds >= 10);
+
+      if (shouldSend) {
+        if (enableVoiceChat) {
+          if (await _sendDurationMetricsToAI(metrics, isFormFeedback: false)) {
+            _lastExcellentFormFeedbackSent = now;
+          }
+        } else {
+          await _feedbackManager?.playExcellentFormFeedback();
+          _lastExcellentFormFeedbackSent = now;
+        }
+      }
     }
   }
 
-  Future<void> _sendDurationMetricsToAI(_DurationBasedExerciseMetrics metrics, {required bool isFormFeedback}) async {
+  Future<bool> _sendDurationMetricsToAI(_DurationBasedExerciseMetrics metrics, {required bool isFormFeedback}) async {
     final exerciseName = _state.currentExercise.name;
     final feedbackType = isFormFeedback
         ? LocaleKeys.workout_exercise_ai_feedback_form_correction_needed.tr()
@@ -186,7 +231,7 @@ ${isFormFeedback ? '''
 </system>
 ''';
     log('\n\nSending duration metrics to AI: $message\n\n');
-    await voiceChatPipeline.addSystemMessage(message);
+    return await voiceChatPipeline.addSystemMessage(message);
   }
 
   /// Go to the next exercise, triggering a rest period.
@@ -195,7 +240,9 @@ ${isFormFeedback ? '''
       final restDuration = _state.currentExercise.restDuration;
 
       await _stopPoseDetection();
-      await voiceChatPipeline.stopListeningToUser();
+      if (enableVoiceChat) {
+        await voiceChatPipeline.stopListeningToUser();
+      }
       _cancelTimers();
 
       final newIndex = _state.currentExerciseIndex + 1;
@@ -210,7 +257,9 @@ ${isFormFeedback ? '''
   Future<void> goToPreviousExercise() async {
     if (_state.hasPreviousExercise) {
       await _stopPoseDetection();
-      await voiceChatPipeline.stopListeningToUser();
+      if (enableVoiceChat) {
+        await voiceChatPipeline.stopListeningToUser();
+      }
       _cancelTimers();
 
       final newIndex = _state.currentExerciseIndex - 1;
@@ -237,6 +286,9 @@ ${isFormFeedback ? '''
   Future<void> goToExercise(int index) async {
     if (index >= 0 && index < session.exercises.length) {
       await _stopPoseDetection();
+      if (enableVoiceChat) {
+        await voiceChatPipeline.stopListeningToUser();
+      }
       _cancelTimers();
       _updateExercise(index);
       _startPreExerciseOrRestTimer(duration: 20, isInitialStart: true);
@@ -253,6 +305,7 @@ ${isFormFeedback ? '''
 
     _cachedReps.clear();
     _lastExcellentRepSent = null;
+    _lastExcellentFormFeedbackSent = null;
 
     _state = _state.copyWith(
       currentExerciseIndex: index,
@@ -363,23 +416,40 @@ ${isFormFeedback ? '''
 
     final hasFeedback = repData.formMetrics.values.any((v) => v is Map && v.containsKey('message'));
     if (hasFeedback) {
-      await _sendRepDataToAI(repData, isFormFeedback: true);
+      if (enableVoiceChat) {
+        await _sendRepDataToAI(repData, isFormFeedback: true);
+      } else {
+        await _handlePreRecordedFormFeedback(repData.formMetrics);
+      }
     } else if (repData.quality == RepQuality.excellent) {
-      // Check if we should send excellent form feedback (There needs to be at least 4 reps gap)
-      // And at least 4 reps have been completed in the current set. This is to prevent sending
+      // Check if we should send excellent form feedback (There needs to be at least 5 reps gap)
+      // And at least 3 reps have been completed in the current set. This is to prevent sending
       // too many feedback in a short time.
       final shouldSend =
           repData.repNumber >= 3 &&
-          (_lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 4);
+          (_lastExcellentRepSent == null || (repData.repNumber - _lastExcellentRepSent!) >= 5);
       if (shouldSend) {
-        if (await _sendRepDataToAI(repData, isFormFeedback: false)) {
+        if (enableVoiceChat) {
+          if (await _sendRepDataToAI(repData, isFormFeedback: false)) {
+            _lastExcellentRepSent = repData.repNumber;
+          }
+        } else {
+          await _feedbackManager?.playExcellentFormFeedback();
           _lastExcellentRepSent = repData.repNumber;
         }
       } else {
-        await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
+        if (enableVoiceChat) {
+          await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
+        } else {
+          await _feedbackManager?.playRepCountingAudio(repData.repNumber);
+        }
       }
     } else {
-      await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
+      if (enableVoiceChat) {
+        await voiceChatPipeline.addSystemSpeech('${repData.repNumber}');
+      } else {
+        await _feedbackManager?.playRepCountingAudio(repData.repNumber);
+      }
     }
   }
 
@@ -422,6 +492,29 @@ ${isFormFeedback ? '''
       _cachedReps.remove(currentRep); // Remove the current rep as well
     }
     return success;
+  }
+
+  /// Handle form feedback using pre-recorded audio when voice chat is disabled
+  Future<void> _handlePreRecordedFormFeedback(Map<String, dynamic> formMetrics) async {
+    if (_feedbackManager == null) return;
+
+    final exerciseName = _state.currentExercise.name;
+
+    // Find the first metric that has feedback to play
+    for (final entry in formMetrics.entries) {
+      if (entry.value is Map && entry.value.containsKey('message')) {
+        final feedbackKey = entry.key;
+
+        // Handle special cases
+        if (feedbackKey == 'overall_visibility') {
+          await _feedbackManager.playOverallVisibilityFeedback();
+          return;
+        } else {
+          await _feedbackManager.playFormFeedbackAudio(exerciseName, feedbackKey);
+          return;
+        }
+      }
+    }
   }
 
   void _startPreExerciseOrRestTimer({required int duration, bool isInitialStart = false}) {
@@ -475,10 +568,11 @@ ${isFormFeedback ? '''
   }
 
   Future<void> _completeSet() async {
-    if (_state.currentExercise.load.type == ExerciseLoadType.reps) {
-      await _stopPoseDetection();
+    await _stopPoseDetection();
+
+    if (enableVoiceChat) {
+      await voiceChatPipeline.stopListeningToUser();
     }
-    await voiceChatPipeline.stopListeningToUser();
 
     if (_state.currentSet < _state.currentExercise.load.sets) {
       _state = _state.copyWith(currentSet: _state.currentSet + 1);
@@ -503,6 +597,7 @@ ${isFormFeedback ? '''
     _state.repsCounter?.dispose();
     await _durationMetricsSubscription?.cancel();
     _durationFormTracker = null;
+    await _feedbackManager?.dispose();
     await _stateController.close();
   }
 }
@@ -525,28 +620,42 @@ class _DurationBasedExerciseFormTracker {
     }
   }
 
+  void reset() {
+    _pendingMetrics = _DurationBasedExerciseMetrics(formScore: 0.5, formMetrics: {}, correctness: 0.5);
+    _numAccumulatedMetrics = 0;
+    _lastEmittedTime = DateTime.now();
+  }
+
   Stream<_DurationBasedExerciseMetrics> get metricsStream => _metricsController.stream;
 
-  void processFrame(PoseDetectionResult result) {
-    final formScore = classifier.classify(worldLandmarks: result.worldLandmarks, imageLandmarks: result.landmarks);
+  void processFrame(PoseDetectionResult poseResult) {
+    if (!poseResult.hasPose || poseResult.visibleLandmarkCount < 10) {
+      return; // Skip frames with poor pose detection
+    }
+
+    final formScore = classifier.classify(
+      worldLandmarks: poseResult.worldLandmarks,
+      imageLandmarks: poseResult.landmarks,
+    );
     final formMetrics = classifier.calculateFormMetrics(
-      worldLandmarks: result.worldLandmarks,
-      imageLandmarks: result.landmarks,
+      worldLandmarks: poseResult.worldLandmarks,
+      imageLandmarks: poseResult.landmarks,
     );
     _numAccumulatedMetrics++;
     _pendingMetrics = _DurationBasedExerciseMetrics(
-      // For duration-based exercises, the classifier return correct and incorrect probabilities
-      correctness: _moveAverage(formScore['correct'] ?? 0.5, _pendingMetrics.correctness, _numAccumulatedMetrics),
+      // For duration-based exercises, up is the probability of form correctness and down for incorrect
+      correctness: _moveAverage(formScore['up'] ?? 0.5, _pendingMetrics.correctness, _numAccumulatedMetrics),
       formScore: _moveAverage(_calculateFormScore(formMetrics), _pendingMetrics.formScore, _numAccumulatedMetrics),
       formMetrics: formMetrics,
     );
 
     // Emit metrics every second
-    if (_lastEmittedTime.difference(DateTime.now()).inSeconds >= 1) {
+    if (_lastEmittedTime.difference(DateTime.now()).inSeconds.abs() >= 1) {
+      log(
+        'Emitting duration metrics: ${_pendingMetrics.formMetrics}, score: ${_pendingMetrics.formScore}, correctness: ${_pendingMetrics.correctness}',
+      );
       _metricsController.add(_pendingMetrics);
-      _lastEmittedTime = DateTime.now();
-      _numAccumulatedMetrics = 0;
-      _pendingMetrics = _DurationBasedExerciseMetrics(formScore: 0.5, formMetrics: {}, correctness: 0.5);
+      reset();
     }
   }
 
