@@ -1,5 +1,9 @@
 ## Overview
 
+[![](https://utfs.io/f/nGnSqDveMsqxda2w2GCW8Kyk6Aa3cm2xfpuRSwJFTL4ZegVb)](https://www.youtube.com/watch?v=ufq7EUXwlQM)
+
+---
+
 Waico (**W**ellbeing **AI Co**mpanion), pronounced weiko, is a Mobile App that leverages Gemma 3n and other on-device AI models to provide personalized wellbeing support through multiple specialized AI agents. The system combines conversational AI with Gemma 3n, computer vision for pose landmark detection with Mediapipe, health data integration, and tailored optimizations for on-device performance to create a comprehensive wellbeing platform.
 
 The app operates entirely offline using locally deployed AI models, ensuring user privacy while providing real-time, intelligent interactions across counseling, fitness coaching, and meditation guidance. With more modules to come.
