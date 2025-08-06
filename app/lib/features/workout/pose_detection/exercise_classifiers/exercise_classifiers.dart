@@ -18,19 +18,33 @@ abstract class ExerciseClassifier {
 
   bool get isDurationBased => false;
 
-  Map<String, double> classify({
+  Map<String, dynamic> classify({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
     final rawProbabilities = _calculateProbabilities(worldLandmarks: worldLandmarks, imageLandmarks: imageLandmarks);
-    _history.add(rawProbabilities);
+    // Extract only the probability values for smoothing
+    final probabilitiesOnly = <String, double>{
+      'up': (rawProbabilities['up'] as num?)?.toDouble() ?? 0.5,
+      'down': (rawProbabilities['down'] as num?)?.toDouble() ?? 0.5,
+    };
+    _history.add(probabilitiesOnly);
     if (_history.length > smoothingWindow) {
       _history.removeFirst();
     }
-    return _getSmoothedProbabilities();
+
+    final smoothedProbabilities = _getSmoothedProbabilities();
+    final result = <String, dynamic>{'up': smoothedProbabilities['up'], 'down': smoothedProbabilities['down']};
+
+    // Include feedback if present in raw probabilities
+    if (rawProbabilities.containsKey('feedback')) {
+      result['feedback'] = rawProbabilities['feedback'];
+    }
+
+    return result;
   }
 
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   });
@@ -61,5 +75,5 @@ abstract class ExerciseClassifier {
     return {'up': upSum / _history.length, 'down': downSum / _history.length};
   }
 
-  Map<String, double> _neutralResult() => {'up': 0.5, 'down': 0.5};
+  Map<String, dynamic> _neutralResult() => {'up': 0.5, 'down': 0.5};
 }

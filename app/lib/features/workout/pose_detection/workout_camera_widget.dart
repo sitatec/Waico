@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:developer' show log;
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:waico/features/workout/pose_detection/reps_counter.dart';
+import 'package:waico/generated/locale_keys.g.dart';
 
 /// A high-performance camera widget with pose detection using native platform views
 class WorkoutCameraWidget extends StatefulWidget {
@@ -64,7 +67,7 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget> with TickerPr
       final hasPermission = await Permission.camera.request().isGranted;
       if (!hasPermission) {
         setState(() {
-          _errorMessage = 'Camera permission required';
+          _errorMessage = LocaleKeys.workout_errors_camera_permission_required.tr();
         });
         return;
       }
@@ -79,9 +82,10 @@ class _WorkoutCameraWidgetState extends State<WorkoutCameraWidget> with TickerPr
       setState(() {
         _isInitialized = true;
       });
-    } catch (e) {
+    } catch (e, s) {
+      log('Error initializing camera.', error: e, stackTrace: s);
       setState(() {
-        _errorMessage = 'Initialization failed: $e';
+        _errorMessage = LocaleKeys.workout_exercise_camera_initialization_failed.tr(namedArgs: {'error': e.toString()});
       });
     }
   }
@@ -147,26 +151,32 @@ class _NativeCameraPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!hasPermission) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.camera_alt, size: 64, color: Colors.white54),
             SizedBox(height: 16),
-            Text('Camera permission required', style: TextStyle(color: Colors.white, fontSize: 16)),
+            Text(
+              LocaleKeys.workout_errors_camera_permission_required.tr(),
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
           ],
         ),
       );
     }
 
     if (!isInitialized) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(color: Colors.white),
             SizedBox(height: 16),
-            Text('Initializing camera...', style: TextStyle(color: Colors.white, fontSize: 16)),
+            Text(
+              LocaleKeys.workout_errors_initializing_camera.tr(),
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
           ],
         ),
       );
@@ -188,7 +198,6 @@ class _RepCounterOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUp = repCountingState.currentState == ExerciseState.up;
     final lastQuality = repCountingState.lastRep?.formScore ?? 0.0;
 
     return Positioned(
@@ -208,7 +217,7 @@ class _RepCounterOverlay extends StatelessWidget {
               _RepCountDisplay(totalReps: repCountingState.totalReps, repScaleAnimation: repScaleAnimation),
               const SizedBox(height: 4),
               Text(
-                'REPS',
+                LocaleKeys.workout_exercise_camera_reps_label.tr(),
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
@@ -219,7 +228,7 @@ class _RepCounterOverlay extends StatelessWidget {
               const SizedBox(height: 6),
               _QualityIndicator(quality: lastQuality),
               const SizedBox(height: 6),
-              _PositionIndicator(isUp: isUp),
+              _PositionIndicator(state: repCountingState.currentState),
               if (repCountingState.lastRep != null) ...[
                 const SizedBox(height: 6),
                 _LastRepQualityIndicator(repData: repCountingState.lastRep!),
@@ -316,27 +325,31 @@ class _QualityIndicator extends StatelessWidget {
 }
 
 class _PositionIndicator extends StatelessWidget {
-  final bool isUp;
+  final ExerciseState state;
 
-  const _PositionIndicator({required this.isUp});
+  const _PositionIndicator({required this.state});
 
   @override
   Widget build(BuildContext context) {
+    final color = state == ExerciseState.up
+        ? Colors.green
+        : state == ExerciseState.down
+        ? Colors.orange
+        : Colors.grey;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isUp ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.15),
+        color: color.withOpacity(0.17),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isUp ? Colors.green : Colors.orange, width: 0.8),
+        border: Border.all(color: color, width: 0.8),
       ),
       child: Text(
-        isUp ? 'UP' : 'DOWN',
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          color: isUp ? Colors.green : Colors.orange,
-          letterSpacing: 1,
-        ),
+        state == ExerciseState.up
+            ? LocaleKeys.workout_exercise_camera_position_up.tr()
+            : state == ExerciseState.down
+            ? LocaleKeys.workout_exercise_camera_position_down.tr()
+            : LocaleKeys.workout_exercise_camera_position_neutral.tr(),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color, letterSpacing: 1),
       ),
     );
   }
@@ -473,7 +486,7 @@ class _DurationTimerOverlayState extends State<_DurationTimerOverlay> with Ticke
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'TIME',
+                      LocaleKeys.workout_exercise_camera_time_label.tr(),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,

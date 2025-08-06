@@ -5,7 +5,7 @@ class PlankClassifier extends ExerciseClassifier {
   bool get isDurationBased => true;
 
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -36,7 +36,9 @@ class PlankClassifier extends ExerciseClassifier {
         elbow.visibility < visibilityThreshold ||
         wrist.visibility < visibilityThreshold ||
         knee.visibility < visibilityThreshold) {
-      return _neutralResult();
+      return _neutralResult()..addAll({
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      });
     }
 
     // --- Granular Algorithm ---
@@ -61,7 +63,12 @@ class PlankClassifier extends ExerciseClassifier {
     final hipAnkleDistance = sqrt(pow(hip.x - ankle.x, 2) + pow(hip.y - ankle.y, 2));
     final totalBodyLength = shoulderHipDistance + hipAnkleDistance;
 
-    if (totalBodyLength < 0.01) return _neutralResult();
+    if (totalBodyLength < 0.01) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'body_alignment': 'Should maintain a straight line from head to heels'},
+      };
+    }
 
     // Check vertical alignment - hip should be roughly in line with shoulder and ankle
     final shoulderToAnkleDistance = sqrt(pow(shoulder.x - ankle.x, 2) + pow(shoulder.y - ankle.y, 2));
@@ -199,7 +206,7 @@ class SidePlankClassifier extends ExerciseClassifier {
   bool get isDurationBased => true;
 
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -227,7 +234,9 @@ class SidePlankClassifier extends ExerciseClassifier {
         rightHip.visibility < visibilityThreshold ||
         leftAnkle.visibility < visibilityThreshold ||
         rightAnkle.visibility < visibilityThreshold) {
-      return _neutralResult();
+      return _neutralResult()..addAll({
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      });
     }
 
     // --- Side Plank Algorithm ---

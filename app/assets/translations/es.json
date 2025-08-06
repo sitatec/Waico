@@ -275,6 +275,7 @@
       "optimal_tracking_message": "Asegúrate de estar {position} para un seguimiento óptimo.",
       "instructions": "Instrucciones",
       "no_instructions": "No hay instrucciones disponibles para este ejercicio.",
+      "no_reps_counting": "No hay conteo de repeticiones disponible para {exerciseName} aún.",
       "start_exercise": "COMENZAR EJERCICIO",
       "auto_starting": "Inicio automático en {seconds}s...",
       "rest": "DESCANSO",
@@ -306,6 +307,7 @@
         "time_label": "TIEMPO",
         "position_up": "ARRIBA",
         "position_down": "ABAJO",
+        "position_neutral": "NEUTRO",
         "initialization_failed": "Falló la inicialización: {error}"
       }
     },

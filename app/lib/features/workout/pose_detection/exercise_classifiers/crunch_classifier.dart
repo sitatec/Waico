@@ -3,7 +3,6 @@ part of 'exercise_classifiers.dart';
 List<int> _getRequiredLandmark(bool isLeftVisible) {
   if (isLeftVisible) {
     return [
-      PoseLandmarkType.nose,
       PoseLandmarkType.leftShoulder,
       PoseLandmarkType.leftHip,
       PoseLandmarkType.leftKnee,
@@ -13,7 +12,6 @@ List<int> _getRequiredLandmark(bool isLeftVisible) {
     ];
   } else {
     return [
-      PoseLandmarkType.nose,
       PoseLandmarkType.rightShoulder,
       PoseLandmarkType.rightHip,
       PoseLandmarkType.rightKnee,
@@ -26,14 +24,17 @@ List<int> _getRequiredLandmark(bool isLeftVisible) {
 
 class CrunchClassifier extends ExerciseClassifier {
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
     final isLeftVisible = PoseUtilities.isLeftBodyVisible(worldLandmarks);
 
     if (_getRequiredLandmark(isLeftVisible).any((type) => worldLandmarks[type].visibility < 0.65)) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
 
     final leftKnee = worldLandmarks[PoseLandmarkType.leftKnee];
@@ -51,7 +52,12 @@ class CrunchClassifier extends ExerciseClassifier {
     // Knees should be bent, no specific angle, but they should not be fully extended
     // We will score knee angle in the metrics instead, here it's just to make sure the user is doing the right exercise
     if (kneeAngle > 160.0) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {
+          'knee_stability': 'Should keep the knees bent at about 90 degrees and stable throughout the movement',
+        },
+      };
     }
 
     final shoulderCenter3D = PoseUtilities.getMidpoint(
@@ -67,35 +73,34 @@ class CrunchClassifier extends ExerciseClassifier {
       worldLandmarks[PoseLandmarkType.rightKnee],
     );
 
-    final shoulderCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftShoulder],
-      imageLandmarks[PoseLandmarkType.rightShoulder],
-    );
-    final hipCenter2D = PoseUtilities.getMidpoint(
-      imageLandmarks[PoseLandmarkType.leftHip],
-      imageLandmarks[PoseLandmarkType.rightHip],
-    );
+    // final shoulderCenter2D = PoseUtilities.getMidpoint(
+    //   imageLandmarks[PoseLandmarkType.leftShoulder],
+    //   imageLandmarks[PoseLandmarkType.rightShoulder],
+    // );
+    // final hipCenter2D = PoseUtilities.getMidpoint(
+    //   imageLandmarks[PoseLandmarkType.leftHip],
+    //   imageLandmarks[PoseLandmarkType.rightHip],
+    // );
 
     // Signal 1: Torso Angle (Primary)
     final torsoAngle = PoseUtilities.getAngle(shoulderCenter3D, hipCenter3D, kneeCenter3D);
-    // UP: ~117.9°, DOWN: ~130.7° - smaller angle means more crunched (up)
-    final angleProb = 1.0 - PoseUtilities.normalize(torsoAngle, 110.0, 140.0);
+    final angleProb = 1.0 - PoseUtilities.normalize(torsoAngle, 120.0, 150.0);
 
     // Signal 2: Shoulder Elevation (Secondary)
-    final shoulderElevation = PoseUtilities.getVerticalDistance(hipCenter2D, shoulderCenter2D);
-    final torsoLength = Vector2(
-      shoulderCenter2D.x,
-      shoulderCenter2D.y,
-    ).distanceTo(Vector2(hipCenter2D.x, hipCenter2D.y));
-    if (torsoLength < 0.01) return _neutralResult();
+    // final shoulderElevation = PoseUtilities.getVerticalDistance(hipCenter2D, shoulderCenter2D);
+    // final torsoLength = Vector2(
+    //   shoulderCenter2D.x,
+    //   shoulderCenter2D.y,
+    // ).distanceTo(Vector2(hipCenter2D.x, hipCenter2D.y));
+    // if (torsoLength < 0.01) return _neutralResult();
 
-    final normalizedElevation = shoulderElevation / torsoLength;
-    // DOWN: ~0.117, UP: ~0.639 - higher elevation means more crunched (up)
-    final elevationProb = PoseUtilities.normalize(normalizedElevation, 0.05, 0.8);
+    // final normalizedElevation = shoulderElevation / torsoLength;
+    // // DOWN: ~0.117, UP: ~0.639 - higher elevation means more crunched (up)
+    // final elevationProb = PoseUtilities.normalize(normalizedElevation, 0.05, 0.8);
 
     // Combine with emphasis on both signals
-    final upProbability = (angleProb * 0.6 + elevationProb * 0.4);
-    return {'up': upProbability, 'down': 1.0 - upProbability};
+    // final upProbability = (angleProb * 0.6 + elevationProb * 0.4);
+    return {'up': angleProb, 'down': 1.0 - angleProb};
   }
 
   @override
@@ -176,14 +181,17 @@ class CrunchClassifier extends ExerciseClassifier {
 
 class ReverseCrunchClassifier extends ExerciseClassifier {
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
     final isLeftVisible = PoseUtilities.isLeftBodyVisible(worldLandmarks);
 
     if (_getRequiredLandmark(isLeftVisible).any((type) => worldLandmarks[type].visibility < 0.65)) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
     final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
     final rightHip = worldLandmarks[PoseLandmarkType.rightHip];
@@ -284,16 +292,18 @@ class ReverseCrunchClassifier extends ExerciseClassifier {
 
 class DoubleCrunchClassifier extends ExerciseClassifier {
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
     final isLeftVisible = PoseUtilities.isLeftBodyVisible(worldLandmarks);
     if (_getRequiredLandmark(isLeftVisible).any((type) => worldLandmarks[type].visibility < 0.65)) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
     // Combines both regular crunch (torso flexion) and reverse crunch (hip flexion)
-    final nose = worldLandmarks[PoseLandmarkType.nose];
     final leftShoulder = worldLandmarks[PoseLandmarkType.leftShoulder];
     final rightShoulder = worldLandmarks[PoseLandmarkType.rightShoulder];
     final leftHip = worldLandmarks[PoseLandmarkType.leftHip];
@@ -305,18 +315,10 @@ class DoubleCrunchClassifier extends ExerciseClassifier {
     final hipMid = PoseUtilities.getMidpoint(leftHip, rightHip);
     final kneeMid = PoseUtilities.getMidpoint(leftKnee, rightKnee);
 
-    // Torso flexion (like regular crunch)
-    final torsoAngle = PoseUtilities.getAngle(nose, shoulderMid, hipMid);
-    final torsoFlexion = 1.0 - PoseUtilities.normalize(torsoAngle, 120.0, 180.0);
-
-    // Hip flexion (like reverse crunch)
     final hipAngle = PoseUtilities.getAngle(shoulderMid, hipMid, kneeMid);
-    final hipFlexion = 1.0 - PoseUtilities.normalize(hipAngle, 60.0, 120.0);
+    final hipFlexion = 1.0 - PoseUtilities.normalize(hipAngle, 45.0, 120.0);
 
-    // Both should happen together for double crunch
-    final combinedFlexion = (torsoFlexion + hipFlexion) / 2;
-
-    return {'up': combinedFlexion, 'down': 1 - combinedFlexion};
+    return {'up': hipFlexion, 'down': 1 - hipFlexion};
   }
 
   @override

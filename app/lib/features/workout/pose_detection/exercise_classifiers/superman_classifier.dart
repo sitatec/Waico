@@ -2,7 +2,7 @@ part of 'exercise_classifiers.dart';
 
 class SupermanClassifier extends ExerciseClassifier {
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -20,7 +20,10 @@ class SupermanClassifier extends ExerciseClassifier {
     );
 
     if (shoulderCenter.visibility < 0.6 || hipCenter.visibility < 0.6) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
 
     // --- Improved data-driven Algorithm ---
@@ -29,7 +32,12 @@ class SupermanClassifier extends ExerciseClassifier {
     // Leg elevation shows better separation, so weight it more heavily
 
     final bodyLengthProxy = (Vector2(hipCenter.x, hipCenter.y).distanceTo(Vector2(ankleCenter.x, ankleCenter.y))).abs();
-    if (bodyLengthProxy < 0.01) return _neutralResult();
+    if (bodyLengthProxy < 0.01) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
+    }
 
     // Signal 1: Chest Elevation (less reliable due to noise)
     final chestElevation = hipCenter.y - shoulderCenter.y; // Positive when chest is up

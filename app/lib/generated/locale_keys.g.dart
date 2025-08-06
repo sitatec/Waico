@@ -256,6 +256,7 @@ abstract class  LocaleKeys {
   static const workout_exercise_optimal_tracking_message = 'workout.exercise.optimal_tracking_message';
   static const workout_exercise_instructions = 'workout.exercise.instructions';
   static const workout_exercise_no_instructions = 'workout.exercise.no_instructions';
+  static const workout_exercise_no_reps_counting = 'workout.exercise.no_reps_counting';
   static const workout_exercise_start_exercise = 'workout.exercise.start_exercise';
   static const workout_exercise_auto_starting = 'workout.exercise.auto_starting';
   static const workout_exercise_rest = 'workout.exercise.rest';
@@ -285,6 +286,7 @@ abstract class  LocaleKeys {
   static const workout_exercise_camera_time_label = 'workout.exercise.camera.time_label';
   static const workout_exercise_camera_position_up = 'workout.exercise.camera.position_up';
   static const workout_exercise_camera_position_down = 'workout.exercise.camera.position_down';
+  static const workout_exercise_camera_position_neutral = 'workout.exercise.camera.position_neutral';
   static const workout_exercise_camera_initialization_failed = 'workout.exercise.camera.initialization_failed';
   static const workout_exercise_camera = 'workout.exercise.camera';
   static const workout_exercise = 'workout.exercise';

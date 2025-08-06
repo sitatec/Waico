@@ -2,7 +2,7 @@ part of 'exercise_classifiers.dart';
 
 class SquatClassifier extends ExerciseClassifier {
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -19,7 +19,10 @@ class SquatClassifier extends ExerciseClassifier {
     final knee2D = imageLandmarks[kneeIdx];
 
     if (hip3D.visibility < 0.8 || knee3D.visibility < 0.8 || ankle3D.visibility < 0.8) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
 
     // --- Granular Algorithm ---
@@ -34,7 +37,12 @@ class SquatClassifier extends ExerciseClassifier {
     // In a deep squat, hips are at or below knee level.
     final hipKneeHeightDiff = knee2D.y - hip2D.y; // Positive when hip is above knee
     final shinHeight = PoseUtilities.getVerticalDistance(knee2D, imageLandmarks[ankleIdx]);
-    if (shinHeight < 0.01) return _neutralResult();
+    if (shinHeight < 0.01) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'squat_depth': 'Should maintain proper squatting form with adequate depth'},
+      };
+    }
 
     final normalizedHipHeight = hipKneeHeightDiff / shinHeight;
     // Down: hip is near/below knee (ratio ~0). Up: hip is high above knee (ratio ~1.0-1.2).
@@ -127,7 +135,7 @@ class SquatClassifier extends ExerciseClassifier {
 class SumoSquatClassifier extends ExerciseClassifier {
   // Sumo Squat logic is similar to a regular squat but averages both legs.
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -139,7 +147,12 @@ class SumoSquatClassifier extends ExerciseClassifier {
     final rKnee = worldLandmarks[PoseLandmarkType.rightKnee];
     final rAnkle = worldLandmarks[PoseLandmarkType.rightAnkle];
 
-    if (lKnee.visibility < 0.7 || rKnee.visibility < 0.7) return _neutralResult();
+    if (lKnee.visibility < 0.7 || rKnee.visibility < 0.7) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
+    }
 
     // Calculate angles for both legs
     final lKneeAngle = PoseUtilities.getAngle(lHip, lKnee, lAnkle);
@@ -159,7 +172,12 @@ class SumoSquatClassifier extends ExerciseClassifier {
     final hipKneeHeightDiff = avgKneeHeight - avgHipHeight;
 
     final shinHeight = PoseUtilities.getVerticalDistance(lKnee2D, imageLandmarks[PoseLandmarkType.leftAnkle]);
-    if (shinHeight < 0.01) return _neutralResult();
+    if (shinHeight < 0.01) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
+    }
 
     final normalizedHipHeight = hipKneeHeightDiff / shinHeight;
     final heightProb = PoseUtilities.normalize(normalizedHipHeight, 0.0, 1.2);
@@ -253,7 +271,7 @@ class SplitSquatClassifier extends ExerciseClassifier {
   SplitSquatClassifier({required this.frontLeg});
 
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -267,7 +285,10 @@ class SplitSquatClassifier extends ExerciseClassifier {
     final frontAnkle = worldLandmarks[frontAnkleIdx];
 
     if (frontHip.visibility < 0.8 || frontKnee.visibility < 0.8 || frontAnkle.visibility < 0.8) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
 
     // Front leg knee angle
@@ -280,7 +301,12 @@ class SplitSquatClassifier extends ExerciseClassifier {
     final hipKneeHeightDiff = frontKnee2D.y - frontHip2D.y;
     final shinHeight = PoseUtilities.getVerticalDistance(frontKnee2D, imageLandmarks[frontAnkleIdx]);
 
-    if (shinHeight < 0.01) return _neutralResult();
+    if (shinHeight < 0.01) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
+    }
 
     final normalizedHipHeight = hipKneeHeightDiff / shinHeight;
     final heightProb = PoseUtilities.normalize(normalizedHipHeight, 0.0, 1.2);

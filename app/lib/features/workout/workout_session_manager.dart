@@ -30,11 +30,13 @@ class WorkoutSessionManager {
 
   // Rep counting management
   StreamSubscription<RepetitionData>? _repStreamSubscription;
+  StreamSubscription<Map<String, String>>? _validationFeedbackSubscription;
   final List<RepetitionData> _cachedReps = [];
   int? _lastExcellentRepSent;
 
   // Duration-based exercise feedback management
   DateTime? _lastExcellentFormFeedbackSent;
+  DateTime? _lastValidationFeedbackSent;
 
   // Timers
   Timer? _autoStartTimer;
@@ -125,6 +127,9 @@ class WorkoutSessionManager {
   Future<void> startCurrentExercise() async {
     _cancelTimers();
 
+    // Reset validation feedback timer for new exercise
+    _lastValidationFeedbackSent = null;
+
     _state = _state.copyWith(currentPhase: WorkoutPhaseType.exercising, restTimerValue: null);
     _emitState();
 
@@ -144,12 +149,15 @@ class WorkoutSessionManager {
     await _stopPoseDetection();
     _durationFormTracker?.metricsStream.drain();
     await _durationMetricsSubscription?.cancel();
+    await _validationFeedbackSubscription?.cancel();
+    _durationFormTracker?.dispose();
     _durationFormTracker = null;
 
     final classifier = _createDurationBasedClassifier(_state.currentExercise);
     if (classifier == null) return;
     _durationFormTracker = _DurationBasedExerciseFormTracker(classifier);
     _durationMetricsSubscription = _durationFormTracker!.metricsStream.listen(_handleDurationMetrics);
+    _validationFeedbackSubscription = _durationFormTracker!.validationFeedbackStream.listen(_handleValidationFeedback);
 
     if (!poseDetectionService.isActive) {
       try {
@@ -301,11 +309,13 @@ ${isFormFeedback ? '''
     final newRepsCounter = _createRepsCounter(newExercise);
 
     _repStreamSubscription?.cancel();
+    _validationFeedbackSubscription?.cancel();
     _state.repsCounter?.dispose();
 
     _cachedReps.clear();
     _lastExcellentRepSent = null;
     _lastExcellentFormFeedbackSent = null;
+    _lastValidationFeedbackSent = null;
 
     _state = _state.copyWith(
       currentExerciseIndex: index,
@@ -323,6 +333,7 @@ ${isFormFeedback ? '''
   void _listenToRepStream(RepsCounter? repsCounter) {
     if (repsCounter != null) {
       _repStreamSubscription = repsCounter.repStream.listen(_handleRepetitionData);
+      _validationFeedbackSubscription = repsCounter.validationFeedbackStream.listen(_handleValidationFeedback);
     }
   }
 
@@ -517,6 +528,63 @@ ${isFormFeedback ? '''
     }
   }
 
+  /// Handle validation feedback from classifiers (when user's form prevents exercise counting)
+  Future<void> _handleValidationFeedback(Map<String, String> feedback) async {
+    // Throttle validation feedback to prevent sending too many messages
+    final now = DateTime.now();
+    if (_lastValidationFeedbackSent != null && now.difference(_lastValidationFeedbackSent!).inSeconds.abs() < 15) {
+      return; // Skip if less than 15 seconds have passed since last validation feedback
+    }
+
+    _lastValidationFeedbackSent = now;
+
+    // Validation feedback should be given immediately when form prevents exercise counting
+    if (enableVoiceChat) {
+      await _sendValidationFeedbackToAI(feedback);
+    } else {
+      await _handlePreRecordedValidationFeedback(feedback);
+    }
+  }
+
+  /// Send validation feedback to AI for voice chat
+  Future<void> _sendValidationFeedbackToAI(Map<String, String> feedback) async {
+    final exerciseName = _state.currentExercise.name;
+    final feedbackMessages = feedback.values.join(', ');
+
+    final prompt =
+        '''
+    The user is performing $exerciseName but their form has validation issues that prevent rep counting:
+    $feedbackMessages
+    
+    Please provide immediate, concise corrective feedback to help them fix their form so reps can be counted.
+    Keep it brief and actionable.
+    ''';
+
+    await voiceChatPipeline.addSystemMessage(prompt);
+  }
+
+  /// Handle pre-recorded validation feedback
+  Future<void> _handlePreRecordedValidationFeedback(Map<String, String> feedback) async {
+    if (_feedbackManager == null) return;
+
+    final exerciseName = _state.currentExercise.name;
+
+    // Handle the first feedback message available
+    for (final entry in feedback.entries) {
+      final feedbackKey = entry.key;
+
+      // Handle special cases
+      if (feedbackKey == 'overall_visibility') {
+        await _feedbackManager.playOverallVisibilityFeedback();
+        return;
+      } else {
+        // For other validation feedback, try to play the specific feedback audio
+        await _feedbackManager.playFormFeedbackAudio(exerciseName, feedbackKey);
+        return;
+      }
+    }
+  }
+
   void _startPreExerciseOrRestTimer({required int duration, bool isInitialStart = false}) {
     _cancelTimers();
     if (duration <= 0) {
@@ -594,8 +662,10 @@ ${isFormFeedback ? '''
     _cancelTimers();
     await _stopPoseDetection();
     await _repStreamSubscription?.cancel();
+    await _validationFeedbackSubscription?.cancel();
     _state.repsCounter?.dispose();
     await _durationMetricsSubscription?.cancel();
+    _durationFormTracker?.dispose();
     _durationFormTracker = null;
     await _feedbackManager?.dispose();
     await _stateController.close();
@@ -606,6 +676,8 @@ class _DurationBasedExerciseFormTracker {
   final ExerciseClassifier classifier;
   final StreamController<_DurationBasedExerciseMetrics> _metricsController =
       StreamController<_DurationBasedExerciseMetrics>.broadcast();
+  final _validationFeedbackController = StreamController<Map<String, String>>.broadcast();
+
   _DurationBasedExerciseMetrics _pendingMetrics = _DurationBasedExerciseMetrics(
     formScore: 0.5,
     formMetrics: {},
@@ -620,13 +692,15 @@ class _DurationBasedExerciseFormTracker {
     }
   }
 
+  Stream<_DurationBasedExerciseMetrics> get metricsStream => _metricsController.stream;
+
+  Stream<Map<String, String>> get validationFeedbackStream => _validationFeedbackController.stream;
+
   void reset() {
     _pendingMetrics = _DurationBasedExerciseMetrics(formScore: 0.5, formMetrics: {}, correctness: 0.5);
     _numAccumulatedMetrics = 0;
     _lastEmittedTime = DateTime.now();
   }
-
-  Stream<_DurationBasedExerciseMetrics> get metricsStream => _metricsController.stream;
 
   void processFrame(PoseDetectionResult poseResult) {
     if (!poseResult.hasPose || poseResult.visibleLandmarkCount < 10) {
@@ -637,6 +711,13 @@ class _DurationBasedExerciseFormTracker {
       worldLandmarks: poseResult.worldLandmarks,
       imageLandmarks: poseResult.landmarks,
     );
+
+    if (formScore.containsKey('feedback')) {
+      // Emit validation feedback if available
+      _validationFeedbackController.add(formScore['feedback']);
+      return; // Skip further processing if validation feedback is provided
+    }
+
     final formMetrics = classifier.calculateFormMetrics(
       worldLandmarks: poseResult.worldLandmarks,
       imageLandmarks: poseResult.landmarks,
@@ -673,6 +754,11 @@ class _DurationBasedExerciseFormTracker {
     if (values.isEmpty) return 0.5;
 
     return values.fold(0.0, (a, b) => a + b['score']) / values.length;
+  }
+
+  void dispose() {
+    _metricsController.close();
+    _validationFeedbackController.close();
   }
 }
 

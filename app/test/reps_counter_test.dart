@@ -178,12 +178,15 @@ class MockPoseClassifier extends ExerciseClassifier {
   }
 
   @override
-  Map<String, double> calculateFormMetrics({
+  Map<String, dynamic> calculateFormMetrics({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
     String? position,
   }) {
-    return {'overall_visibility': 0.9, 'test_metric': 0.8};
+    return {
+      'overall_visibility': {'score': 0.9},
+      'test_metric': {'score': 0.8},
+    };
   }
 }
 

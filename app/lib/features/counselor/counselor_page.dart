@@ -291,6 +291,7 @@ class _CounselorPageState extends State<CounselorPage> {
       context: context,
       useRootNavigator: true,
       isDismissible: false,
+      enableDrag: false,
       builder: (context) {
         return PopScope(
           canPop: false,

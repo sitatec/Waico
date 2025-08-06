@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:developer' as dev;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:waico/core/utils/number_utils.dart';
@@ -179,7 +180,8 @@ class RepsCounter {
   final RepCountingConfig _config;
 
   // State tracking
-  ExerciseState _currentState = ExerciseState.up;
+  ExerciseState _currentState = ExerciseState.transitioning;
+  ExerciseState? _previousState; // Track previous state for transitions
   ExerciseState? _targetState; // Track what state we're trying to reach
   int _stableFrameCount = 0;
   int _totalReps = 0;
@@ -191,6 +193,7 @@ class RepsCounter {
   // Stream controllers for real-time updates
   final StreamController<RepCountingState> _stateController = StreamController<RepCountingState>.broadcast();
   final StreamController<RepetitionData> _repController = StreamController<RepetitionData>.broadcast();
+  final _validationFeedbackController = StreamController<Map<String, String>>.broadcast();
 
   RepsCounter(this._classifier, {RepCountingConfig? config}) : _config = config ?? const RepCountingConfig();
 
@@ -199,6 +202,10 @@ class RepsCounter {
 
   /// Stream of completed repetitions
   Stream<RepetitionData> get repStream => _repController.stream;
+
+  /// Feedback when the user is not performing the exercise correctly enough to count reps
+  /// Or when the user is not fully visible in the camera
+  Stream<Map<String, String>> get validationFeedbackStream => _validationFeedbackController.stream;
 
   /// Current rep counting state
   RepCountingState get currentState => RepCountingState(
@@ -219,8 +226,14 @@ class RepsCounter {
       imageLandmarks: poseResult.landmarks,
     );
 
-    final upProbability = probabilities['up'] ?? 0.5;
-    final downProbability = probabilities['down'] ?? 0.5;
+    final upProbability = (probabilities['up'] as num?)?.toDouble() ?? 0.5;
+    final downProbability = (probabilities['down'] as num?)?.toDouble() ?? 0.5;
+
+    // Check for feedback and emit it immediately if present
+    if (probabilities.containsKey('feedback')) {
+      _validationFeedbackController.add(probabilities['feedback']);
+      return; // Don't process the frame further when there's validation feedback
+    }
 
     // Determine target state based on probabilities
     ExerciseState targetState;
@@ -239,7 +252,7 @@ class RepsCounter {
   }
 
   /// Update exercise state and count repetitions
-  void _updateState(ExerciseState targetState, PoseDetectionResult poseResult, Map<String, double> probabilities) {
+  void _updateState(ExerciseState targetState, PoseDetectionResult poseResult, Map<String, dynamic> probabilities) {
     // Check if the target state has changed
     if (_targetState != targetState) {
       _targetState = targetState;
@@ -259,15 +272,17 @@ class RepsCounter {
         return;
       }
 
-      final previousState = _currentState;
+      if (_currentState != ExerciseState.transitioning) {
+        _previousState = _currentState; // Save previous state before transition
+      }
       _currentState = targetState;
       _stableFrameCount = 0;
       _targetState = null; // Reset target state tracking
 
       // Count rep when transitioning from down to up (completing a full cycle)
-      if (previousState == ExerciseState.down && _currentState == ExerciseState.up) {
+      if (_previousState == ExerciseState.down && _currentState == ExerciseState.up) {
         _completeRepetition(timestamp, poseResult, probabilities);
-      } else if (previousState == ExerciseState.up && _currentState == ExerciseState.down) {
+      } else if (_previousState == ExerciseState.up && _currentState == ExerciseState.down) {
         // Starting a new rep cycle
         _transitionStartTime = timestamp;
       }
@@ -275,15 +290,16 @@ class RepsCounter {
   }
 
   /// Complete a repetition and calculate quality metrics
-  void _completeRepetition(DateTime timestamp, PoseDetectionResult poseResult, Map<String, double> probabilities) {
+  void _completeRepetition(DateTime timestamp, PoseDetectionResult poseResult, Map<String, dynamic> probabilities) {
+    dev.log('Completing rep at $timestamp with probabilities: $probabilities');
     _totalReps++;
 
     final duration = _transitionStartTime != null
         ? timestamp.difference(_transitionStartTime!).inMilliseconds.toDouble()
         : 0.0;
 
-    final upProbability = probabilities['up'] ?? 0.5;
-    final downProbability = probabilities['down'] ?? 0.5;
+    final upProbability = (probabilities['up'] as num?)?.toDouble() ?? 0.5;
+    final downProbability = (probabilities['down'] as num?)?.toDouble() ?? 0.5;
 
     // Confidence represents certainty: 0.0 (uncertain) to 1.0 (very certain)
     // Convert from probability space to confidence space
@@ -353,5 +369,6 @@ class RepsCounter {
   void dispose() {
     _stateController.close();
     _repController.close();
+    _validationFeedbackController.close();
   }
 }

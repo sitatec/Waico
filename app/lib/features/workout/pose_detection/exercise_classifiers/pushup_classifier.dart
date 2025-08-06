@@ -8,7 +8,7 @@ class PushUpClassifier extends ExerciseClassifier {
   PushUpClassifier({this.type = PushUpType.standard, super.smoothingWindow});
 
   @override
-  Map<String, double> _calculateProbabilities({
+  Map<String, dynamic> _calculateProbabilities({
     required List<PoseLandmark> worldLandmarks,
     required List<PoseLandmark> imageLandmarks,
   }) {
@@ -32,7 +32,10 @@ class PushUpClassifier extends ExerciseClassifier {
     if (shoulder3D.visibility < visibilityThreshold ||
         elbow3D.visibility < visibilityThreshold ||
         wrist3D.visibility < visibilityThreshold) {
-      return _neutralResult();
+      return {
+        ..._neutralResult(),
+        'feedback': {'overall_visibility': 'Should ensure the whole body is clearly visible in the camera'},
+      };
     }
 
     // Get variation-specific angle thresholds
@@ -55,7 +58,10 @@ class PushUpClassifier extends ExerciseClassifier {
       final range = angleThresholds['upMin']! - angleThresholds['downMax']!;
       if (range <= 0) {
         // Safety check: if range is invalid, return neutral
-        return _neutralResult();
+        return {
+          ..._neutralResult(),
+          'feedback': {'body_alignment': 'Should maintain proper body alignment during the exercise'},
+        };
       }
       angleProb = (elbowAngle - angleThresholds['downMax']!) / range;
       // Apply sigmoid-like function for smoother transition
@@ -68,7 +74,12 @@ class PushUpClassifier extends ExerciseClassifier {
     final torsoHeight = PoseUtilities.getVerticalDistance(shoulder2D, hip2D);
 
     // Safety check for torso height
-    if (torsoHeight < 0.01) return _neutralResult();
+    if (torsoHeight < 0.01) {
+      return {
+        ..._neutralResult(),
+        'feedback': {'body_alignment': 'Should maintain proper body alignment during the exercise'},
+      };
+    }
 
     final normalizedShoulderHeight = shoulderHeight / torsoHeight;
     // Invert the height signal: higher height = more likely DOWN position
